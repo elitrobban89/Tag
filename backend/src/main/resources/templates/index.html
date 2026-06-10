@@ -366,8 +366,12 @@ function fetchGPS() {
         btn.disabled = false; btn.classList.remove('fetching'); lbl.textContent = 'GPS';
       });
   }, function(err) {
-    var msgs = {1:'🔒 Åtkomst nekad.', 2:'📵 Position ej tillgänglig.', 3:'⏱ Timeout.'};
-    setHint(msgs[err.code] || 'GPS-fel.', 'error');
+    var msgs = {
+      1:'🔒 GPS nekad – ange startstation manuellt eller tillåt plats i webbläsaren.',
+      2:'📵 Position ej tillgänglig – ange startstation manuellt.',
+      3:'⏱ Timeout – ange startstation manuellt.'
+    };
+    setHint(msgs[err.code] || 'GPS-fel – ange startstation manuellt.', 'error');
     btn.disabled = false; btn.classList.remove('fetching'); lbl.textContent = 'GPS';
   }, {enableHighAccuracy:false, timeout:8000, maximumAge:60000});
 }
