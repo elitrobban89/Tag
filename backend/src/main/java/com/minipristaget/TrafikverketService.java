@@ -86,10 +86,11 @@ public class TrafikverketService {
 
     // ── Hämta avgångar ────────────────────────────────────────────
     public List<TrainDeparture> getDepartures(String fromSignature, String toName, LocalDate date) throws Exception {
+        int limit = (toName == null || toName.isBlank()) ? 50 : 200;
         String xml = """
             <REQUEST>
               <LOGIN authenticationkey="%s"/>
-              <QUERY objecttype="TrainAnnouncement" schemaversion="1.8" limit="30">
+              <QUERY objecttype="TrainAnnouncement" schemaversion="1.8" limit="%d">
                 <FILTER>
                   <AND>
                     <EQ name="LocationSignature" value="%s"/>
@@ -106,7 +107,7 @@ public class TrafikverketService {
                 <INCLUDE>Canceled</INCLUDE>
               </QUERY>
             </REQUEST>
-            """.formatted(apiKey, fromSignature, date, date);
+            """.formatted(apiKey, limit, fromSignature, date, date);
 
         JsonNode result        = callApi(xml);
         JsonNode announcements = result.path("RESPONSE").path("RESULT").get(0).path("TrainAnnouncement");
@@ -125,23 +126,23 @@ public class TrafikverketService {
     // ── Privata hjälpmetoder ──────────────────────────────────────
     private boolean matchesDestination(JsonNode ann, String toName) {
         JsonNode locs = ann.path("ToLocation");
-        if (!locs.isArray()) return false;
-        String prefix = toName.toLowerCase().substring(0, Math.min(3, toName.length()));
+        if (!locs.isArray() || locs.isEmpty()) return false;
+        String lower = toName.toLowerCase();
+
         for (JsonNode loc : locs) {
-            if (loc.path("LocationName").asText().toLowerCase().startsWith(prefix)) return true;
-        }
-        // Also check against full station cache name
-        try {
+            String sig = loc.path("LocationName").asText();
+
+            // Direct signature prefix match
+            if (sig.toLowerCase().startsWith(lower.substring(0, Math.min(3, lower.length())))) return true;
+
+            // Resolve signature → friendly name via station cache
             if (stationCache != null) {
-                for (JsonNode loc : locs) {
-                    String sig = loc.path("LocationName").asText();
-                    boolean match = stationCache.stream()
-                        .anyMatch(s -> s.getSignature().equalsIgnoreCase(sig) &&
-                                       s.getName().toLowerCase().contains(toName.toLowerCase()));
-                    if (match) return true;
+                for (TrainStation s : stationCache) {
+                    if (s.getSignature().equalsIgnoreCase(sig) &&
+                        s.getName().toLowerCase().contains(lower)) return true;
                 }
             }
-        } catch (Exception ignored) {}
+        }
         return false;
     }
 
