@@ -6,14 +6,19 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.servlet.http.HttpServletRequest;
+
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 @RestController
@@ -29,6 +34,12 @@ public class SuggestController {
         "Strand",   "en strand- eller skärgårdsdestination längs Sveriges kust med bad och sol"
     );
 
+    // Rate limit: max 10 requests per IP per 10 minutes
+    private static final int RATE_LIMIT        = 10;
+    private static final long WINDOW_MS        = 10 * 60 * 1000L;
+    private record RateEntry(AtomicInteger count, long windowStart) {}
+    private final ConcurrentHashMap<String, RateEntry> rateLimiter = new ConcurrentHashMap<>();
+
     @Autowired
     private TrafikverketService trafikverketService;
 
@@ -41,7 +52,20 @@ public class SuggestController {
     }
 
     @PostMapping("/suggest")
-    public ResponseEntity<?> suggest(@RequestBody SuggestRequest req) {
+    public ResponseEntity<?> suggest(@RequestBody SuggestRequest req, HttpServletRequest httpReq) {
+        // Rate limiting per IP
+        String ip = getClientIp(httpReq);
+        long now = System.currentTimeMillis();
+        RateEntry entry = rateLimiter.compute(ip, (k, v) -> {
+            if (v == null || now - v.windowStart() > WINDOW_MS)
+                return new RateEntry(new AtomicInteger(1), now);
+            v.count().incrementAndGet();
+            return v;
+        });
+        if (entry.count().get() > RATE_LIMIT) {
+            return ResponseEntity.status(429).body(Map.of("error", "För många förfrågningar. Försök igen om en stund."));
+        }
+
         String category = req.getCategory();
 
         if (category == null || !CATEGORY_PROMPTS.containsKey(category)) {
@@ -113,7 +137,7 @@ public class SuggestController {
             Optional<TrainStation> station = trafikverketService.findStationByName(fromName);
             if (station.isEmpty()) return List.of();
             List<TrainDeparture> deps = trafikverketService.getDepartures(
-                station.get().getSignature(), null, LocalDate.now());
+                station.get().getSignature(), null, LocalDate.now(ZoneId.of("Europe/Stockholm")));
             return deps.stream()
                 .map(TrainDeparture::getDestination)
                 .filter(d -> d != null && !d.isBlank())
@@ -126,5 +150,12 @@ public class SuggestController {
             System.err.println("Could not fetch reachable destinations: " + e.getMessage());
             return List.of();
         }
+    }
+
+    private String getClientIp(HttpServletRequest req) {
+        String forwarded = req.getHeader("X-Forwarded-For");
+        if (forwarded != null && !forwarded.isBlank())
+            return forwarded.split(",")[0].trim();
+        return req.getRemoteAddr();
     }
 }

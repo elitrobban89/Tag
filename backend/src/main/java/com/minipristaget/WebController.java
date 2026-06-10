@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import jakarta.servlet.http.HttpServletResponse;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -112,7 +113,7 @@ public class WebController {
 
             // If no trains left today, automatically show tomorrow's departures
             boolean autoTomorrow = false;
-            if (departures.isEmpty() && date.equals(LocalDate.now())) {
+            if (departures.isEmpty() && date.equals(LocalDate.now(ZoneId.of("Europe/Stockholm")))) {
                 date = date.plusDays(1);
                 departures = trafikverketService.getDepartures(
                     fromStation.get().getSignature(), form.getTo(), date);

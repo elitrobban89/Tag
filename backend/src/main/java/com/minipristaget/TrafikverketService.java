@@ -12,6 +12,8 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
@@ -93,9 +95,11 @@ public class TrafikverketService {
     // ── Hämta avgångar ────────────────────────────────────────────
     public List<TrainDeparture> getDepartures(String fromSignature, String toName, LocalDate date) throws Exception {
         int limit = (toName == null || toName.isBlank()) ? 50 : 200;
-        // When searching today, only fetch trains from now onwards (skip already departed trains)
-        String fromTime = date.equals(LocalDate.now())
-            ? LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss"))
+        // Trafikverket times are in Swedish local time — use Stockholm timezone for comparison
+        ZoneId stockholm = ZoneId.of("Europe/Stockholm");
+        ZonedDateTime nowSweden = ZonedDateTime.now(stockholm);
+        String fromTime = date.equals(LocalDate.now(stockholm))
+            ? nowSweden.toLocalTime().format(DateTimeFormatter.ofPattern("HH:mm:ss"))
             : "00:00:00";
         String xml = """
             <REQUEST>
