@@ -22,7 +22,7 @@ public class SuggestController {
     private static final Map<String, String> CATEGORY_PROMPTS = Map.of(
         "Storstad", "en svensk storstad med kultur, nöjen och shopping",
         "Natur",    "en naturskön destination med natur, nationalparker eller friluftsliv i Sverige",
-        "Havet",    "en havs- eller skärgårdsdestination längs Sveriges kust"
+        "Strand",   "en strand- eller skärgårdsdestination längs Sveriges kust med bad och sol"
     );
 
     private final HttpClient httpClient = HttpClient.newHttpClient();

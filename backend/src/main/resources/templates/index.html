@@ -308,8 +308,8 @@
           <button type="button" id="cat-natur" class="cat-btn">
             <span class="cat-icon">🌲</span>Natur
           </button>
-          <button type="button" id="cat-havet" class="cat-btn">
-            <span class="cat-icon">🌊</span>Havet
+          <button type="button" id="cat-strand" class="cat-btn">
+            <span class="cat-icon">🏖️</span>Strand
           </button>
         </div>
       </div>
@@ -387,7 +387,7 @@ document.getElementById('btn-tur').addEventListener('click', function() {
 });
 
 // ── AI-kategorier ────────────────────────────────────────────────
-var cats = {storstad:'Storstad', natur:'Natur', havet:'Havet'};
+var cats = {storstad:'Storstad', natur:'Natur', strand:'Strand'};
 Object.keys(cats).forEach(function(id) {
   document.getElementById('cat-' + id).addEventListener('click', function() {
     var from = document.getElementById('from').value.trim();
