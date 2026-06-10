@@ -1375,7 +1375,7 @@ function openSeatMapForCard(btn) {
 function openSeatModal(trainId, layout, model, depTime, price, destination, trainImage, travelMinutes, priceOriginal, seatsLeft, classLabel) {
   _seatState.trainId       = trainId;
   _seatState.layout        = layout;
-  _seatState.wagon         = 1;
+  _seatState.wagon         = wagonForClass(layout, classLabel);
   _seatState.selected      = '';
   _seatState.price         = price || '';
   _seatState.selectedClass = classLabel || '2 klass';
@@ -1429,14 +1429,21 @@ function seatOverlayClick(e) {
   if (e.target === document.getElementById('seat-overlay')) closeSeatModal();
 }
 
+function wagonForClass(layout, cls) {
+  var cfg = LAYOUTS[layout];
+  if (!cfg || !cls) return 1;
+  var lower = cls.toLowerCase();
+  for (var i = 0; i < cfg.wagonLabel.length; i++) {
+    if (cfg.wagonLabel[i].toLowerCase().indexOf(lower) !== -1) return i + 1;
+  }
+  return 1;
+}
+
 function renderWagonTabs() {
   var cfg = LAYOUTS[_seatState.layout];
   if (!cfg) return;
-  var html = '';
-  for (var i = 0; i < cfg.wagons; i++) {
-    var active = (i + 1 === _seatState.wagon) ? ' active' : '';
-    html += '<button class="wagon-tab' + active + '" onclick="switchWagon(' + (i+1) + ')">' + cfg.wagonLabel[i] + '</button>';
-  }
+  // Only show the wagon matching the selected class — no switching between classes
+  var html = '<button class="wagon-tab active">' + cfg.wagonLabel[_seatState.wagon - 1] + '</button>';
   document.getElementById('wagon-tabs').innerHTML = html;
 }
 
