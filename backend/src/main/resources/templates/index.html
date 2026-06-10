@@ -193,6 +193,16 @@
                        50%{box-shadow:0 2px 28px rgba(59,130,246,.85);} }
     .gps-btn.fetching { animation:pulse 1.1s ease-in-out infinite; cursor:default; }
 
+    .swap-btn {
+      display:flex; align-items:center; justify-content:center;
+      width:36px; height:36px; margin:6px auto;
+      background:rgba(59,130,246,.15); border:1px solid rgba(96,165,250,.35);
+      border-radius:50%; cursor:pointer; color:#93c5fd;
+      transition:background .18s, transform .2s;
+    }
+    .swap-btn:hover  { background:rgba(59,130,246,.3); color:#fff; }
+    .swap-btn:active { transform:rotate(180deg) scale(.93); }
+
     .autocomplete-wrap { position:relative; flex:1; }
     .autocomplete-dropdown {
       display:none; position:absolute; top:calc(100% + 4px); left:0; right:0; z-index:200;
@@ -1006,6 +1016,15 @@
         </div>
         <div id="gps-hint" class="hint"></div>
       </div>
+
+      <!-- Swap-knapp -->
+      <button type="button" class="swap-btn" onclick="swapFromTo()" title="Byt håll">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M7 16V4m0 0L3 8m4-4l4 4"/>
+          <path d="M17 8v12m0 0l4-4m-4 4l-4-4"/>
+        </svg>
+      </button>
 
       <!-- Till -->
       <div class="field">
@@ -2018,6 +2037,14 @@ function setupAutocomplete(inputId, dropdownId) {
 
 setupAutocomplete('from', 'from-dropdown');
 setupAutocomplete('to', 'to-dropdown');
+
+function swapFromTo() {
+  var fromEl = document.getElementById('from');
+  var toEl   = document.getElementById('to');
+  var tmp    = fromEl.value;
+  fromEl.value = toEl.value;
+  toEl.value   = tmp;
+}
 </script>
 </body>
 </html>
