@@ -24,9 +24,8 @@
     .header::after  { content:''; position:absolute; bottom:-30px; left:-30px; width:120px; height:120px;
                        background:rgba(255,255,255,.04); border-radius:50%; pointer-events:none; }
     .header-icon { display:inline-flex; align-items:center; justify-content:center;
-                   width:52px; height:52px; background:rgba(255,255,255,.12);
-                   border-radius:14px; font-size:1.6rem; margin-bottom:12px;
-                   backdrop-filter:blur(4px); position:relative; }
+                   width:90px; height:90px; margin-bottom:10px; position:relative; }
+    .header-icon img { width:90px; height:90px; object-fit:contain; }
     .header h1 { font-size:1.55rem; font-weight:800; color:#fff;
                  letter-spacing:-.02em; margin-bottom:5px; position:relative; }
     .header p  { font-size:.85rem; color:rgba(255,255,255,.65); position:relative; }
@@ -254,7 +253,7 @@
 
   <!-- ── App header ── -->
   <div class="header" id="app-header">
-    <div class="header-icon">🚂</div>
+    <div class="header-icon"><img src="/images/logo.png" alt="MiniPrisTåget"></div>
     <h1>MiniPrisTåget</h1>
     <p>Sök tågresor med riktiga avgångstider</p>
   </div>
