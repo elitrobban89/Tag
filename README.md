@@ -4,15 +4,40 @@ Tågsökningsapp med MiniPris-deals inbyggd via iframe på [elitrobban.se/minipr
 
 ## Funktioner
 
-- **MiniPris** – kraftigt rabatterade priser med överstruket ordinariepris och platsbegränsning (1–5 platser kvar per avgång)
-- **Reseklasser** – expanderbart val av 2 klass, 2 klass Lugn eller 1 klass med SJ:s riktiga förmåner och prislogik
-- **GPS** – hittar automatiskt närmaste tågstation via Trafikverkets API
-- **Avgångar** – visar riktiga kommande avgångar från Trafikverket Open Data (passerade tåg filtreras bort)
-- **Auto-imorgon** – om inga fler tåg kvar idag byter appen automatiskt till morgondagens avgångar
-- **AI-förslag** – tre kategoriknappar (Storstad / Natur / Strand) låter Groq AI föreslå en destination
-- **CO2-besparing** – visar hur mycket CO2 som sparas jämfört med bilresa
-- **Tur & retur** – valfritt returdatum med separata returavgångar
+### Sökning & avgångar
+- **Avgångar** – riktiga kommande avgångar från Trafikverket Open Data, passerade tåg filtreras bort
+- **GPS** – hittar automatiskt närmaste tågstation (hoppar över GPS om från-fältet redan är ifyllt)
+- **Auto-imorgon** – om inga fler tåg kvar idag byter appen automatiskt till morgondagens avgångar med gul notis
+- **Svensk tidszon** – servern kör UTC men all tidslogik använder `Europe/Stockholm`
+
+### Priser & klasser
+- **MiniPris** – kraftigt rabatterade flash-priser med överstruket ordinariepris och rött MiniPris-badge
+- **Reseklasser** – expanderbart val av 2 klass, 2 klass Lugn eller 1 klass med SJ:s förmåner och prislogik
+- **Klasslåsning** – vald klass låses när man går vidare till platskarta, kan inte ändras i efterhand
+
+### Platskarta & bokning
+- **Interaktiv platskarta** – realistisk vagnskarta per tågtyp (X2000 3 vagnar, X74 2 vagnar)
+- **Klassbaserad vagn** – automatiskt rätt vagn baserat på vald klass (1 klass → Vagn 3 på X2000)
+- **Regionaltåg** – visar "Öppen placering" istället för platskarta för lokaltåg
+- **Platsbeläggnig** – deterministisk men realistisk: färre platser kvar = mer fullsatt karta
+- **Swish-betalning** – demo-flöde med `swish://` deep link, spinner och bokningsbekräftelse
+- **Platser räknas ned** – efter betalning minskar antalet platser kvar i realtid
+
+### Återresa
+- **Återresemodul** – efter bokning öppnas en ny skärm med omvänd rutt och datumväljare (default nästa dag)
+- **Fullständigt flöde** – återresan har eget sök, platskarta och Swish-betalning
+
+### Mina bokningar
+- **Bokningshistorik** – knapp i headern med badge-räknare efter varje genomförd betalning
+- **Bokningskort** – visar bokningsref, rutt, datum, avgångstid, plats, klass och pris
+- **Demo-reset** – listan återställs automatiskt efter 5 minuter (demo-läge)
+
+### Övrigt
+- **AI-förslag** – tre kategoriknappar (Storstad / Natur / Strand) via Groq AI
+- **CO2-besparing** – visar kg CO2 sparat jämfört med bilresa
 - **Rate limiting** – AI-endpointen begränsad till 10 förfrågningar per IP per 10 minuter
+- **Mobilanpassad** – responsiv layout med media queries för smala skärmar
+- **UptimeRobot** – pingar `/health` var 5:e minut, håller Render-instansen varm
 
 ## Teknikstack
 
