@@ -22,7 +22,7 @@ public class TrainModelService {
                                     "X74 (VR) · 200 km/h max",    "/images/train-vy.jpg")),
         Map.entry("MTRXEX",     new TrainModelInfo("X74",              "#1a5e35", 175,
                                     "X74 · 200 km/h max",          "/images/train-vy.jpg")),
-        Map.entry("VASTTRAF",   new TrainModelInfo("Coradia Nordic",   "#0055a5", 110,
+        Map.entry("VASTTRAF",   new TrainModelInfo("X61 Västtåg",      "#0055a5", 110,
                                     "Regionaltåg västkusten",      "/images/train-sj-regional.png")),
         Map.entry("Ö-TÅG",      new TrainModelInfo("Öresundståg X31", "#004EA8", 120,
                                     "Regionaltåg Skåne",           "/images/train-sj-regional.png")),
