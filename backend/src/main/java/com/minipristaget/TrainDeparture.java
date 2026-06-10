@@ -14,6 +14,7 @@ public class TrainDeparture {
     private String price;
     private String trainModel;
     private String trainColor;
+    private String trainImage;
     private int    travelMinutes;
     private int    transfers;
 
@@ -46,6 +47,9 @@ public class TrainDeparture {
 
     public String getTrainColor()       { return trainColor; }
     public void setTrainColor(String v) { this.trainColor = v; }
+
+    public String getTrainImage()       { return trainImage; }
+    public void setTrainImage(String v) { this.trainImage = v; }
 
     public int  getTravelMinutes()     { return travelMinutes; }
     public void setTravelMinutes(int v){ this.travelMinutes = v; }

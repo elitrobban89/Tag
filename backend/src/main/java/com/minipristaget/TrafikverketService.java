@@ -135,6 +135,7 @@ public class TrafikverketService {
             TrainModelService.TrainModelInfo model = trainModelService.getModel(dep.getOperator());
             dep.setTrainModel(model.name());
             dep.setTrainColor(model.color());
+            dep.setTrainImage(model.imageUrl());
             dep.setTransfers(0);
 
             if (fromSt != null && dep.getDestinationSignature() != null && stationCache != null) {

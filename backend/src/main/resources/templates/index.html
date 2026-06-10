@@ -9,7 +9,7 @@
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
            background: #f3f4f6; }
 
-    .wrap { max-width: 520px; margin: 0 auto; padding: 0 0 48px; }
+    .wrap { max-width: 660px; margin: 0 auto; padding: 0 0 48px; }
 
     /* ── App header ── */
     .header {
@@ -142,119 +142,90 @@
                    font-size: .72rem; font-weight: 700; padding: 3px 10px;
                    border-radius: 16px; }
 
+    /* ── Departure list container ── */
     .dep-list {
-      background: #fff;
+      background: #f3f4f6;
+      padding: 12px 14px 14px;
       border-radius: 0 0 20px 20px;
       box-shadow: 0 6px 32px rgba(0,0,0,.10);
-      overflow: hidden;
       margin-bottom: 14px;
     }
     .list-header {
       display: flex; align-items: center; gap: 8px;
-      padding: 13px 20px 9px;
+      padding: 4px 4px 10px;
       font-size: .72rem; font-weight: 700;
       text-transform: uppercase; letter-spacing: .09em; color: #1b4332;
-      border-bottom: 1px solid #f0f4f0;
     }
     .list-dot { width: 7px; height: 7px; background: #1b4332; border-radius: 50%; flex-shrink:0; }
 
-    .dep-item {
-      display: flex; align-items: stretch;
-      padding: 0 18px;
-      border-bottom: 1px solid #f3f4f6;
-      transition: background .15s;
-      position: relative;
+    /* ── Departure card (SJ-style) ── */
+    .dep-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 18px 20px 16px;
+      margin-bottom: 10px;
+      border: 1px solid #e5e7eb;
+      box-shadow: 0 1px 4px rgba(0,0,0,.06);
+      transition: box-shadow .15s, transform .1s;
     }
-    .dep-item:last-child { border-bottom: none; }
-    .dep-item:hover { background: #f9fbf9; }
-    .dep-item.canceled { opacity: .45; }
+    .dep-card:last-child { margin-bottom: 0; }
+    .dep-card:hover { box-shadow: 0 5px 18px rgba(0,0,0,.11); }
+    .dep-card.canceled { opacity: .5; }
+    .dep-card.delayed  { border-left: 3px solid #f59e0b; }
 
-    .dep-timeline {
-      display: flex; flex-direction: column; align-items: center;
-      padding: 14px 14px 14px 0;
-      position: relative;
-    }
-    .dep-timeline::after {
-      content:''; position:absolute;
-      left:50%; transform:translateX(-50%);
-      top:38px; bottom:-1px;
-      width:2px; background:#f0f4f0;
-    }
-    .dep-item:last-child .dep-timeline::after { display:none; }
-
-    .time-bubble {
-      background: #f0fdf4; border: 2px solid #bbf7d0;
-      border-radius: 10px; padding: 5px 9px;
-      text-align: center; min-width: 52px;
-      position: relative; z-index: 1;
-    }
-    .time-bubble .adv { font-size:1.05rem; font-weight:800; color:#0f2d1e; line-height:1.1; }
-    .time-bubble .est { font-size:.72rem; font-weight:700; color:#dc2626; margin-top:1px; }
-    .dep-item.canceled .time-bubble   { background:#fef2f2; border-color:#fecaca; }
-    .dep-item.delayed:not(.canceled) .time-bubble { background:#fefce8; border-color:#fde68a; }
-
-    .dep-content {
-      flex:1; padding:12px 0 12px 12px;
-      display:flex; flex-direction:column; justify-content:center; gap:3px;
-    }
-    .dep-dest { font-size:.96rem; font-weight:700; color:#111827; }
-    .dep-meta { font-size:.75rem; color:#9ca3af; }
-
-    /* dep-badge-wrap now defined below with column layout */
-    .dep-badge {
-      font-size:.70rem; font-weight:700; padding:4px 10px;
-      border-radius:20px; white-space:nowrap;
-    }
-    .badge-ok       { background:#f0fdf4; color:#15803d; }
-    .badge-delayed  { background:#fefce8; color:#92400e; }
-    .badge-canceled { background:#fef2f2; color:#dc2626; }
-
-    .empty { padding:36px 20px; text-align:center; }
-    .empty-icon  { font-size:2.2rem; margin-bottom:10px; }
-    .empty-title { font-size:.95rem; font-weight:700; color:#374151; margin-bottom:5px; }
-    .empty-sub   { font-size:.82rem; color:#9ca3af; }
-
-    /* Train model card */
-    .train-card {
-      display: inline-flex; align-items: center; gap: 7px;
-      border-left: 3px solid #6b7280;
-      border-radius: 0 7px 7px 0;
-      padding: 4px 10px 4px 8px;
-      margin-top: 5px;
-      background: rgba(107,114,128,.07);
-      max-width: 100%;
-    }
-    .train-loco { font-size: 1.05rem; flex-shrink: 0; }
-    .train-name { font-size: .76rem; font-weight: 700; color: #111827; }
-    .train-spec { font-size: .68rem; color: #6b7280; }
-
-    /* Travel time + transfers row */
-    .dep-travel {
-      display: flex; align-items: center; gap: 8px; margin-top: 5px;
-    }
-    .travel-time { font-size: .72rem; color: #374151; font-weight: 600; }
-    .transfer-chip {
-      font-size: .66rem; font-weight: 700;
-      background: #f0fdf4; color: #15803d;
-      border: 1px solid #bbf7d0;
-      padding: 2px 7px; border-radius: 10px;
+    .card-main {
+      display: flex; align-items: flex-start; gap: 14px;
     }
 
-    /* Price chip */
-    .price-chip {
-      font-size: .68rem; font-weight: 700;
-      background: #fffbeb; color: #92400e;
-      border: 1px solid #fde68a;
-      padding: 3px 8px; border-radius: 10px;
-      white-space: nowrap; margin-bottom: 4px;
+    .card-left { flex: 1; min-width: 0; }
+
+    .card-time-range {
+      font-size: 1.55rem; font-weight: 800; color: #111827;
+      letter-spacing: -.025em; line-height: 1.1; margin-bottom: 4px;
+    }
+    .card-time-delayed { color: #dc2626; font-size: .8rem; font-weight: 700; margin-left: 6px; }
+
+    .card-travel-info {
+      font-size: .84rem; color: #6b7280; margin-bottom: 13px;
     }
 
-    /* Badge wrap becomes a column */
-    .dep-badge-wrap {
+    .card-train-row {
+      display: flex; align-items: center; gap: 12px;
+    }
+    .card-train-photo {
+      width: 170px; height: 58px;
+      object-fit: cover; object-position: center 60%;
+      border-radius: 8px; flex-shrink: 0;
+      border: 1px solid #e5e7eb;
+    }
+    .card-train-label {
+      font-size: .80rem; color: #374151; line-height: 1.5;
+    }
+    .card-train-model { font-weight: 700; color: #111827; }
+
+    .card-right {
       display: flex; flex-direction: column;
-      align-items: flex-end; justify-content: center;
-      padding: 10px 0 10px 8px; gap: 4px;
+      align-items: flex-end; min-width: 94px; flex-shrink: 0;
     }
+    .card-price-fr    { font-size: .76rem; color: #6b7280; margin-bottom: 1px; }
+    .card-price-amt   {
+      font-size: 1.65rem; font-weight: 800; color: #111827;
+      letter-spacing: -.03em; line-height: 1.1;
+    }
+    .card-price-model { font-size: .70rem; color: #6b7280; margin-bottom: 8px; }
+
+    .dep-badge {
+      font-size: .70rem; font-weight: 700; padding: 4px 10px;
+      border-radius: 20px; white-space: nowrap;
+    }
+    .badge-ok       { background: #f0fdf4; color: #15803d; }
+    .badge-delayed  { background: #fefce8; color: #92400e; }
+    .badge-canceled { background: #fef2f2; color: #dc2626; }
+
+    .empty { padding: 36px 20px; text-align: center; }
+    .empty-icon  { font-size: 2.2rem; margin-bottom: 10px; }
+    .empty-title { font-size: .95rem; font-weight: 700; color: #374151; margin-bottom: 5px; }
+    .empty-sub   { font-size: .82rem; color: #9ca3af; }
 
     /* Return section */
     .return-section { margin-top:14px; }
@@ -273,10 +244,9 @@
     .return-station { font-size:1.08rem; font-weight:800; color:#fff; }
     .return-arrow   { color:rgba(255,255,255,.45); }
     .return-meta { font-size:.78rem; color:rgba(255,255,255,.50); margin-top:5px; }
-    .return-dep-list { border-radius:0 0 20px 20px; }
-    .return-dep-list .time-bubble { background:#eff6ff; border-color:#bfdbfe; }
-    .return-dep-list .list-header { color:#1e4d8c; }
-    .return-dep-list .list-dot    { background:#1e4d8c; }
+    .return-dep-list { border-radius: 0 0 20px 20px; background: #eff6ff; }
+    .return-dep-list .list-dot    { background: #1e4d8c; }
+    .return-dep-list .list-header { color: #1e4d8c; }
   </style>
 </head>
 <body>
@@ -520,26 +490,27 @@ function showForm() {
   document.getElementById('app-header').style.borderRadius = '20px 20px 0 0';
 }
 
+// ── Räkna ut ankomsttid ───────────────────────────────────────────
+function calcArrival(depTime, minutes) {
+  if (!depTime || !minutes) return '';
+  var parts = depTime.split(':');
+  var total = parseInt(parts[0]) * 60 + parseInt(parts[1]) + minutes;
+  var hh = Math.floor(total / 60) % 24;
+  var mm = total % 60;
+  return (hh < 10 ? '0' : '') + hh + ':' + (mm < 10 ? '0' : '') + mm;
+}
+
 // ── Formatera restid ──────────────────────────────────────────────
 function formatDuration(minutes) {
   if (!minutes || minutes <= 0) return '';
   var h = Math.floor(minutes / 60);
   var m = minutes % 60;
-  if (h === 0) return 'ca ' + m + ' min';
-  if (m === 0) return 'ca ' + h + 'h';
-  return 'ca ' + h + 'h ' + m + 'min';
+  if (h === 0) return m + ' min';
+  if (m === 0) return h + 'h';
+  return h + 'h ' + m + 'min';
 }
 
-// ── Tågemoji baserad på färg/operatör ────────────────────────────
-function trainEmoji(model) {
-  if (!model) return '🚆';
-  var m = model.toLowerCase();
-  if (m.indexOf('x74') >= 0 || m.indexOf('snabb') >= 0 || m.indexOf('sj 3000') >= 0 || m.indexOf('mtr') >= 0) return '🚄';
-  if (m.indexOf('natt') >= 0 || m.indexOf('snäll') >= 0) return '🌙';
-  return '🚆';
-}
-
-// ── Bygg avgångslista HTML ────────────────────────────────────────
+// ── Bygg avgångslista HTML (SJ-stil) ─────────────────────────────
 function buildDepList(deps, title, isReturn) {
   var cls = 'dep-list' + (isReturn ? ' return-dep-list' : '');
   var html = '<div class="' + cls + '">';
@@ -552,70 +523,63 @@ function buildDepList(deps, title, isReturn) {
   } else {
     for (var i = 0; i < deps.length; i++) {
       var d = deps[i];
-      var itemCls = 'dep-item';
-      if (d.canceled) itemCls += ' canceled';
-      else if (d.delayed) itemCls += ' delayed';
+      var cardCls = 'dep-card';
+      if (d.canceled) cardCls += ' canceled';
+      else if (d.delayed) cardCls += ' delayed';
 
-      html += '<div class="' + itemCls + '">';
+      // Tidsintervall t.ex. "06:04 – 08:44"
+      var arrTime = calcArrival(d.departureTime, d.travelMinutes);
+      var timeRange = esc(d.departureTime) + (arrTime ? ' – ' + arrTime : '');
 
-      // Left: time bubble
-      html +=   '<div class="dep-timeline">';
-      html +=     '<div class="time-bubble">';
-      html +=       '<div class="adv">' + esc(d.departureTime) + '</div>';
-      if (d.delayed) html += '<div class="est">' + esc(d.estimatedTime) + '</div>';
-      html +=     '</div>';
-      html +=   '</div>';
-
-      // Middle: destination, meta, train card, travel info
-      html +=   '<div class="dep-content">';
-      html +=     '<div class="dep-dest">' + esc(d.destination) + '</div>';
-      html +=     '<div class="dep-meta">Tåg ' + esc(d.trainId);
-      if (d.operator) html += ' · ' + esc(d.operator);
-      html +=     '</div>';
-
-      // Train model card
-      if (d.trainModel) {
-        var color = d.trainColor || '#6b7280';
-        var bgAlpha = 'rgba(' + hexToRgb(color) + ',0.08)';
-        html += '<div class="train-card" style="border-left-color:' + esc(color) + ';background:' + bgAlpha + '">';
-        html +=   '<span class="train-loco">' + trainEmoji(d.trainModel) + '</span>';
-        html +=   '<span class="train-name">' + esc(d.trainModel) + '</span>';
-        html += '</div>';
-      }
-
-      // Travel time + transfers
+      // Restid + byten
       var dur = formatDuration(d.travelMinutes);
-      if (dur || d.transfers === 0) {
-        html += '<div class="dep-travel">';
-        if (dur) html += '<span class="travel-time">' + esc(dur) + '</span>';
-        html += '<span class="transfer-chip">Direktresa</span>';
-        html += '</div>';
+      var travelInfo = (dur ? 'Restid ' + dur + ' · ' : '') + '0 byten';
+
+      // Pris: "från 489 kr" → "Fr." + "489:-"
+      var priceAmt = '';
+      if (d.price && d.price.indexOf('från ') === 0) {
+        priceAmt = d.price.replace('från ', '').replace(' kr', ':-');
       }
 
-      html +=   '</div>'; // dep-content
+      html += '<div class="' + cardCls + '">';
+      html +=   '<div class="card-main">';
 
-      // Right: price + status badge
-      html +=   '<div class="dep-badge-wrap">';
-      if (d.price) html += '<div class="price-chip">' + esc(d.price) + '</div>';
+      // Vänster: tider + tåg
+      html +=     '<div class="card-left">';
+      html +=       '<div class="card-time-range">' + timeRange;
+      if (d.delayed) html += '<span class="card-time-delayed">→ ' + esc(d.estimatedTime) + '</span>';
+      html +=       '</div>';
+      html +=       '<div class="card-travel-info">' + esc(travelInfo) + '</div>';
+      html +=       '<div class="card-train-row">';
+      if (d.trainImage) {
+        html += '<img class="card-train-photo" src="' + esc(d.trainImage) + '" alt="' + esc(d.trainModel || '') + '">';
+      }
+      html +=         '<div class="card-train-label">';
+      html +=           '<div class="card-train-model">' + esc(d.trainModel || '') + '</div>';
+      html +=           esc(d.destination) + ' · tåg ' + esc(d.trainId);
+      html +=         '</div>';
+      html +=       '</div>';
+      html +=     '</div>';
+
+      // Höger: pris + badge
+      html +=     '<div class="card-right">';
+      if (priceAmt) {
+        html += '<div class="card-price-fr">Fr.</div>';
+        html += '<div class="card-price-amt">' + esc(priceAmt) + '</div>';
+        html += '<div class="card-price-model">' + esc(d.trainModel || '') + '</div>';
+      }
       if (d.canceled)     html += '<span class="dep-badge badge-canceled">Inställd</span>';
       else if (d.delayed) html += '<span class="dep-badge badge-delayed">Försenad</span>';
       else                html += '<span class="dep-badge badge-ok">I tid</span>';
-      html +=   '</div>';
+      html +=     '</div>';
 
-      html += '</div>'; // dep-item
+      html +=   '</div>'; // card-main
+      html += '</div>';   // dep-card
     }
   }
 
   html += '</div>';
   return html;
-}
-
-// ── Hex → "r,g,b" för rgba() ─────────────────────────────────────
-function hexToRgb(hex) {
-  hex = hex.replace('#', '');
-  if (hex.length === 3) hex = hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
-  var n = parseInt(hex, 16);
-  return ((n>>16)&255) + ',' + ((n>>8)&255) + ',' + (n&255);
 }
 
 // ── Visa resultat ─────────────────────────────────────────────────
