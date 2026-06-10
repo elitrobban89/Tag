@@ -88,6 +88,50 @@ public class WebController {
         return "results";
     }
 
+    // ── JSON API för AJAX-sökning (inga sidnavigering) ───────────
+    @PostMapping("/api/search")
+    @ResponseBody
+    public ResponseEntity<?> apiSearch(@RequestBody SearchFormRequest form) {
+        if (form.getFrom() == null || form.getFrom().isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Ange en startstation."));
+        }
+        try {
+            Optional<TrainStation> fromStation = trafikverketService.findStationByName(form.getFrom());
+            if (fromStation.isEmpty()) {
+                return ResponseEntity.badRequest().body(
+                    Map.of("error", "Hittade ingen station för: " + form.getFrom()));
+            }
+            LocalDate date = parseDate(form.getDate());
+            List<TrainDeparture> departures = trafikverketService.getDepartures(
+                fromStation.get().getSignature(), form.getTo(), date);
+
+            java.util.Map<String, Object> result = new java.util.LinkedHashMap<>();
+            result.put("fromName",   fromStation.get().getName());
+            result.put("toName",     (form.getTo() == null || form.getTo().isBlank())
+                                         ? "Alla destinationer" : form.getTo());
+            result.put("date",       date.toString());
+            result.put("departures", departures);
+
+            if ("tur".equals(form.getTripType())
+                    && form.getTo() != null && !form.getTo().isBlank()
+                    && form.getReturnDate() != null && !form.getReturnDate().isBlank()) {
+                Optional<TrainStation> toStation = trafikverketService.findStationByName(form.getTo());
+                if (toStation.isPresent()) {
+                    LocalDate returnDate = parseDate(form.getReturnDate());
+                    List<TrainDeparture> returnDeps = trafikverketService.getDepartures(
+                        toStation.get().getSignature(), form.getFrom(), returnDate);
+                    result.put("returnFromName",   toStation.get().getName());
+                    result.put("returnDate",       returnDate.toString());
+                    result.put("returnDepartures", returnDeps);
+                }
+            }
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(
+                Map.of("error", "Kunde inte hämta avgångar: " + e.getMessage()));
+        }
+    }
+
     private LocalDate parseDate(String dateStr) {
         try {
             return LocalDate.parse(dateStr);
