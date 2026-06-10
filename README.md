@@ -109,6 +109,18 @@ Lägg till ett **Anpassad HTML**-block i Gutenberg med:
 
 > `allow="geolocation"` krävs för att GPS-funktionen ska fungera i iframen.
 
+## Demo-läge
+
+Appen är ett demonstrationsprojekt — ingen riktig bokning eller betalning sker.
+
+| Funktion | Beteende |
+|---|---|
+| Swish-betalning | Simulerad — `swish://` deep link öppnar appen på mobil men ingen transaktion genomförs. Efter 3 sekunder visas ett lyckat svar automatiskt. |
+| Bokningsreferens | Slumpmässigt genererad i JavaScript (t.ex. MP-482931) |
+| Platser kvar | Deterministiskt beräknade per tåg-ID, inte realtidsdata |
+| Priser | Simulerade MiniPris-priser baserade på avstånd, inte SJ:s riktiga priser |
+| Mina bokningar | Sparas lokalt i webbläsarminnet, återställs efter 5 minuter |
+
 ## Driftstatus
 
 Appen monitoreras via [UptimeRobot](https://uptimerobot.com) som pingar `/health` var 5:e minut.
