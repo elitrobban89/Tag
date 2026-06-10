@@ -6,130 +6,310 @@
   <title>MiniPrisTåget – Avgångar</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-           background: #f3f4f6; min-height: 100vh; padding: 24px 16px 48px; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f0f4f0;
+      min-height: 100vh;
+      padding: 0 0 48px;
+    }
 
-    .wrap { max-width: 520px; margin: 0 auto; }
+    .wrap { max-width: 540px; margin: 0 auto; }
 
+    /* ── Header ── */
     .header {
       background: linear-gradient(135deg, #0f2d1e 0%, #1b4332 55%, #2d6a4f 100%);
-      border-radius: 20px 20px 0 0;
-      padding: 26px 24px 22px;
+      padding: 24px 24px 32px;
       position: relative; overflow: hidden;
     }
-    .header::before { content:''; position:absolute; top:-40px; right:-40px; width:140px; height:140px;
-                       background:rgba(255,255,255,.05); border-radius:50%; pointer-events:none; }
-    .back-btn { display:inline-flex; align-items:center; gap:5px; color:rgba(255,255,255,.75);
-                font-size:.82rem; font-weight:600; text-decoration:none; margin-bottom:12px;
-                transition:color .15s; position:relative; }
-    .back-btn:hover { color:#fff; }
-    .route { font-size:1.3rem; font-weight:800; color:#fff; margin-bottom:4px; position:relative; }
-    .route-date { font-size:.83rem; color:rgba(255,255,255,.65); position:relative; }
+    .header::before { content:''; position:absolute; top:-50px; right:-50px;
+      width:180px; height:180px; background:rgba(255,255,255,.05);
+      border-radius:50%; pointer-events:none; }
+    .header::after  { content:''; position:absolute; bottom:-40px; left:-30px;
+      width:130px; height:130px; background:rgba(255,255,255,.04);
+      border-radius:50%; pointer-events:none; }
 
-    .section-card { background:#fff; border-radius:0 0 20px 20px;
-                    box-shadow:0 8px 32px rgba(0,0,0,.10); overflow:hidden; }
-    .section-title { padding:16px 20px 12px; font-size:.74rem; font-weight:700;
-                     text-transform:uppercase; letter-spacing:.08em; color:#1b4332;
-                     border-bottom:1px solid #f3f4f6; }
+    .back-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      color: rgba(255,255,255,.70); font-size: .8rem; font-weight: 600;
+      text-decoration: none; margin-bottom: 20px;
+      transition: color .15s; position: relative;
+    }
+    .back-btn:hover { color: #fff; }
 
-    .dep-row { display:flex; align-items:center; padding:14px 20px;
-               border-bottom:1px solid #f9fafb; gap:14px; }
-    .dep-row:last-child { border-bottom:none; }
-    .dep-row.canceled { opacity:.5; }
+    .route-box { position: relative; }
+    .route-stations {
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 6px;
+    }
+    .station-name {
+      font-size: 1.25rem; font-weight: 800; color: #fff;
+      letter-spacing: -.01em; line-height: 1.2;
+    }
+    .route-arrow {
+      display: flex; align-items: center; flex-shrink: 0;
+      color: rgba(255,255,255,.50);
+    }
+    .route-meta {
+      display: flex; align-items: center; gap: 14px;
+      font-size: .8rem; color: rgba(255,255,255,.60);
+      position: relative;
+    }
+    .route-meta span { display: flex; align-items: center; gap: 4px; }
 
-    .dep-time { min-width:48px; }
-    .dep-time .adv { font-size:1.05rem; font-weight:800; color:#111827; }
-    .dep-time .est { font-size:.78rem; color:#dc2626; font-weight:600; margin-top:1px; }
+    .count-pill {
+      position: absolute; top: 0; right: 0;
+      background: rgba(255,255,255,.15); color: #fff;
+      font-size: .75rem; font-weight: 700; padding: 4px 12px;
+      border-radius: 20px; backdrop-filter: blur(4px);
+    }
 
-    .dep-info { flex:1; }
-    .dep-dest { font-size:.95rem; font-weight:700; color:#111827; margin-bottom:2px; }
-    .dep-meta { font-size:.77rem; color:#6b7280; }
+    /* ── Avgångslista ── */
+    .dep-list {
+      background: #fff;
+      border-radius: 0 0 24px 24px;
+      box-shadow: 0 8px 40px rgba(0,0,0,.10);
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
 
-    .dep-badge { font-size:.72rem; font-weight:700; padding:3px 9px; border-radius:20px; }
-    .badge-ok       { background:#f0fdf4; color:#15803d; }
-    .badge-delayed  { background:#fef9c3; color:#854d0e; }
-    .badge-canceled { background:#fef2f2; color:#dc2626; }
+    .list-header {
+      display: flex; align-items: center; gap: 8px;
+      padding: 14px 20px 10px;
+      font-size: .72rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .09em; color: #1b4332;
+      border-bottom: 1px solid #f0f4f0;
+    }
+    .list-header-dot {
+      width: 7px; height: 7px; background: #1b4332;
+      border-radius: 50%; flex-shrink: 0;
+    }
 
-    .empty { padding:32px 20px; text-align:center; color:#9ca3af; font-size:.9rem; }
+    .dep-item {
+      display: flex; align-items: stretch;
+      padding: 0 20px;
+      border-bottom: 1px solid #f3f4f6;
+      transition: background .15s;
+      position: relative;
+    }
+    .dep-item:last-child { border-bottom: none; }
+    .dep-item:hover { background: #f9fbf9; }
+    .dep-item.canceled { opacity: .45; }
 
-    .return-section { margin-top:14px; }
-    .return-section .section-card { border-radius:20px; }
-    .return-section .header { border-radius:20px 20px 0 0; }
+    /* Timeline */
+    .dep-timeline {
+      display: flex; flex-direction: column; align-items: center;
+      padding: 16px 16px 16px 0;
+      position: relative;
+    }
+    .dep-timeline::after {
+      content: ''; position: absolute;
+      left: 50%; transform: translateX(-50%);
+      top: 38px; bottom: -1px;
+      width: 2px; background: #f0f4f0;
+    }
+    .dep-item:last-child .dep-timeline::after { display: none; }
+
+    .time-bubble {
+      background: #f0fdf4; border: 2px solid #bbf7d0;
+      border-radius: 10px; padding: 6px 10px;
+      text-align: center; min-width: 54px;
+      position: relative; z-index: 1;
+    }
+    .time-bubble .adv {
+      font-size: 1.08rem; font-weight: 800; color: #0f2d1e;
+      line-height: 1.1;
+    }
+    .time-bubble .est {
+      font-size: .72rem; font-weight: 700; color: #dc2626;
+      margin-top: 1px;
+    }
+    .dep-item.canceled .time-bubble { background: #fef2f2; border-color: #fecaca; }
+    .dep-item.delayed:not(.canceled) .time-bubble { background: #fefce8; border-color: #fde68a; }
+
+    /* Content */
+    .dep-content {
+      flex: 1; padding: 14px 0 14px 14px;
+      display: flex; flex-direction: column; justify-content: center; gap: 4px;
+    }
+    .dep-dest {
+      font-size: .98rem; font-weight: 700; color: #111827;
+    }
+    .dep-meta {
+      font-size: .76rem; color: #9ca3af;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .dep-meta .dot { width: 3px; height: 3px; background: #d1d5db; border-radius: 50%; }
+
+    /* Badge */
+    .dep-badge-wrap {
+      display: flex; align-items: center; padding: 14px 0 14px 10px;
+    }
+    .dep-badge {
+      font-size: .70rem; font-weight: 700; padding: 4px 10px;
+      border-radius: 20px; white-space: nowrap;
+    }
+    .badge-ok       { background: #f0fdf4; color: #15803d; }
+    .badge-delayed  { background: #fefce8; color: #92400e; }
+    .badge-canceled { background: #fef2f2; color: #dc2626; }
+
+    /* Empty */
+    .empty {
+      padding: 40px 24px; text-align: center;
+    }
+    .empty-icon { font-size: 2.5rem; margin-bottom: 12px; }
+    .empty-title { font-size: 1rem; font-weight: 700; color: #374151; margin-bottom: 6px; }
+    .empty-sub   { font-size: .85rem; color: #9ca3af; }
+
+    /* ── Retur-sektion ── */
+    .return-section { margin-top: 16px; }
+    .return-header {
+      background: linear-gradient(135deg, #1a3a5c 0%, #1e4d8c 55%, #2563eb 100%);
+      border-radius: 20px 20px 0 0;
+      padding: 18px 24px 22px;
+      position: relative; overflow: hidden;
+    }
+    .return-header::before { content:''; position:absolute; top:-30px; right:-30px;
+      width:120px; height:120px; background:rgba(255,255,255,.05);
+      border-radius:50%; pointer-events:none; }
+    .return-label {
+      font-size: .72rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .09em; color: rgba(255,255,255,.60); margin-bottom: 8px;
+    }
+    .return-route {
+      display: flex; align-items: center; gap: 10px;
+    }
+    .return-station {
+      font-size: 1.1rem; font-weight: 800; color: #fff;
+    }
+    .return-dep-list { border-radius: 0 0 20px 20px; }
+    .return-dep-list .time-bubble {
+      background: #eff6ff; border-color: #bfdbfe;
+    }
+    .return-dep-list .list-header { color: #1e4d8c; }
+    .return-dep-list .list-header-dot { background: #1e4d8c; }
   </style>
 </head>
 <body>
 <div class="wrap">
 
-  <!-- Utresa -->
+  <!-- ── Header ── -->
   <div class="header">
     <a href="/" class="back-btn">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
            stroke-width="2.5" stroke-linecap="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
       Ny sökning
     </a>
-    <div class="route" th:text="${fromName} + ' → ' + ${toName}"></div>
-    <div class="route-date" th:text="'Avresa ' + ${date}"></div>
+    <div class="route-box">
+      <div class="route-stations">
+        <span class="station-name" th:text="${fromName}"></span>
+        <span class="route-arrow">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </span>
+        <span class="station-name" th:text="${toName}"></span>
+      </div>
+      <div class="route-meta">
+        <span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+          <span th:text="${date}"></span>
+        </span>
+        <span>🚂 Tåg</span>
+      </div>
+      <div th:if="${departures != null}" class="count-pill"
+           th:text="${#lists.size(departures)} + ' avgångar'"></div>
+    </div>
   </div>
 
-  <div class="section-card">
-    <div class="section-title">Avgångar</div>
+  <!-- ── Avgångar ── -->
+  <div class="dep-list">
+    <div class="list-header">
+      <div class="list-header-dot"></div>
+      Avgångar
+    </div>
 
     <div th:if="${departures == null or #lists.isEmpty(departures)}" class="empty">
-      Inga avgångar hittades för vald sträcka och datum.
+      <div class="empty-icon">🚉</div>
+      <div class="empty-title">Inga avgångar hittades</div>
+      <div class="empty-sub">Prova ett annat datum eller en annan sträcka.</div>
     </div>
 
     <div th:each="dep : ${departures}"
-         th:classappend="${dep.canceled} ? 'canceled'" class="dep-row">
-      <div class="dep-time">
-        <div class="adv" th:text="${dep.departureTime}"></div>
-        <div th:if="${dep.delayed}" class="est" th:text="${dep.estimatedTime}"></div>
-      </div>
-      <div class="dep-info">
-        <div class="dep-dest" th:text="${dep.destination}"></div>
-        <div class="dep-meta">
-          Tåg <span th:text="${dep.trainId}"></span>
-          <span th:if="${dep.operator != null and !#strings.isEmpty(dep.operator)}">
-            · <span th:text="${dep.operator}"></span>
-          </span>
-        </div>
-      </div>
-      <span th:if="${dep.canceled}"    class="dep-badge badge-canceled">Inställd</span>
-      <span th:if="${dep.delayed and !dep.canceled}" class="dep-badge badge-delayed">Försenad</span>
-      <span th:if="${!dep.delayed and !dep.canceled}" class="dep-badge badge-ok">I tid</span>
-    </div>
-  </div>
-
-  <!-- Returresa -->
-  <div th:if="${returnDepartures != null}" class="return-section">
-    <div class="header" style="border-radius:20px 20px 0 0; margin-top:0;">
-      <div class="route" th:text="${returnFromName} + ' → ' + ${fromName}"></div>
-      <div class="route-date" th:text="'Retur ' + ${returnDate}"></div>
-    </div>
-    <div class="section-card" style="border-radius:0 0 20px 20px;">
-      <div class="section-title">Returavgångar</div>
-
-      <div th:if="${#lists.isEmpty(returnDepartures)}" class="empty">
-        Inga returavgångar hittades.
-      </div>
-
-      <div th:each="dep : ${returnDepartures}"
-           th:classappend="${dep.canceled} ? 'canceled'" class="dep-row">
-        <div class="dep-time">
+         th:class="${dep.canceled ? 'dep-item canceled' : (dep.delayed ? 'dep-item delayed' : 'dep-item')}">
+      <div class="dep-timeline">
+        <div class="time-bubble">
           <div class="adv" th:text="${dep.departureTime}"></div>
           <div th:if="${dep.delayed}" class="est" th:text="${dep.estimatedTime}"></div>
         </div>
-        <div class="dep-info">
-          <div class="dep-dest" th:text="${dep.destination}"></div>
-          <div class="dep-meta">
-            Tåg <span th:text="${dep.trainId}"></span>
-            <span th:if="${dep.operator != null and !#strings.isEmpty(dep.operator)}">
-              · <span th:text="${dep.operator}"></span>
-            </span>
-          </div>
+      </div>
+      <div class="dep-content">
+        <div class="dep-dest" th:text="${dep.destination}"></div>
+        <div class="dep-meta">
+          <span th:text="'Tåg ' + ${dep.trainId}"></span>
+          <span th:if="${dep.operator != null and !#strings.isEmpty(dep.operator)}"
+                th:text="${dep.operator}" class="dot-before">
+            <span class="dot"></span>
+          </span>
         </div>
-        <span th:if="${dep.canceled}"    class="dep-badge badge-canceled">Inställd</span>
+      </div>
+      <div class="dep-badge-wrap">
+        <span th:if="${dep.canceled}"              class="dep-badge badge-canceled">Inställd</span>
         <span th:if="${dep.delayed and !dep.canceled}" class="dep-badge badge-delayed">Försenad</span>
         <span th:if="${!dep.delayed and !dep.canceled}" class="dep-badge badge-ok">I tid</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Returresa ── -->
+  <div th:if="${returnDepartures != null}" class="return-section">
+    <div class="return-header">
+      <div class="return-label">Tur &amp; retur</div>
+      <div class="return-route">
+        <span class="return-station" th:text="${returnFromName}"></span>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.5)"
+             stroke-width="2" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        <span class="return-station" th:text="${fromName}"></span>
+      </div>
+      <div class="route-meta" style="margin-top:6px;">
+        <span style="color:rgba(255,255,255,.55);">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+          <span th:text="${returnDate}"></span>
+        </span>
+      </div>
+    </div>
+
+    <div class="dep-list return-dep-list">
+      <div class="list-header">
+        <div class="list-header-dot"></div>
+        Returavgångar
+      </div>
+
+      <div th:if="${#lists.isEmpty(returnDepartures)}" class="empty">
+        <div class="empty-icon">🚉</div>
+        <div class="empty-title">Inga returavgångar hittades</div>
+        <div class="empty-sub">Prova ett annat returdatum.</div>
+      </div>
+
+      <div th:each="dep : ${returnDepartures}"
+           th:class="${dep.canceled ? 'dep-item canceled' : (dep.delayed ? 'dep-item delayed' : 'dep-item')}">
+        <div class="dep-timeline">
+          <div class="time-bubble">
+            <div class="adv" th:text="${dep.departureTime}"></div>
+            <div th:if="${dep.delayed}" class="est" th:text="${dep.estimatedTime}"></div>
+          </div>
+        </div>
+        <div class="dep-content">
+          <div class="dep-dest" th:text="${dep.destination}"></div>
+          <div class="dep-meta">
+            <span th:text="'Tåg ' + ${dep.trainId}"></span>
+          </div>
+        </div>
+        <div class="dep-badge-wrap">
+          <span th:if="${dep.canceled}"                  class="dep-badge badge-canceled">Inställd</span>
+          <span th:if="${dep.delayed and !dep.canceled}"  class="dep-badge badge-delayed">Försenad</span>
+          <span th:if="${!dep.delayed and !dep.canceled}" class="dep-badge badge-ok">I tid</span>
+        </div>
       </div>
     </div>
   </div>
