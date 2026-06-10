@@ -4,7 +4,7 @@
 // ═══════════════════════════════════════════════════════
 
 // !! Byt ut URL:en nedan mot din Render-tjänsts adress !!
-var MP_BACKEND = 'https://DITT-APP-NAMN.onrender.com';
+var MP_BACKEND = 'https://tag-v9sz.onrender.com';
 
 var mpUserLat = null, mpUserLon = null;
 
