@@ -1,6 +1,6 @@
 # MiniPrisTåget
 
-Tågsökningsapp inbyggd via iframe på [elitrobban.se/minipristaget](https://elitrobban.se/minipristaget/).
+TågBiljett bokningsapp inbyggd via iframe på [elitrobban.se/minipristaget](https://elitrobban.se/minipristaget/).
 
 ## Funktioner
 
