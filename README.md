@@ -6,6 +6,7 @@ Tågsökningsapp med MiniPris-deals inbyggd via iframe på [elitrobban.se/minipr
 
 ### Sökning & avgångar
 - **Avgångar** – riktiga kommande avgångar från Trafikverket Open Data, passerade tåg filtreras bort
+- **Stationsautocomplete** – skriv "Göt" → Göteborg, "Sto" → Stockholm, "Mal" → Malmö. Debounced fetch mot `/api/stations`, tangentbordsnavigation (↑/↓/Enter/Escape)
 - **GPS** – hittar automatiskt närmaste tågstation (hoppar över GPS om från-fältet redan är ifyllt)
 - **Auto-imorgon** – om inga fler tåg kvar idag byter appen automatiskt till morgondagens avgångar med gul notis
 - **Svensk tidszon** – servern kör UTC men all tidslogik använder `Europe/Stockholm`
@@ -85,6 +86,7 @@ backend/
 | Metod | URL | Beskrivning |
 |---|---|---|
 | GET | `/` | Startsida med sökformulär |
+| GET | `/api/stations?q=xxx` | Stationsautocomplete – returnerar upp till 8 matchande stationer (JSON) |
 | GET | `/nearest-station?lat=X&lon=Y` | Närmaste tågstation (JSON) |
 | POST | `/api/search` | Sök avgångar (JSON) – returnerar `autoTomorrow: true` vid auto-datumbyte |
 | POST | `/suggest` | AI-destination via Groq (JSON) – rate limited |

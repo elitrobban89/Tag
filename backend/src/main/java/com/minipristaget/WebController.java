@@ -13,6 +13,7 @@ import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Controller
 public class WebController {
@@ -28,6 +29,31 @@ public class WebController {
         response.setHeader("Expires", "0");
         model.addAttribute("form", new SearchFormRequest());
         return "index";
+    }
+
+    // ── Stationsautocomplete ──────────────────────────────────────
+    @GetMapping("/api/stations")
+    @ResponseBody
+    public ResponseEntity<?> stations(@RequestParam(defaultValue = "") String q) {
+        if (q.length() < 2) return ResponseEntity.ok(List.of());
+        try {
+            String lower = q.toLowerCase();
+            List<Map<String,String>> matches = trafikverketService.getAllStations().stream()
+                .filter(s -> s.getName().toLowerCase().contains(lower))
+                .sorted((a, b) -> {
+                    boolean aStarts = a.getName().toLowerCase().startsWith(lower);
+                    boolean bStarts = b.getName().toLowerCase().startsWith(lower);
+                    if (aStarts && !bStarts) return -1;
+                    if (!aStarts && bStarts) return 1;
+                    return a.getName().compareTo(b.getName());
+                })
+                .limit(8)
+                .map(s -> Map.of("name", s.getName()))
+                .collect(Collectors.toList());
+            return ResponseEntity.ok(matches);
+        } catch (Exception e) {
+            return ResponseEntity.ok(List.of());
+        }
     }
 
     // ── Närmaste station via GPS-koordinater (AJAX) ───────────────
