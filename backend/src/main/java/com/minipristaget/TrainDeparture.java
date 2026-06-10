@@ -17,6 +17,7 @@ public class TrainDeparture {
     private String trainImage;
     private int    travelMinutes;
     private int    transfers;
+    private double co2SavedKg;
 
     @JsonIgnore
     private String destinationSignature;
@@ -56,6 +57,9 @@ public class TrainDeparture {
 
     public int  getTransfers()     { return transfers; }
     public void setTransfers(int v){ this.transfers = v; }
+
+    public double getCo2SavedKg()       { return co2SavedKg; }
+    public void   setCo2SavedKg(double v){ this.co2SavedKg = v; }
 
     public String getDestinationSignature()       { return destinationSignature; }
     public void setDestinationSignature(String v) { this.destinationSignature = v; }
