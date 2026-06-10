@@ -667,6 +667,77 @@
       background:#111827; border:none; border-radius:12px;
       color:#fff; font-weight:700; cursor:pointer; font-size:.88rem;
     }
+
+    /* ── Return trip modal ── */
+    .return-overlay {
+      display:none; position:fixed; inset:0; z-index:1050;
+      background:rgba(7,13,31,.97);
+      align-items:flex-start; justify-content:center;
+      padding:16px; overflow-y:auto;
+    }
+    .return-overlay.open { display:flex; }
+    .return-modal {
+      background:linear-gradient(160deg,rgba(10,20,50,.97),rgba(5,10,30,.99));
+      border:1px solid rgba(139,92,246,.25);
+      border-radius:20px; width:100%; max-width:520px;
+      min-height:50vh;
+      box-shadow:0 20px 60px rgba(0,0,0,.6);
+    }
+    .return-modal-head {
+      display:flex; align-items:center; gap:10px;
+      padding:14px 20px 12px; border-bottom:1px solid rgba(255,255,255,.07);
+    }
+    .return-modal-title {
+      font-size:.88rem; font-weight:800; color:rgba(255,255,255,.5);
+      letter-spacing:.06em; text-transform:uppercase; flex:1;
+    }
+    .return-modal-route {
+      font-size:.78rem; color:rgba(196,181,253,.7); font-weight:600;
+    }
+    .return-modal-body { padding:16px 20px 24px; }
+    .return-outbound-card {
+      background:rgba(255,255,255,.05);
+      border:1px solid rgba(96,165,250,.15);
+      border-radius:12px; padding:12px 14px; margin-bottom:16px;
+      font-size:.78rem; color:rgba(255,255,255,.5);
+    }
+    .return-outbound-label {
+      font-size:.64rem; font-weight:800; letter-spacing:.08em;
+      text-transform:uppercase; color:rgba(255,255,255,.25); margin-bottom:4px;
+    }
+    .return-outbound-info { color:rgba(255,255,255,.75); line-height:1.5; }
+    .return-outbound-info strong { color:#fff; }
+    .return-date-section {
+      margin-bottom:20px;
+    }
+    .return-date-label {
+      display:block; font-size:.76rem; font-weight:700;
+      letter-spacing:.08em; text-transform:uppercase;
+      color:rgba(147,197,253,.85); margin-bottom:8px;
+    }
+    .return-date-input {
+      width:100%; padding:10px 14px;
+      background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.14);
+      border-radius:10px; color:#fff; font-size:.9rem;
+      margin-bottom:12px;
+    }
+    .return-date-input::-webkit-calendar-picker-indicator { filter:invert(1) opacity(.5); }
+    .return-search-btn {
+      width:100%; padding:12px 16px;
+      background:linear-gradient(135deg,rgba(139,92,246,.5),rgba(99,102,241,.6));
+      border:1px solid rgba(167,139,250,.35);
+      color:#fff; font-weight:800; font-size:.88rem;
+      border-radius:12px; cursor:pointer;
+      box-shadow:0 4px 14px rgba(139,92,246,.25);
+      transition:opacity .15s;
+    }
+    .return-search-btn:hover { opacity:.88; }
+    .return-loading {
+      text-align:center; padding:30px; color:rgba(255,255,255,.35); font-size:.85rem;
+    }
+    .return-error {
+      text-align:center; padding:20px; color:rgba(239,68,68,.7); font-size:.82rem;
+    }
   </style>
 </head>
 <body>
@@ -737,6 +808,26 @@
           <button class="swish-done-btn" onclick="closeSwishModal()">Stäng</button>
         </div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Return trip modal ── -->
+<div class="return-overlay" id="return-overlay" onclick="returnOverlayClick(event)">
+  <div class="return-modal" id="return-modal">
+    <div class="return-modal-head">
+      <div class="return-modal-title">↩ Välj återresa</div>
+      <div class="return-modal-route" id="return-modal-route"></div>
+      <button class="seat-modal-close" onclick="closeReturnModal()">✕</button>
+    </div>
+    <div class="return-modal-body">
+      <div id="return-outbound-card" class="return-outbound-card"></div>
+      <div class="return-date-section">
+        <label class="return-date-label">Datum för återresan</label>
+        <input type="date" id="return-modal-date" class="return-date-input">
+        <button class="return-search-btn" onclick="searchReturnTrip()">Sök avgångar →</button>
+      </div>
+      <div id="return-results-wrap"></div>
     </div>
   </div>
 </div>
@@ -1002,7 +1093,11 @@ function formatDuration(minutes) {
 }
 
 // ── Platskarta ────────────────────────────────────────────────────
-var _seatState = { trainId:'', layout:'', wagon:1, selected:'' };
+var _seatState = { trainId:'', layout:'', wagon:1, selected:'',
+                   fromCity:'', selectedClass:'2 klass', outboundDate:'' };
+var _searchFromName = '';
+var _searchToName   = '';
+var _searchDate     = '';
 
 // Tåglayouter: { wagons, classes: [{name, rows:[{num,seats:[]}], dir}] }
 var LAYOUTS = {
@@ -1063,19 +1158,42 @@ function isTaken(trainId, wagon, row, col) {
   return seatHash(trainId, wagon, row, col) % threshold !== 0;
 }
 
-function openSeatModal(trainId, layout, model, depTime, price, destination, trainImage, travelMinutes, priceOriginal, seatsLeft) {
-  _seatState.trainId      = trainId;
-  _seatState.layout       = layout;
-  _seatState.wagon        = 1;
-  _seatState.selected     = '';
-  _seatState.price        = price || '';
-  _seatState.destination  = destination || '';
-  _seatState.model        = model || '';
-  _seatState.depTime      = depTime || '';
-  _seatState.trainImage   = trainImage || '';
-  _seatState.travelMins   = parseInt(travelMinutes, 10) || 0;
-  _seatState.priceOriginal= priceOriginal || '';
-  _seatState.seatsLeft    = parseInt(seatsLeft, 10) || 5;
+function openSeatMapForCard(btn) {
+  var card       = btn.closest('.dep-card');
+  var sel        = card ? card.querySelector('.class-option.selected') : null;
+  var price      = sel ? sel.getAttribute('data-price')      : btn.getAttribute('data-price');
+  var classLabel = sel ? sel.getAttribute('data-class-name') : '2 klass';
+  openSeatModal(
+    btn.getAttribute('data-train-id'),
+    btn.getAttribute('data-layout'),
+    btn.getAttribute('data-model'),
+    btn.getAttribute('data-dep-time'),
+    price,
+    btn.getAttribute('data-destination'),
+    btn.getAttribute('data-train-image'),
+    parseInt(btn.getAttribute('data-travel-minutes'), 10) || 0,
+    parseInt(btn.getAttribute('data-price-original'), 10) || 0,
+    parseInt(btn.getAttribute('data-seats-left'),     10) || 5,
+    classLabel
+  );
+}
+
+function openSeatModal(trainId, layout, model, depTime, price, destination, trainImage, travelMinutes, priceOriginal, seatsLeft, classLabel) {
+  _seatState.trainId       = trainId;
+  _seatState.layout        = layout;
+  _seatState.wagon         = 1;
+  _seatState.selected      = '';
+  _seatState.price         = price || '';
+  _seatState.selectedClass = classLabel || '2 klass';
+  _seatState.destination   = destination || '';
+  _seatState.model         = model || '';
+  _seatState.depTime       = depTime || '';
+  _seatState.trainImage    = trainImage || '';
+  _seatState.travelMins    = parseInt(travelMinutes, 10) || 0;
+  _seatState.priceOriginal = priceOriginal || '';
+  _seatState.seatsLeft     = parseInt(seatsLeft, 10) || 5;
+  _seatState.fromCity      = _searchFromName;
+  _seatState.outboundDate  = _searchDate;
 
   // Render journey card
   var arrTime = calcArrival(depTime, _seatState.travelMins);
@@ -1183,19 +1301,79 @@ function confirmSeat() {
 }
 
 function addReturnTrip() {
-  closeSeatModal();
-  // Scrolla upp till sökformuläret och välj tur & retur
-  var turRetur = document.querySelector('input[value="tur"]');
-  if (turRetur) { turRetur.checked = true; turRetur.dispatchEvent(new Event('change')); }
-  var returnEl = document.getElementById('return-date');
-  if (returnEl) {
-    returnEl.focus();
-    returnEl.scrollIntoView({ behavior:'smooth', block:'center' });
-    returnEl.style.boxShadow = '0 0 0 2px rgba(96,165,250,.7)';
-    setTimeout(function() { returnEl.style.boxShadow = ''; }, 2000);
+  openReturnModal();
+}
+
+function openReturnModal() {
+  var s = _seatState;
+  // Route shown in header: destination → fromCity
+  document.getElementById('return-modal-route').textContent =
+    (s.destination || '') + ' → ' + (s.fromCity || '');
+  // Outbound summary card
+  document.getElementById('return-outbound-card').innerHTML =
+    '<div class="return-outbound-label">Din utresa</div>' +
+    '<div class="return-outbound-info">' +
+      esc(s.fromCity || '') + ' → <strong>' + esc(s.destination || '') + '</strong>' +
+      ' · avg ' + esc(s.depTime || '') +
+      (s.seatLabel ? ' · ' + esc(s.seatLabel) : '') +
+      ' · ' + esc(s.selectedClass || '2 klass') +
+    '</div>';
+  // Default return date: day after outbound
+  var defaultDate = '';
+  if (s.outboundDate) {
+    var d = new Date(s.outboundDate + 'T12:00:00');
+    d.setDate(d.getDate() + 1);
+    defaultDate = d.toISOString().split('T')[0];
   } else {
-    window.scrollTo({ top:0, behavior:'smooth' });
+    var tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    defaultDate = tomorrow.toISOString().split('T')[0];
   }
+  document.getElementById('return-modal-date').value = defaultDate;
+  document.getElementById('return-results-wrap').innerHTML = '';
+  // Close seat modal, open return modal
+  document.getElementById('seat-overlay').classList.remove('open');
+  document.getElementById('return-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeReturnModal() {
+  document.getElementById('return-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function returnOverlayClick(e) {
+  if (e.target === document.getElementById('return-overlay')) closeReturnModal();
+}
+
+function searchReturnTrip() {
+  var s    = _seatState;
+  var date = document.getElementById('return-modal-date').value;
+  if (!date) return;
+  var fromCity = s.destination || '';
+  var toCity   = s.fromCity    || '';
+  var wrap = document.getElementById('return-results-wrap');
+  wrap.innerHTML = '<div class="return-loading">Söker avgångar...</div>';
+  fetch(BACKEND + '/api/search', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ from: fromCity, to: toCity, date: date, tripType: 'enkel', returnDate: '' })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    _searchFromName = data.fromName || fromCity;
+    _searchToName   = data.toName   || toCity;
+    _searchDate     = data.date     || date;
+    var html = '';
+    if (data.autoTomorrow) {
+      html += '<div class="tomorrow-notice">🌙 Inga fler tåg – visar avgångar för nästa dag (' + esc(data.date) + ')</div>';
+    }
+    html += buildDepList(data.departures, (data.fromName || fromCity) + ' → ' + (data.toName || toCity), true);
+    wrap.innerHTML = html;
+  })
+  .catch(function() {
+    wrap.innerHTML = '<div class="return-error">Kunde inte hämta avgångar, försök igen.</div>';
+  });
 }
 
 // ── Swish payment ─────────────────────────────────────────────────
@@ -1205,8 +1383,8 @@ function openSwishModal() {
   document.getElementById('swish-journey-box').innerHTML =
     '<strong>' + esc(s.destination || 'Destination') + '</strong><br>' +
     'Tåg ' + esc(s.trainId) + ' · ' + esc(s.model) + ' · avg ' + esc(s.depTime) + '<br>' +
-    esc(s.seatLabel || '') + ' · 2 klass MiniPris';
-  // Amount — extract number from "från 179 kr"
+    esc(s.seatLabel || '') + ' · ' + esc(s.selectedClass || '2 klass') + ' MiniPris';
+  // Amount — extract number from e.g. "från 259 kr"
   var amtRaw = s.price || '';
   var amtNum = amtRaw.replace(/[^0-9]/g,'');
   document.getElementById('swish-amount-val').textContent = (amtNum || '—') + ' kr';
@@ -1381,7 +1559,7 @@ function buildDepList(deps, title, isReturn) {
 
       // 2 klass
       var p2 = d.price || '';
-      html +=   '<div class="class-option selected" onclick="selectClassOption(this)">';
+      html +=   '<div class="class-option selected" data-price="' + esc(p2) + '" data-class-name="2 klass" onclick="selectClassOption(this)">';
       html +=     '<div class="class-opt-top">';
       html +=       '<span class="class-badge cls-2">2 klass</span>';
       html +=       '<span class="class-price-lbl">' + esc(p2) + '</span>';
@@ -1391,7 +1569,7 @@ function buildDepList(deps, title, isReturn) {
 
       // 2 klass Lugn
       var pLugn = d.priceLugn || '';
-      html +=   '<div class="class-option" onclick="selectClassOption(this)">';
+      html +=   '<div class="class-option" data-price="' + esc(pLugn) + '" data-class-name="2 klass Lugn" onclick="selectClassOption(this)">';
       html +=     '<div class="class-opt-top">';
       html +=       '<span class="class-badge cls-lugn">2 klass Lugn</span>';
       html +=       '<span class="class-price-lbl">' + esc(pLugn) + '</span>';
@@ -1401,7 +1579,7 @@ function buildDepList(deps, title, isReturn) {
 
       // 1 klass
       var p1 = d.price1klass || '';
-      html +=   '<div class="class-option" onclick="selectClassOption(this)">';
+      html +=   '<div class="class-option" data-price="' + esc(p1) + '" data-class-name="1 klass" onclick="selectClassOption(this)">';
       html +=     '<div class="class-opt-top">';
       html +=       '<span class="class-badge cls-1">1 klass</span>';
       html +=       '<span class="class-price-lbl">' + esc(p1) + '</span>';
@@ -1420,7 +1598,20 @@ function buildDepList(deps, title, isReturn) {
         var origEsc    = String(d.priceOriginal || '');
         var slEsc      = String(d.seatsLeft || 5);
         var minsEsc    = String(d.travelMinutes || 0);
-        html += '<button class="open-seatmap-btn" data-trainid="' + trainIdEsc + '" onclick="openSeatModal(\'' + trainIdEsc + '\',\'' + layoutEsc + '\',\'' + modelEsc + '\',\'' + esc(d.departureTime||'') + '\',\'' + priceEsc + '\',\'' + destEsc + '\',\'' + imgEsc + '\',' + minsEsc + ',' + origEsc + ',' + slEsc + ')">🪑 Välj sittplats</button>';
+        var dtEsc      = esc(d.departureTime || '');
+        html += '<button class="open-seatmap-btn"' +
+          ' data-trainid="'        + trainIdEsc + '"' +
+          ' data-train-id="'       + trainIdEsc + '"' +
+          ' data-layout="'         + layoutEsc  + '"' +
+          ' data-model="'          + modelEsc   + '"' +
+          ' data-dep-time="'       + dtEsc      + '"' +
+          ' data-price="'          + priceEsc   + '"' +
+          ' data-destination="'    + destEsc    + '"' +
+          ' data-train-image="'    + imgEsc     + '"' +
+          ' data-travel-minutes="' + minsEsc    + '"' +
+          ' data-price-original="' + origEsc    + '"' +
+          ' data-seats-left="'     + slEsc      + '"' +
+          ' onclick="openSeatMapForCard(this)">🪑 Välj sittplats</button>';
       } else {
         html += '<div class="no-seatmap-note">Öppen placering – välj valfri ledig plats ombord</div>';
       }
@@ -1437,6 +1628,9 @@ function buildDepList(deps, title, isReturn) {
 
 // ── Visa resultat ─────────────────────────────────────────────────
 function renderResults(data) {
+  _searchFromName = data.fromName || '';
+  _searchToName   = data.toName   || '';
+  _searchDate     = data.date     || '';
   var n = data.departures ? data.departures.length : 0;
   var html = '';
 
