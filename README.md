@@ -100,7 +100,7 @@ Lägg till ett **Anpassad HTML**-block i Gutenberg med:
 <iframe
   src="https://tag-k5we.onrender.com"
   width="100%"
-  height="850"
+  height="1100"
   frameborder="0"
   allow="geolocation"
   style="border-radius:20px; border:none;">
