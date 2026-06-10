@@ -3,7 +3,6 @@
 //  Klistra in detta i WPCode → JavaScript Snippet
 // ═══════════════════════════════════════════════════════
 
-// !! Byt ut URL:en nedan mot din Render-tjänsts adress !!
 var MP_BACKEND = 'https://tag-v9sz.onrender.com';
 
 var mpUserLat = null, mpUserLon = null;
@@ -38,12 +37,12 @@ function mpFetchGPS() {
         if (fromEl && city) fromEl.value = city;
         mpSetHint('', '');
         if (btn) { btn.disabled = false; btn.classList.remove('fetching'); }
-        if (lbl) lbl.textContent = 'Hämta GPS';
+        if (lbl) lbl.textContent = 'GPS';
       })
       .catch(function() {
         mpSetHint('Kunde inte hämta ortnamn – ange startort manuellt.', 'error');
         if (btn) { btn.disabled = false; btn.classList.remove('fetching'); }
-        if (lbl) lbl.textContent = 'Försök igen';
+        if (lbl) lbl.textContent = 'GPS';
       });
     },
     function(err) {
@@ -54,7 +53,7 @@ function mpFetchGPS() {
       };
       mpSetHint(msgs[err.code] || 'GPS-fel (kod ' + err.code + ').', 'error');
       if (btn) { btn.disabled = false; btn.classList.remove('fetching'); }
-      if (lbl) lbl.textContent = 'Försök igen';
+      if (lbl) lbl.textContent = 'GPS';
     },
     { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 }
   );
@@ -74,8 +73,17 @@ function mpOnSearch() {
 }
 
 function mpOpenBooking(from, till) {
-  var url = 'https://www.vy.se/en/train?from=' +
-            encodeURIComponent(from) + '&to=' + encodeURIComponent(till);
+  var dateOut = document.getElementById('mp-date-out');
+  var dateRet = document.getElementById('mp-date-ret');
+  var isRetur = document.getElementById('mp-tur') &&
+                document.getElementById('mp-tur').classList.contains('active');
+
+  var url = 'https://www.vy.se/en/train' +
+    '?from='    + encodeURIComponent(from) +
+    '&to='      + encodeURIComponent(till) +
+    (dateOut && dateOut.value ? '&date=' + dateOut.value : '') +
+    (isRetur && dateRet && dateRet.value ? '&returnDate=' + dateRet.value : '');
+
   window.open(url, '_blank');
 }
 
@@ -83,32 +91,24 @@ function mpOpenBooking(from, till) {
 function mpShowCategoryPicker() {
   var sec = document.getElementById('mp-cat-section');
   if (sec) sec.classList.add('show');
-
-  var sug = document.getElementById('mp-suggestions');
-  if (sug) { sug.innerHTML = ''; sug.classList.remove('show'); }
-
-  ['storstad', 'natur', 'strand'].forEach(function(c) {
-    var b = document.getElementById('mp-cat-' + c);
-    if (b) b.classList.remove('active');
-  });
+  mpSetTillHint('', '');
 }
 
-// ── AI-förslag från Groq ──────────────────────────────
+// ── AI fyller i Till-fältet ───────────────────────────
 function mpGetSuggestions(category) {
   var fromEl = document.getElementById('mp-from');
-  var sugEl  = document.getElementById('mp-suggestions');
+  var tillEl = document.getElementById('mp-till');
   var from   = fromEl ? fromEl.value.trim() : '';
 
-  ['storstad', 'natur', 'strand'].forEach(function(c) {
+  // Markera aktiv knapp + visa laddning
+  ['storstad', 'natur', 'havet'].forEach(function(c) {
     var b = document.getElementById('mp-cat-' + c);
-    if (b) b.classList.remove('active');
+    if (b) { b.classList.remove('active'); b.disabled = false; }
   });
   var activeBtn = document.getElementById('mp-cat-' + category.toLowerCase());
-  if (activeBtn) activeBtn.classList.add('active');
+  if (activeBtn) { activeBtn.classList.add('active'); activeBtn.disabled = true; }
 
-  sugEl.innerHTML = '<p class="mp-loading">✨ Söker AI-förslag...</p>';
-  sugEl.classList.add('show');
-  sugEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  mpSetTillHint('✨ Hämtar AI-förslag...', 'loading');
 
   fetch(MP_BACKEND + '/suggest', {
     method: 'POST',
@@ -117,50 +117,33 @@ function mpGetSuggestions(category) {
   })
   .then(function(r) { return r.json(); })
   .then(function(data) {
-    if (!data.suggestions || !data.suggestions.length) {
-      sugEl.innerHTML = '<p class="mp-error-msg">Inga förslag hittades – försök igen.</p>';
-      return;
+    if (activeBtn) activeBtn.disabled = false;
+
+    if (data.destination && tillEl) {
+      tillEl.value = data.destination;
+      tillEl.focus();
+      mpSetTillHint('✅ AI föreslog "' + data.destination + '" – klicka Sök eller ändra manuellt.', 'loading');
+    } else {
+      mpSetTillHint('Inget förslag hittades – försök igen.', 'error');
+      if (activeBtn) activeBtn.classList.remove('active');
     }
-    var html = '<div class="mp-suggestion-cards">';
-    data.suggestions.forEach(function(s) {
-      var safe = s.namn.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-      html +=
-        '<div class="mp-sug-card">' +
-          '<div class="mp-sug-name">' + s.namn + '</div>' +
-          '<div class="mp-sug-desc">'  + s.beskrivning + '</div>' +
-          '<div class="mp-sug-footer">' +
-            '<span class="mp-sug-time">🚂 ' + s.restid + '</span>' +
-            '<button class="mp-sug-pick" onclick="mpPickDestination(\'' + safe + '\')">' +
-              'Välj destination' +
-            '</button>' +
-          '</div>' +
-        '</div>';
-    });
-    html += '</div>';
-    sugEl.innerHTML = html;
   })
   .catch(function() {
-    sugEl.innerHTML =
-      '<p class="mp-error-msg">Kunde inte hämta förslag – kontrollera anslutningen.</p>';
+    if (activeBtn) { activeBtn.disabled = false; activeBtn.classList.remove('active'); }
+    mpSetTillHint('Kunde inte hämta förslag – kontrollera anslutningen.', 'error');
   });
-}
-
-function mpPickDestination(destination) {
-  var tillEl = document.getElementById('mp-till');
-  if (tillEl) tillEl.value = destination;
-
-  document.getElementById('mp-cat-section').classList.remove('show');
-  var sugEl = document.getElementById('mp-suggestions');
-  sugEl.innerHTML = '';
-  sugEl.classList.remove('show');
-
-  var fromEl = document.getElementById('mp-from');
-  mpOpenBooking(fromEl ? fromEl.value.trim() : '', destination);
 }
 
 // ── Hjälpfunktioner ───────────────────────────────────
 function mpSetHint(msg, type) {
   var el = document.getElementById('mp-hint');
+  if (!el) return;
+  el.textContent = msg;
+  el.className   = 'mp-hint' + (type ? ' ' + type : '');
+}
+
+function mpSetTillHint(msg, type) {
+  var el = document.getElementById('mp-till-hint');
   if (!el) return;
   el.textContent = msg;
   el.className   = 'mp-hint' + (type ? ' ' + type : '');
@@ -174,11 +157,33 @@ function mpInit() {
   var searchBtn = document.getElementById('mp-search-btn');
   if (searchBtn) searchBtn.addEventListener('click', mpOnSearch);
 
-  var cats = { 'mp-cat-storstad': 'Storstad', 'mp-cat-natur': 'Natur', 'mp-cat-strand': 'Strand' };
+  var cats = { 'mp-cat-storstad': 'Storstad', 'mp-cat-natur': 'Natur', 'mp-cat-havet': 'Havet' };
   Object.keys(cats).forEach(function(id) {
     var btn = document.getElementById(id);
     if (btn) btn.addEventListener('click', function() { mpGetSuggestions(cats[id]); });
   });
+
+  // Enkelresa / tur-och-retur toggle
+  var enkelBtn = document.getElementById('mp-enkel');
+  var turBtn   = document.getElementById('mp-tur');
+  var retWrap  = document.getElementById('mp-return-wrap');
+  if (enkelBtn && turBtn && retWrap) {
+    enkelBtn.addEventListener('click', function() {
+      enkelBtn.classList.add('active');
+      turBtn.classList.remove('active');
+      retWrap.classList.remove('show');
+    });
+    turBtn.addEventListener('click', function() {
+      turBtn.classList.add('active');
+      enkelBtn.classList.remove('active');
+      retWrap.classList.add('show');
+    });
+  }
+
+  // Sätt standarddatum till idag
+  var today = new Date().toISOString().split('T')[0];
+  var dateOut = document.getElementById('mp-date-out');
+  if (dateOut && !dateOut.value) dateOut.value = today;
 
   // GPS startar automatiskt vid sidladdning
   mpFetchGPS();
