@@ -1,0 +1,24 @@
+#!/bin/sh
+# Maven wrapper – minimal version for Render deployment
+set -e
+
+BASEDIR=$(dirname "$(readlink -f "$0")" 2>/dev/null || dirname "$(cd "$(dirname "$0")"; pwd)/$(basename "$0")")
+WRAPPER_JAR="$BASEDIR/.mvn/wrapper/maven-wrapper.jar"
+WRAPPER_PROPS="$BASEDIR/.mvn/wrapper/maven-wrapper.properties"
+
+if [ ! -f "$WRAPPER_JAR" ]; then
+  WRAPPER_URL=$(grep "wrapperUrl" "$WRAPPER_PROPS" | cut -d= -f2)
+  echo "Downloading Maven wrapper jar..."
+  if command -v curl > /dev/null; then
+    curl -fsSL -o "$WRAPPER_JAR" "$WRAPPER_URL"
+  elif command -v wget > /dev/null; then
+    wget -q -O "$WRAPPER_JAR" "$WRAPPER_URL"
+  else
+    echo "ERROR: curl or wget required" >&2; exit 1
+  fi
+fi
+
+exec java \
+  -classpath "$WRAPPER_JAR" \
+  "-Dmaven.multiModuleProjectDirectory=$BASEDIR" \
+  org.apache.maven.wrapper.MavenWrapperMain "$@"
