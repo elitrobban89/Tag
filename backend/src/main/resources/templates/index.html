@@ -1249,7 +1249,34 @@ function initiateSwish() {
   setTimeout(function() {
     document.getElementById('swish-state-waiting').style.display = 'none';
     document.getElementById('swish-state-success').style.display = '';
+    decrementSeatsDisplay(_seatState.trainId);
   }, 3000);
+}
+
+function decrementSeatsDisplay(trainId) {
+  var badges = document.querySelectorAll('.seats-badge[data-trainid="' + trainId + '"]');
+  badges.forEach(function(badge) {
+    var n = parseInt(badge.getAttribute('data-seats'), 10) - 1;
+    n = Math.max(0, n);
+    badge.setAttribute('data-seats', n);
+    if (n === 0) {
+      badge.className = 'seats-badge seats-1';
+      badge.textContent = '🔴 Slutsåld!';
+      // Disable Välj sittplats button for this train
+      var btns = document.querySelectorAll('.open-seatmap-btn[data-trainid="' + trainId + '"]');
+      btns.forEach(function(b) {
+        b.disabled = true;
+        b.textContent = '🔴 Slutsåld';
+        b.style.opacity = '.4';
+        b.style.cursor = 'not-allowed';
+      });
+    } else {
+      badge.className = 'seats-badge ' + (n === 1 ? 'seats-1' : n <= 3 ? 'seats-2-3' : 'seats-4-5');
+      badge.textContent = n === 1 ? '🔥 1 plats kvar!' : n + ' platser kvar';
+    }
+    // Also update seatsLeft in state for next seat map render
+    _seatState.seatsLeft = n;
+  });
 }
 
 // ── Reseklass expand/select ───────────────────────────────────────
@@ -1332,7 +1359,7 @@ function buildDepList(deps, title, isReturn) {
       if (d.seatsLeft > 0) {
         var seatsCls = d.seatsLeft === 1 ? 'seats-1' : d.seatsLeft <= 3 ? 'seats-2-3' : 'seats-4-5';
         var seatsText = d.seatsLeft === 1 ? '🔥 1 plats kvar!' : d.seatsLeft + ' platser kvar';
-        html += '<div class="seats-badge ' + seatsCls + '">' + seatsText + '</div>';
+        html += '<div class="seats-badge ' + seatsCls + '" data-trainid="' + esc(d.trainId||'') + '" data-seats="' + d.seatsLeft + '">' + seatsText + '</div>';
       }
       if (d.co2SavedKg > 0) {
         var co2 = d.co2SavedKg >= 1
@@ -1393,7 +1420,7 @@ function buildDepList(deps, title, isReturn) {
         var origEsc    = String(d.priceOriginal || '');
         var slEsc      = String(d.seatsLeft || 5);
         var minsEsc    = String(d.travelMinutes || 0);
-        html += '<button class="open-seatmap-btn" onclick="openSeatModal(\'' + trainIdEsc + '\',\'' + layoutEsc + '\',\'' + modelEsc + '\',\'' + esc(d.departureTime||'') + '\',\'' + priceEsc + '\',\'' + destEsc + '\',\'' + imgEsc + '\',' + minsEsc + ',' + origEsc + ',' + slEsc + ')">🪑 Välj sittplats</button>';
+        html += '<button class="open-seatmap-btn" data-trainid="' + trainIdEsc + '" onclick="openSeatModal(\'' + trainIdEsc + '\',\'' + layoutEsc + '\',\'' + modelEsc + '\',\'' + esc(d.departureTime||'') + '\',\'' + priceEsc + '\',\'' + destEsc + '\',\'' + imgEsc + '\',' + minsEsc + ',' + origEsc + ',' + slEsc + ')">🪑 Välj sittplats</button>';
       } else {
         html += '<div class="no-seatmap-note">Öppen placering – välj valfri ledig plats ombord</div>';
       }
