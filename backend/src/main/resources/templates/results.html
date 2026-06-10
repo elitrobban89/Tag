@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="sv" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MiniPrisTåget – Avgångar</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+           background: #f3f4f6; min-height: 100vh; padding: 24px 16px 48px; }
+
+    .wrap { max-width: 520px; margin: 0 auto; }
+
+    .header {
+      background: linear-gradient(135deg, #0f2d1e 0%, #1b4332 55%, #2d6a4f 100%);
+      border-radius: 20px 20px 0 0;
+      padding: 26px 24px 22px;
+      position: relative; overflow: hidden;
+    }
+    .header::before { content:''; position:absolute; top:-40px; right:-40px; width:140px; height:140px;
+                       background:rgba(255,255,255,.05); border-radius:50%; pointer-events:none; }
+    .back-btn { display:inline-flex; align-items:center; gap:5px; color:rgba(255,255,255,.75);
+                font-size:.82rem; font-weight:600; text-decoration:none; margin-bottom:12px;
+                transition:color .15s; position:relative; }
+    .back-btn:hover { color:#fff; }
+    .route { font-size:1.3rem; font-weight:800; color:#fff; margin-bottom:4px; position:relative; }
+    .route-date { font-size:.83rem; color:rgba(255,255,255,.65); position:relative; }
+
+    .section-card { background:#fff; border-radius:0 0 20px 20px;
+                    box-shadow:0 8px 32px rgba(0,0,0,.10); overflow:hidden; }
+    .section-title { padding:16px 20px 12px; font-size:.74rem; font-weight:700;
+                     text-transform:uppercase; letter-spacing:.08em; color:#1b4332;
+                     border-bottom:1px solid #f3f4f6; }
+
+    .dep-row { display:flex; align-items:center; padding:14px 20px;
+               border-bottom:1px solid #f9fafb; gap:14px; }
+    .dep-row:last-child { border-bottom:none; }
+    .dep-row.canceled { opacity:.5; }
+
+    .dep-time { min-width:48px; }
+    .dep-time .adv { font-size:1.05rem; font-weight:800; color:#111827; }
+    .dep-time .est { font-size:.78rem; color:#dc2626; font-weight:600; margin-top:1px; }
+
+    .dep-info { flex:1; }
+    .dep-dest { font-size:.95rem; font-weight:700; color:#111827; margin-bottom:2px; }
+    .dep-meta { font-size:.77rem; color:#6b7280; }
+
+    .dep-badge { font-size:.72rem; font-weight:700; padding:3px 9px; border-radius:20px; }
+    .badge-ok       { background:#f0fdf4; color:#15803d; }
+    .badge-delayed  { background:#fef9c3; color:#854d0e; }
+    .badge-canceled { background:#fef2f2; color:#dc2626; }
+
+    .empty { padding:32px 20px; text-align:center; color:#9ca3af; font-size:.9rem; }
+
+    .return-section { margin-top:14px; }
+    .return-section .section-card { border-radius:20px; }
+    .return-section .header { border-radius:20px 20px 0 0; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Utresa -->
+  <div class="header">
+    <a href="/" class="back-btn">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2.5" stroke-linecap="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+      Ny sökning
+    </a>
+    <div class="route" th:text="${fromName} + ' → ' + ${toName}"></div>
+    <div class="route-date" th:text="'Avresa ' + ${date}"></div>
+  </div>
+
+  <div class="section-card">
+    <div class="section-title">Avgångar</div>
+
+    <div th:if="${departures == null or #lists.isEmpty(departures)}" class="empty">
+      Inga avgångar hittades för vald sträcka och datum.
+    </div>
+
+    <div th:each="dep : ${departures}"
+         th:classappend="${dep.canceled} ? 'canceled'" class="dep-row">
+      <div class="dep-time">
+        <div class="adv" th:text="${dep.departureTime}"></div>
+        <div th:if="${dep.delayed}" class="est" th:text="${dep.estimatedTime}"></div>
+      </div>
+      <div class="dep-info">
+        <div class="dep-dest" th:text="${dep.destination}"></div>
+        <div class="dep-meta">
+          Tåg <span th:text="${dep.trainId}"></span>
+          <span th:if="${dep.operator != null and !#strings.isEmpty(dep.operator)}">
+            · <span th:text="${dep.operator}"></span>
+          </span>
+        </div>
+      </div>
+      <span th:if="${dep.canceled}"    class="dep-badge badge-canceled">Inställd</span>
+      <span th:if="${dep.delayed and !dep.canceled}" class="dep-badge badge-delayed">Försenad</span>
+      <span th:if="${!dep.delayed and !dep.canceled}" class="dep-badge badge-ok">I tid</span>
+    </div>
+  </div>
+
+  <!-- Returresa -->
+  <div th:if="${returnDepartures != null}" class="return-section">
+    <div class="header" style="border-radius:20px 20px 0 0; margin-top:0;">
+      <div class="route" th:text="${returnFromName} + ' → ' + ${fromName}"></div>
+      <div class="route-date" th:text="'Retur ' + ${returnDate}"></div>
+    </div>
+    <div class="section-card" style="border-radius:0 0 20px 20px;">
+      <div class="section-title">Returavgångar</div>
+
+      <div th:if="${#lists.isEmpty(returnDepartures)}" class="empty">
+        Inga returavgångar hittades.
+      </div>
+
+      <div th:each="dep : ${returnDepartures}"
+           th:classappend="${dep.canceled} ? 'canceled'" class="dep-row">
+        <div class="dep-time">
+          <div class="adv" th:text="${dep.departureTime}"></div>
+          <div th:if="${dep.delayed}" class="est" th:text="${dep.estimatedTime}"></div>
+        </div>
+        <div class="dep-info">
+          <div class="dep-dest" th:text="${dep.destination}"></div>
+          <div class="dep-meta">
+            Tåg <span th:text="${dep.trainId}"></span>
+            <span th:if="${dep.operator != null and !#strings.isEmpty(dep.operator)}">
+              · <span th:text="${dep.operator}"></span>
+            </span>
+          </div>
+        </div>
+        <span th:if="${dep.canceled}"    class="dep-badge badge-canceled">Inställd</span>
+        <span th:if="${dep.delayed and !dep.canceled}" class="dep-badge badge-delayed">Försenad</span>
+        <span th:if="${!dep.delayed and !dep.canceled}" class="dep-badge badge-ok">I tid</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
