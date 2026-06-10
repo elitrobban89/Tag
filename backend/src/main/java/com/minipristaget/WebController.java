@@ -6,6 +6,8 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.servlet.http.HttpServletResponse;
+
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -19,7 +21,10 @@ public class WebController {
 
     // ── Startsida ─────────────────────────────────────────────────
     @GetMapping("/")
-    public String index(Model model) {
+    public String index(Model model, HttpServletResponse response) {
+        response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+        response.setHeader("Pragma", "no-cache");
+        response.setHeader("Expires", "0");
         model.addAttribute("form", new SearchFormRequest());
         return "index";
     }
