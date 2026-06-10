@@ -296,7 +296,7 @@
         </div>
       </div>
 
-      <button type="submit" id="search-btn" class="search-btn">🔍 Sök tåg</button>
+      <button type="submit" id="search-btn" class="search-btn">🔍 Sök resa</button>
 
       <!-- AI-kategorier -->
       <div id="cat-section" class="cat-section">
@@ -452,7 +452,7 @@ function doSearch() {
   .then(function(r) { return r.json(); })
   .then(function(data) {
     btn.disabled = false;
-    btn.innerHTML = '🔍 Sök tåg';
+    btn.innerHTML = '🔍 Sök resa';
     if (data.error) {
       showFormError(data.error);
     } else {
@@ -461,7 +461,7 @@ function doSearch() {
   })
   .catch(function() {
     btn.disabled = false;
-    btn.innerHTML = '🔍 Sök tåg';
+    btn.innerHTML = '🔍 Sök resa';
     showFormError('Kunde inte söka avgångar. Kontrollera att du har angett stationer korrekt.');
   });
 }
