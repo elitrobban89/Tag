@@ -63,6 +63,86 @@
                  letter-spacing:-.02em; margin-bottom:5px; position:relative;
                  text-shadow: 0 0 30px rgba(96,165,250,.6); }
     .header p  { font-size:.85rem; color:rgba(255,255,255,.55); position:relative; }
+    .bookings-btn {
+      position:relative; display:inline-flex; align-items:center; gap:6px;
+      margin-top:12px; padding:7px 16px;
+      background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.2);
+      border-radius:20px; color:#fff; font-size:.78rem; font-weight:700;
+      cursor:pointer; transition:background .15s; letter-spacing:.02em;
+    }
+    .bookings-btn:hover { background:rgba(255,255,255,.18); }
+    .bookings-badge {
+      display:none; align-items:center; justify-content:center;
+      background:#ef4444; color:#fff; font-size:.62rem; font-weight:800;
+      width:17px; height:17px; border-radius:50%;
+    }
+    .bookings-badge.show { display:inline-flex; }
+
+    /* ── Bookings modal ── */
+    .bookings-overlay {
+      display:none; position:fixed; inset:0; z-index:1300;
+      background:rgba(7,13,31,.97);
+      align-items:flex-start; justify-content:center;
+      padding:16px; overflow-y:auto;
+    }
+    .bookings-overlay.open { display:flex; }
+    .bookings-modal {
+      background:linear-gradient(160deg,rgba(10,20,50,.97),rgba(5,10,30,.99));
+      border:1px solid rgba(96,165,250,.25);
+      border-radius:20px; width:100%; max-width:520px;
+      box-shadow:0 20px 60px rgba(0,0,0,.6);
+    }
+    .bookings-modal-head {
+      display:flex; align-items:center; gap:10px;
+      padding:14px 20px 12px; border-bottom:1px solid rgba(255,255,255,.07);
+    }
+    .bookings-modal-title {
+      font-size:.88rem; font-weight:800; color:rgba(255,255,255,.5);
+      letter-spacing:.06em; text-transform:uppercase; flex:1;
+    }
+    .bookings-modal-body { padding:16px 20px 24px; }
+    .booking-card {
+      background:rgba(255,255,255,.05);
+      border:1px solid rgba(96,165,250,.18);
+      border-radius:14px; padding:14px 16px; margin-bottom:12px;
+    }
+    .booking-card-top {
+      display:flex; align-items:flex-start; justify-content:space-between;
+      margin-bottom:8px;
+    }
+    .booking-ref {
+      font-size:.7rem; font-weight:800; color:#93c5fd;
+      letter-spacing:.05em;
+    }
+    .booking-class-badge {
+      font-size:.65rem; font-weight:700; padding:2px 8px;
+      background:rgba(59,130,246,.2); border:1px solid rgba(96,165,250,.3);
+      border-radius:20px; color:#93c5fd;
+    }
+    .booking-route {
+      font-size:1rem; font-weight:800; color:#fff; margin-bottom:4px;
+    }
+    .booking-meta {
+      font-size:.73rem; color:rgba(255,255,255,.4); line-height:1.6;
+    }
+    .booking-price-row {
+      display:flex; align-items:center; justify-content:space-between;
+      margin-top:10px; padding-top:10px;
+      border-top:1px solid rgba(255,255,255,.06);
+    }
+    .booking-seat { font-size:.72rem; color:rgba(255,255,255,.5); }
+    .booking-price { font-size:1rem; font-weight:800; color:#fff; }
+    .bookings-empty {
+      text-align:center; padding:40px 20px;
+      color:rgba(255,255,255,.25); font-size:.85rem;
+    }
+    .bookings-empty-icon { font-size:2.5rem; margin-bottom:10px; }
+    .bookings-reset-notice {
+      text-align:center; padding:14px;
+      background:rgba(239,68,68,.1); border:1px solid rgba(239,68,68,.2);
+      border-radius:10px; color:rgba(239,68,68,.8);
+      font-size:.78rem; margin-bottom:12px;
+    }
 
     /* ── Search card ── */
     .card {
@@ -812,6 +892,17 @@
   </div>
 </div>
 
+<!-- ── Bookings modal ── -->
+<div class="bookings-overlay" id="bookings-overlay" onclick="bookingsOverlayClick(event)">
+  <div class="bookings-modal">
+    <div class="bookings-modal-head">
+      <div class="bookings-modal-title">🎫 Mina bokningar</div>
+      <button class="seat-modal-close" onclick="closeBookingsModal()">✕</button>
+    </div>
+    <div class="bookings-modal-body" id="bookings-modal-body"></div>
+  </div>
+</div>
+
 <!-- ── Return trip modal ── -->
 <div class="return-overlay" id="return-overlay" onclick="returnOverlayClick(event)">
   <div class="return-modal" id="return-modal">
@@ -839,6 +930,10 @@
     <div class="header-icon"><img src="/images/logo.png" alt="MiniPrisTåget"></div>
     <h1>MiniPrisTåget</h1>
     <p>Sök tågresor med riktiga avgångstider</p>
+    <button class="bookings-btn" onclick="openBookingsModal()">
+      🎫 Mina bokningar
+      <span class="bookings-badge" id="bookings-badge"></span>
+    </button>
   </div>
 
   <!-- ── Search form ── -->
@@ -1098,6 +1193,79 @@ var _seatState = { trainId:'', layout:'', wagon:1, selected:'',
 var _searchFromName = '';
 var _searchToName   = '';
 var _searchDate     = '';
+var _bookings       = [];
+var DEMO_BOOKING_LIMIT = 2;
+
+function addBooking() {
+  var s = _seatState;
+  var booking = {
+    ref:       'MP-' + Math.floor(Math.random()*900000+100000),
+    fromCity:  s.fromCity      || _searchFromName || '?',
+    toCity:    s.destination   || '?',
+    depTime:   s.depTime       || '?',
+    model:     s.model         || '',
+    trainId:   s.trainId       || '',
+    seatLabel: s.seatLabel     || '',
+    cls:       s.selectedClass || '2 klass',
+    price:     (s.price || '').replace('från ','').replace(' kr','') + ' kr'
+  };
+  _bookings.push(booking);
+  updateBookingsBadge();
+  if (_bookings.length >= DEMO_BOOKING_LIMIT) {
+    setTimeout(function() {
+      _bookings = [];
+      updateBookingsBadge();
+    }, 8000);
+  }
+}
+
+function updateBookingsBadge() {
+  var badge = document.getElementById('bookings-badge');
+  if (_bookings.length > 0) {
+    badge.textContent = _bookings.length;
+    badge.classList.add('show');
+  } else {
+    badge.classList.remove('show');
+  }
+}
+
+function openBookingsModal() {
+  var body = document.getElementById('bookings-modal-body');
+  var html = '';
+  if (_bookings.length === 0) {
+    html = '<div class="bookings-empty"><div class="bookings-empty-icon">🎫</div>Inga bokningar ännu.<br>Boka en resa för att se den här.</div>';
+  } else {
+    if (_bookings.length >= DEMO_BOOKING_LIMIT) {
+      html += '<div class="bookings-reset-notice">⏳ Demo-läge: bokningarna återställs automatiskt om 8 sekunder</div>';
+    }
+    _bookings.forEach(function(b) {
+      html += '<div class="booking-card">' +
+        '<div class="booking-card-top">' +
+          '<div class="booking-ref">' + esc(b.ref) + '</div>' +
+          '<div class="booking-class-badge">' + esc(b.cls) + '</div>' +
+        '</div>' +
+        '<div class="booking-route">' + esc(b.fromCity) + ' → ' + esc(b.toCity) + '</div>' +
+        '<div class="booking-meta">Tåg ' + esc(b.trainId) + ' · ' + esc(b.model) + ' · avg ' + esc(b.depTime) + '</div>' +
+        '<div class="booking-price-row">' +
+          '<div class="booking-seat">🪑 ' + esc(b.seatLabel || 'Sittplats bokad') + '</div>' +
+          '<div class="booking-price">' + esc(b.price) + '</div>' +
+        '</div>' +
+      '</div>';
+    });
+  }
+  body.innerHTML = html;
+  document.getElementById('bookings-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeBookingsModal() {
+  document.getElementById('bookings-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function bookingsOverlayClick(e) {
+  if (e.target === document.getElementById('bookings-overlay')) closeBookingsModal();
+}
 
 // Tåglayouter: { wagons, classes: [{name, rows:[{num,seats:[]}], dir}] }
 var LAYOUTS = {
@@ -1428,6 +1596,7 @@ function initiateSwish() {
     document.getElementById('swish-state-waiting').style.display = 'none';
     document.getElementById('swish-state-success').style.display = '';
     decrementSeatsDisplay(_seatState.trainId);
+    addBooking();
   }, 3000);
 }
 
