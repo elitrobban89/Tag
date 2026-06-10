@@ -2,6 +2,7 @@ package com.minipristaget;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -25,8 +26,11 @@ public class TrafikverketService {
     @Value("${trafikverket.api.key:}")
     private String apiKey;
 
-    private final HttpClient    httpClient = HttpClient.newHttpClient();
-    private final ObjectMapper  mapper     = new ObjectMapper();
+    @Autowired
+    private TrainModelService trainModelService;
+
+    private final HttpClient   httpClient = HttpClient.newHttpClient();
+    private final ObjectMapper mapper     = new ObjectMapper();
 
     private List<TrainStation> stationCache = null;
 
@@ -48,7 +52,7 @@ public class TrafikverketService {
             </REQUEST>
             """.formatted(apiKey);
 
-        JsonNode result  = callApi(xml);
+        JsonNode result   = callApi(xml);
         JsonNode stations = result.path("RESPONSE").path("RESULT").get(0).path("TrainStation");
 
         List<TrainStation> list = new ArrayList<>();
@@ -120,6 +124,34 @@ public class TrafikverketService {
                 }
             }
         }
+
+        // Enrich with train model info, price and travel time
+        TrainStation fromSt = stationCache == null ? null :
+            stationCache.stream()
+                .filter(s -> s.getSignature().equalsIgnoreCase(fromSignature))
+                .findFirst().orElse(null);
+
+        for (TrainDeparture dep : departures) {
+            TrainModelService.TrainModelInfo model = trainModelService.getModel(dep.getOperator());
+            dep.setTrainModel(model.name());
+            dep.setTrainColor(model.color());
+            dep.setTransfers(0);
+
+            if (fromSt != null && dep.getDestinationSignature() != null && stationCache != null) {
+                final String destSig = dep.getDestinationSignature();
+                TrainStation toSt = stationCache.stream()
+                    .filter(s -> s.getSignature().equalsIgnoreCase(destSig))
+                    .findFirst().orElse(null);
+
+                if (toSt != null) {
+                    double dist = haversine(fromSt.getLat(), fromSt.getLon(),
+                                            toSt.getLat(),   toSt.getLon());
+                    dep.setPrice(trainModelService.calculatePrice(dist, dep.getTrainId()));
+                    dep.setTravelMinutes(trainModelService.estimateTravelMinutes(dist, model.avgSpeedKmh()));
+                }
+            }
+        }
+
         return departures;
     }
 
@@ -132,10 +164,8 @@ public class TrafikverketService {
         for (JsonNode loc : locs) {
             String sig = loc.path("LocationName").asText();
 
-            // Direct signature prefix match
             if (sig.toLowerCase().startsWith(lower.substring(0, Math.min(3, lower.length())))) return true;
 
-            // Resolve signature → friendly name via station cache
             if (stationCache != null) {
                 for (TrainStation s : stationCache) {
                     if (s.getSignature().equalsIgnoreCase(sig) &&
@@ -161,7 +191,7 @@ public class TrafikverketService {
         JsonNode locs = ann.path("ToLocation");
         if (locs.isArray() && locs.size() > 0) {
             String lastSig = locs.get(locs.size() - 1).path("LocationName").asText();
-            // Try to resolve signature → friendly name
+            dep.setDestinationSignature(lastSig);
             String friendlyName = lastSig;
             if (stationCache != null) {
                 friendlyName = stationCache.stream()
@@ -191,12 +221,12 @@ public class TrafikverketService {
     }
 
     private double haversine(double lat1, double lon1, double lat2, double lon2) {
-        double R  = 6371;
+        double R    = 6371;
         double dLat = Math.toRadians(lat2 - lat1);
         double dLon = Math.toRadians(lon2 - lon1);
-        double a  = Math.sin(dLat / 2) * Math.sin(dLat / 2)
-                  + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
-                  * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        double a    = Math.sin(dLat / 2) * Math.sin(dLat / 2)
+                    + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
+                    * Math.sin(dLon / 2) * Math.sin(dLon / 2);
         return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     }
 }

@@ -200,7 +200,7 @@
     .dep-dest { font-size:.96rem; font-weight:700; color:#111827; }
     .dep-meta { font-size:.75rem; color:#9ca3af; }
 
-    .dep-badge-wrap { display:flex; align-items:center; padding:12px 0 12px 8px; }
+    /* dep-badge-wrap now defined below with column layout */
     .dep-badge {
       font-size:.70rem; font-weight:700; padding:4px 10px;
       border-radius:20px; white-space:nowrap;
@@ -213,6 +213,48 @@
     .empty-icon  { font-size:2.2rem; margin-bottom:10px; }
     .empty-title { font-size:.95rem; font-weight:700; color:#374151; margin-bottom:5px; }
     .empty-sub   { font-size:.82rem; color:#9ca3af; }
+
+    /* Train model card */
+    .train-card {
+      display: inline-flex; align-items: center; gap: 7px;
+      border-left: 3px solid #6b7280;
+      border-radius: 0 7px 7px 0;
+      padding: 4px 10px 4px 8px;
+      margin-top: 5px;
+      background: rgba(107,114,128,.07);
+      max-width: 100%;
+    }
+    .train-loco { font-size: 1.05rem; flex-shrink: 0; }
+    .train-name { font-size: .76rem; font-weight: 700; color: #111827; }
+    .train-spec { font-size: .68rem; color: #6b7280; }
+
+    /* Travel time + transfers row */
+    .dep-travel {
+      display: flex; align-items: center; gap: 8px; margin-top: 5px;
+    }
+    .travel-time { font-size: .72rem; color: #374151; font-weight: 600; }
+    .transfer-chip {
+      font-size: .66rem; font-weight: 700;
+      background: #f0fdf4; color: #15803d;
+      border: 1px solid #bbf7d0;
+      padding: 2px 7px; border-radius: 10px;
+    }
+
+    /* Price chip */
+    .price-chip {
+      font-size: .68rem; font-weight: 700;
+      background: #fffbeb; color: #92400e;
+      border: 1px solid #fde68a;
+      padding: 3px 8px; border-radius: 10px;
+      white-space: nowrap; margin-bottom: 4px;
+    }
+
+    /* Badge wrap becomes a column */
+    .dep-badge-wrap {
+      display: flex; flex-direction: column;
+      align-items: flex-end; justify-content: center;
+      padding: 10px 0 10px 8px; gap: 4px;
+    }
 
     /* Return section */
     .return-section { margin-top:14px; }
@@ -478,12 +520,30 @@ function showForm() {
   document.getElementById('app-header').style.borderRadius = '20px 20px 0 0';
 }
 
+// ── Formatera restid ──────────────────────────────────────────────
+function formatDuration(minutes) {
+  if (!minutes || minutes <= 0) return '';
+  var h = Math.floor(minutes / 60);
+  var m = minutes % 60;
+  if (h === 0) return 'ca ' + m + ' min';
+  if (m === 0) return 'ca ' + h + 'h';
+  return 'ca ' + h + 'h ' + m + 'min';
+}
+
+// ── Tågemoji baserad på färg/operatör ────────────────────────────
+function trainEmoji(model) {
+  if (!model) return '🚆';
+  var m = model.toLowerCase();
+  if (m.indexOf('x74') >= 0 || m.indexOf('snabb') >= 0 || m.indexOf('sj 3000') >= 0 || m.indexOf('mtr') >= 0) return '🚄';
+  if (m.indexOf('natt') >= 0 || m.indexOf('snäll') >= 0) return '🌙';
+  return '🚆';
+}
+
 // ── Bygg avgångslista HTML ────────────────────────────────────────
 function buildDepList(deps, title, isReturn) {
   var cls = 'dep-list' + (isReturn ? ' return-dep-list' : '');
-  var dotCls = 'list-dot';
   var html = '<div class="' + cls + '">';
-  html += '<div class="list-header"><div class="' + dotCls + '"></div>' + esc(title) + '</div>';
+  html += '<div class="list-header"><div class="list-dot"></div>' + esc(title) + '</div>';
 
   if (!deps || !deps.length) {
     html += '<div class="empty"><div class="empty-icon">🚉</div>';
@@ -496,31 +556,66 @@ function buildDepList(deps, title, isReturn) {
       if (d.canceled) itemCls += ' canceled';
       else if (d.delayed) itemCls += ' delayed';
 
-      var bubbleCls = 'time-bubble';
       html += '<div class="' + itemCls + '">';
+
+      // Left: time bubble
       html +=   '<div class="dep-timeline">';
-      html +=     '<div class="' + bubbleCls + '">';
+      html +=     '<div class="time-bubble">';
       html +=       '<div class="adv">' + esc(d.departureTime) + '</div>';
       if (d.delayed) html += '<div class="est">' + esc(d.estimatedTime) + '</div>';
       html +=     '</div>';
       html +=   '</div>';
+
+      // Middle: destination, meta, train card, travel info
       html +=   '<div class="dep-content">';
       html +=     '<div class="dep-dest">' + esc(d.destination) + '</div>';
       html +=     '<div class="dep-meta">Tåg ' + esc(d.trainId);
       if (d.operator) html += ' · ' + esc(d.operator);
       html +=     '</div>';
-      html +=   '</div>';
+
+      // Train model card
+      if (d.trainModel) {
+        var color = d.trainColor || '#6b7280';
+        var bgAlpha = 'rgba(' + hexToRgb(color) + ',0.08)';
+        html += '<div class="train-card" style="border-left-color:' + esc(color) + ';background:' + bgAlpha + '">';
+        html +=   '<span class="train-loco">' + trainEmoji(d.trainModel) + '</span>';
+        html +=   '<span class="train-name">' + esc(d.trainModel) + '</span>';
+        html += '</div>';
+      }
+
+      // Travel time + transfers
+      var dur = formatDuration(d.travelMinutes);
+      if (dur || d.transfers === 0) {
+        html += '<div class="dep-travel">';
+        if (dur) html += '<span class="travel-time">' + esc(dur) + '</span>';
+        html += '<span class="transfer-chip">Direktresa</span>';
+        html += '</div>';
+      }
+
+      html +=   '</div>'; // dep-content
+
+      // Right: price + status badge
       html +=   '<div class="dep-badge-wrap">';
-      if (d.canceled)       html += '<span class="dep-badge badge-canceled">Inställd</span>';
-      else if (d.delayed)   html += '<span class="dep-badge badge-delayed">Försenad</span>';
-      else                  html += '<span class="dep-badge badge-ok">I tid</span>';
+      if (d.price) html += '<div class="price-chip">' + esc(d.price) + '</div>';
+      if (d.canceled)     html += '<span class="dep-badge badge-canceled">Inställd</span>';
+      else if (d.delayed) html += '<span class="dep-badge badge-delayed">Försenad</span>';
+      else                html += '<span class="dep-badge badge-ok">I tid</span>';
       html +=   '</div>';
-      html += '</div>';
+
+      html += '</div>'; // dep-item
     }
   }
 
   html += '</div>';
   return html;
+}
+
+// ── Hex → "r,g,b" för rgba() ─────────────────────────────────────
+function hexToRgb(hex) {
+  hex = hex.replace('#', '');
+  if (hex.length === 3) hex = hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
+  var n = parseInt(hex, 16);
+  return ((n>>16)&255) + ',' + ((n>>8)&255) + ',' + (n&255);
 }
 
 // ── Visa resultat ─────────────────────────────────────────────────
