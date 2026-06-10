@@ -516,15 +516,22 @@
     .seat-footer {
       padding:12px 20px 18px;
       border-top:1px solid rgba(255,255,255,.06);
-      display:flex; align-items:center; gap:12px;
     }
-    .seat-selected-lbl { flex:1; font-size:.82rem; color:rgba(255,255,255,.5); }
+    .seat-selected-lbl { font-size:.82rem; color:rgba(255,255,255,.5); margin-bottom:10px; }
     .seat-selected-val { color:#fff; font-weight:700; }
+    .seat-footer-btns  { display:flex; gap:8px; }
+    .seat-return-btn {
+      flex:1; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.18);
+      color:#fff; font-weight:700; font-size:.78rem;
+      padding:9px 10px; border-radius:12px; cursor:pointer; transition:background .15s;
+    }
+    .seat-return-btn:hover:not(:disabled) { background:rgba(255,255,255,.16); }
+    .seat-return-btn:disabled { opacity:.3; cursor:not-allowed; }
     .seat-confirm-btn {
-      background:linear-gradient(135deg,#2563eb,#1d4ed8);
+      flex:2; background:linear-gradient(135deg,#00B6E3,#00A651);
       border:none; color:#fff; font-weight:800; font-size:.82rem;
-      padding:9px 20px; border-radius:12px; cursor:pointer;
-      box-shadow:0 4px 12px rgba(37,99,235,.4);
+      padding:9px 14px; border-radius:12px; cursor:pointer;
+      box-shadow:0 4px 12px rgba(0,166,81,.35);
       transition:opacity .15s;
     }
     .seat-confirm-btn:disabled { opacity:.35; cursor:not-allowed; }
@@ -540,6 +547,92 @@
     .no-seatmap-note {
       font-size:.68rem; color:rgba(255,255,255,.25);
       margin-top:8px; text-align:center; font-style:italic;
+    }
+
+    /* ── Swish payment modal ── */
+    .swish-overlay {
+      display:none; position:fixed; inset:0; z-index:1100;
+      background:rgba(0,0,0,.82); backdrop-filter:blur(8px);
+      align-items:center; justify-content:center; padding:16px;
+    }
+    .swish-overlay.open { display:flex; }
+    .swish-modal {
+      background:#fff; border-radius:20px;
+      width:100%; max-width:380px;
+      box-shadow:0 24px 70px rgba(0,0,0,.6);
+      overflow:hidden;
+    }
+    .swish-head {
+      background:linear-gradient(135deg,#00B6E3 0%,#00A651 100%);
+      padding:20px 20px 16px;
+      display:flex; align-items:center; justify-content:space-between;
+    }
+    .swish-logo-text {
+      font-size:1.6rem; font-weight:900; color:#fff;
+      letter-spacing:-.04em; font-style:italic;
+    }
+    .swish-head-close {
+      background:rgba(255,255,255,.25); border:none; color:#fff;
+      width:28px; height:28px; border-radius:50%; cursor:pointer;
+      font-size:.8rem; display:flex; align-items:center; justify-content:center;
+    }
+    .swish-body { padding:20px; }
+    .swish-journey-box {
+      background:#f4f7fb; border-radius:12px; padding:12px 14px;
+      margin-bottom:16px; font-size:.8rem; color:#374151; line-height:1.7;
+    }
+    .swish-journey-box strong { color:#111827; font-size:.85rem; }
+    .swish-amount-row {
+      text-align:center; margin-bottom:18px;
+    }
+    .swish-amount-lbl { font-size:.72rem; color:#6b7280; margin-bottom:2px; }
+    .swish-amount-val {
+      font-size:2.6rem; font-weight:900; color:#111827; line-height:1;
+    }
+    .swish-merchant {
+      font-size:.72rem; color:#9ca3af; text-align:center; margin-bottom:18px;
+    }
+    .swish-pay-btn {
+      width:100%; padding:14px;
+      background:linear-gradient(135deg,#00B6E3,#00A651);
+      border:none; border-radius:14px; color:#fff;
+      font-size:1rem; font-weight:800; cursor:pointer;
+      box-shadow:0 4px 16px rgba(0,166,81,.35);
+      transition:opacity .15s; display:flex;
+      align-items:center; justify-content:center; gap:8px;
+    }
+    .swish-pay-btn:hover { opacity:.9; }
+    .swish-wait {
+      text-align:center; padding:10px 0 6px;
+    }
+    .swish-spinner {
+      width:44px; height:44px; border:4px solid #e5e7eb;
+      border-top-color:#00B6E3; border-radius:50%;
+      margin:0 auto 12px; animation:spin .8s linear infinite;
+    }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .swish-wait-txt { font-size:.88rem; color:#6b7280; font-weight:600; }
+    .swish-wait-sub { font-size:.72rem; color:#9ca3af; margin-top:4px; }
+    .swish-success { text-align:center; padding:10px 0 6px; }
+    .swish-check-circle {
+      width:56px; height:56px; background:#00A651;
+      border-radius:50%; margin:0 auto 12px;
+      display:flex; align-items:center; justify-content:center;
+      font-size:1.6rem; color:#fff;
+      animation:popIn .3s cubic-bezier(.175,.885,.32,1.275);
+    }
+    @keyframes popIn { from{transform:scale(0)} to{transform:scale(1)} }
+    .swish-success-title { font-size:1rem; font-weight:800; color:#111827; }
+    .swish-success-sub   { font-size:.75rem; color:#6b7280; margin-top:4px; }
+    .swish-ticket-box {
+      background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px;
+      padding:10px 14px; margin-top:14px; font-size:.75rem; color:#166534;
+      line-height:1.7;
+    }
+    .swish-done-btn {
+      width:100%; margin-top:14px; padding:12px;
+      background:#111827; border:none; border-radius:12px;
+      color:#fff; font-weight:700; cursor:pointer; font-size:.88rem;
     }
   </style>
 </head>
@@ -564,7 +657,55 @@
     <div class="seat-map-wrap" id="seat-map-wrap"></div>
     <div class="seat-footer">
       <div class="seat-selected-lbl">Vald plats: <span class="seat-selected-val" id="seat-selected-val">—</span></div>
-      <button class="seat-confirm-btn" id="seat-confirm-btn" disabled onclick="confirmSeat()">Bekräfta</button>
+      <div class="seat-footer-btns">
+        <button class="seat-return-btn"  id="seat-return-btn"  disabled onclick="addReturnTrip()">↩ Lägg till återresa</button>
+        <button class="seat-confirm-btn" id="seat-confirm-btn" disabled onclick="confirmSeat()">💳 Betala med Swish</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Swish payment modal ── -->
+<div class="swish-overlay" id="swish-overlay" onclick="swishOverlayClick(event)">
+  <div class="swish-modal">
+    <div class="swish-head">
+      <div class="swish-logo-text">swish</div>
+      <button class="swish-head-close" onclick="closeSwishModal()">✕</button>
+    </div>
+    <div class="swish-body">
+      <div class="swish-journey-box" id="swish-journey-box"></div>
+      <div class="swish-amount-row">
+        <div class="swish-amount-lbl">Att betala</div>
+        <div class="swish-amount-val" id="swish-amount-val">—</div>
+      </div>
+      <div class="swish-merchant">Mottagare: MiniPrisTåget AB · 123 123 12 30</div>
+
+      <!-- State: idle -->
+      <div id="swish-state-idle">
+        <button class="swish-pay-btn" onclick="initiateSwish()">
+          <span style="font-size:1.1rem">💳</span> Betala med Swish
+        </button>
+      </div>
+
+      <!-- State: waiting -->
+      <div id="swish-state-waiting" style="display:none">
+        <div class="swish-wait">
+          <div class="swish-spinner"></div>
+          <div class="swish-wait-txt">Väntar på Swish-appen...</div>
+          <div class="swish-wait-sub">Öppna Swish och godkänn betalningen</div>
+        </div>
+      </div>
+
+      <!-- State: success -->
+      <div id="swish-state-success" style="display:none">
+        <div class="swish-success">
+          <div class="swish-check-circle">✓</div>
+          <div class="swish-success-title">Betalning genomförd!</div>
+          <div class="swish-success-sub">Tack för din bokning hos MiniPrisTåget</div>
+          <div class="swish-ticket-box" id="swish-ticket-box"></div>
+          <button class="swish-done-btn" onclick="closeSwishModal()">Stäng</button>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -888,15 +1029,20 @@ function isTaken(trainId, wagon, row, col) {
   return seatHash(trainId, wagon, row, col) % 3 === 0; // ~33% bokade
 }
 
-function openSeatModal(trainId, layout, model, depTime) {
-  _seatState.trainId  = trainId;
-  _seatState.layout   = layout;
-  _seatState.wagon    = 1;
-  _seatState.selected = '';
-  document.getElementById('seat-modal-title').textContent = 'Välj sittplats';
-  document.getElementById('seat-modal-sub').textContent   = 'Tåg ' + trainId + ' · ' + model + ' · avg ' + depTime;
+function openSeatModal(trainId, layout, model, depTime, price, destination) {
+  _seatState.trainId     = trainId;
+  _seatState.layout      = layout;
+  _seatState.wagon       = 1;
+  _seatState.selected    = '';
+  _seatState.price       = price || '';
+  _seatState.destination = destination || '';
+  _seatState.model       = model || '';
+  _seatState.depTime     = depTime || '';
+  document.getElementById('seat-modal-title').textContent  = 'Välj sittplats';
+  document.getElementById('seat-modal-sub').textContent    = 'Tåg ' + trainId + ' · ' + model + ' · avg ' + depTime;
   document.getElementById('seat-selected-val').textContent = '—';
   document.getElementById('seat-confirm-btn').disabled = true;
+  document.getElementById('seat-return-btn').disabled  = true;
   renderWagonTabs();
   renderSeatMap();
   document.getElementById('seat-overlay').classList.add('open');
@@ -965,22 +1111,87 @@ function renderSeatMap() {
 }
 
 function selectSeat(seatId, row, col) {
-  _seatState.selected = seatId;
-  var vagn = 'Vagn ' + _seatState.wagon + ', plats ' + row + col;
-  document.getElementById('seat-selected-val').textContent = vagn;
+  _seatState.selected  = seatId;
+  _seatState.seatLabel = 'Vagn ' + _seatState.wagon + ', plats ' + row + col;
+  document.getElementById('seat-selected-val').textContent = _seatState.seatLabel;
   document.getElementById('seat-confirm-btn').disabled = false;
+  document.getElementById('seat-return-btn').disabled  = false;
   renderSeatMap();
 }
 
 function confirmSeat() {
-  var val = document.getElementById('seat-selected-val').textContent;
   closeSeatModal();
-  // Show brief confirmation toast
-  var toast = document.createElement('div');
-  toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:rgba(34,197,94,.9);color:#fff;font-weight:700;padding:10px 20px;border-radius:12px;z-index:2000;font-size:.82rem;box-shadow:0 4px 20px rgba(0,0,0,.4)';
-  toast.textContent = '✓ ' + val + ' reserverad!';
-  document.body.appendChild(toast);
-  setTimeout(function() { toast.remove(); }, 3000);
+  openSwishModal();
+}
+
+function addReturnTrip() {
+  closeSeatModal();
+  // Scrolla upp till sökformuläret och välj tur & retur
+  var turRetur = document.querySelector('input[value="tur"]');
+  if (turRetur) { turRetur.checked = true; turRetur.dispatchEvent(new Event('change')); }
+  var returnEl = document.getElementById('return-date');
+  if (returnEl) {
+    returnEl.focus();
+    returnEl.scrollIntoView({ behavior:'smooth', block:'center' });
+    returnEl.style.boxShadow = '0 0 0 2px rgba(96,165,250,.7)';
+    setTimeout(function() { returnEl.style.boxShadow = ''; }, 2000);
+  } else {
+    window.scrollTo({ top:0, behavior:'smooth' });
+  }
+}
+
+// ── Swish payment ─────────────────────────────────────────────────
+function openSwishModal() {
+  var s = _seatState;
+  // Journey summary
+  document.getElementById('swish-journey-box').innerHTML =
+    '<strong>' + esc(s.destination || 'Destination') + '</strong><br>' +
+    'Tåg ' + esc(s.trainId) + ' · ' + esc(s.model) + ' · avg ' + esc(s.depTime) + '<br>' +
+    esc(s.seatLabel || '') + ' · 2 klass MiniPris';
+  // Amount — extract number from "från 179 kr"
+  var amtRaw = s.price || '';
+  var amtNum = amtRaw.replace(/[^0-9]/g,'');
+  document.getElementById('swish-amount-val').textContent = (amtNum || '—') + ' kr';
+  // Ticket box (shown on success)
+  document.getElementById('swish-ticket-box').innerHTML =
+    '🎫 Bokningsref: <strong>MP-' + Math.floor(Math.random()*900000+100000) + '</strong><br>' +
+    esc(s.destination) + ' · avg ' + esc(s.depTime) + '<br>' +
+    esc(s.seatLabel || '') + '<br>Biljett skickas till din e-post';
+  // Reset to idle state
+  document.getElementById('swish-state-idle').style.display    = '';
+  document.getElementById('swish-state-waiting').style.display = 'none';
+  document.getElementById('swish-state-success').style.display = 'none';
+  document.getElementById('swish-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeSwishModal() {
+  document.getElementById('swish-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function swishOverlayClick(e) {
+  if (e.target === document.getElementById('swish-overlay')) closeSwishModal();
+}
+
+function initiateSwish() {
+  // Try to open Swish deep link on mobile
+  var s      = _seatState;
+  var amtNum = (s.price || '').replace(/[^0-9]/g,'') || '0';
+  var data   = JSON.stringify({ version:1,
+    payee:   { value:'1231231230', editable:false },
+    amount:  { value:parseInt(amtNum, 10), editable:false },
+    message: { value:'MiniPrisTåget ' + (s.destination||''), editable:false }
+  });
+  window.location.href = 'swish://payment?data=' + encodeURIComponent(data);
+  // Show waiting state
+  document.getElementById('swish-state-idle').style.display    = 'none';
+  document.getElementById('swish-state-waiting').style.display = '';
+  // Simulate successful payment after 3s (demo)
+  setTimeout(function() {
+    document.getElementById('swish-state-waiting').style.display = 'none';
+    document.getElementById('swish-state-success').style.display = '';
+  }, 3000);
 }
 
 // ── Reseklass expand/select ───────────────────────────────────────
@@ -1118,7 +1329,9 @@ function buildDepList(deps, title, isReturn) {
         var trainIdEsc = esc(d.trainId || '');
         var layoutEsc  = esc(d.seatLayout || 'x2000');
         var modelEsc   = esc(d.trainModel || '');
-        html += '<button class="open-seatmap-btn" onclick="openSeatModal(\'' + trainIdEsc + '\',\'' + layoutEsc + '\',\'' + modelEsc + '\',\'' + esc(d.departureTime||'') + '\')">🪑 Välj sittplats</button>';
+        var priceEsc = esc(d.price || '');
+        var destEsc  = esc(d.destination || '');
+        html += '<button class="open-seatmap-btn" onclick="openSeatModal(\'' + trainIdEsc + '\',\'' + layoutEsc + '\',\'' + modelEsc + '\',\'' + esc(d.departureTime||'') + '\',\'' + priceEsc + '\',\'' + destEsc + '\')">🪑 Välj sittplats</button>';
       } else {
         html += '<div class="no-seatmap-note">Öppen placering – välj valfri ledig plats ombord</div>';
       }
