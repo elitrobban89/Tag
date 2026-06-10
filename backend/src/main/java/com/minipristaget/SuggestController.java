@@ -41,14 +41,25 @@ public class SuggestController {
             return ResponseEntity.badRequest().body(Map.of("error", "Ogiltig kategori"));
         }
 
-        String from     = (req.getFrom() != null && !req.getFrom().isBlank()) ? req.getFrom() : null;
-        String fromText = from != null ? "från " + from : "i Sverige";
+        String from = (req.getFrom() != null && !req.getFrom().isBlank()) ? req.getFrom().trim() : null;
 
-        String prompt =
-            "Du är en tågreseexpert i Sverige. En resenär vill resa " + fromText +
-            " och söker " + CATEGORY_PROMPTS.get(category) + ".\n\n" +
-            "Ge ETT perfekt destinationsförslag som går bra att nå med tåg. " +
-            "Svara ENBART med ortnamnet, ingenting annat. Exempel: Göteborg";
+        String prompt;
+        if (from != null) {
+            prompt =
+                "Du är en tågreseexpert i Sverige. En resenär åker från " + from + " med tåg " +
+                "och vill besöka " + CATEGORY_PROMPTS.get(category) + ".\n\n" +
+                "Kriterier:\n" +
+                "- Destinationen MÅSTE gå att nå med tåg från " + from + " (direkt eller med byte)\n" +
+                "- Destinationen får INTE vara " + from + " eller en angränsande ort\n" +
+                "- Välj ett riktigt tågläge i Sverige\n\n" +
+                "Svara ENBART med ortnamnet, ingenting annat. Exempel: Göteborg";
+        } else {
+            prompt =
+                "Du är en tågreseexpert i Sverige. En resenär vill resa med tåg och söker " +
+                CATEGORY_PROMPTS.get(category) + ".\n\n" +
+                "Ge ETT resmål som går att nå med tåg i Sverige. " +
+                "Svara ENBART med ortnamnet, ingenting annat. Exempel: Göteborg";
+        }
 
         try {
             String requestBody = mapper.writeValueAsString(Map.of(
