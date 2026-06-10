@@ -11,6 +11,8 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -91,6 +93,10 @@ public class TrafikverketService {
     // ── Hämta avgångar ────────────────────────────────────────────
     public List<TrainDeparture> getDepartures(String fromSignature, String toName, LocalDate date) throws Exception {
         int limit = (toName == null || toName.isBlank()) ? 50 : 200;
+        // When searching today, only fetch trains from now onwards (skip already departed trains)
+        String fromTime = date.equals(LocalDate.now())
+            ? LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss"))
+            : "00:00:00";
         String xml = """
             <REQUEST>
               <LOGIN authenticationkey="%s"/>
@@ -99,7 +105,7 @@ public class TrafikverketService {
                   <AND>
                     <EQ name="LocationSignature" value="%s"/>
                     <EQ name="ActivityType" value="Avgang"/>
-                    <GT name="AdvertisedTimeAtLocation" value="%sT00:00:00"/>
+                    <GT name="AdvertisedTimeAtLocation" value="%sT%s"/>
                     <LT name="AdvertisedTimeAtLocation" value="%sT23:59:59"/>
                   </AND>
                 </FILTER>
@@ -111,7 +117,7 @@ public class TrafikverketService {
                 <INCLUDE>Canceled</INCLUDE>
               </QUERY>
             </REQUEST>
-            """.formatted(apiKey, limit, fromSignature, date, date);
+            """.formatted(apiKey, limit, fromSignature, date, fromTime, date);
 
         JsonNode result        = callApi(xml);
         JsonNode announcements = result.path("RESPONSE").path("RESULT").get(0).path("TrainAnnouncement");

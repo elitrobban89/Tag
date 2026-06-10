@@ -295,6 +295,19 @@
     .empty-title { font-size:.95rem; font-weight:700; color:rgba(255,255,255,.65); margin-bottom:5px; }
     .empty-sub   { font-size:.82rem; color:rgba(255,255,255,.35); }
 
+    .tomorrow-notice {
+      background: rgba(234,179,8,.12);
+      border: 1px solid rgba(234,179,8,.3);
+      border-radius: 12px;
+      padding: 10px 16px;
+      margin: 10px 0 0;
+      font-size: .82rem;
+      color: #fde68a;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
     /* Return section */
     .return-section { margin-top:14px; }
     .return-header {
@@ -687,6 +700,11 @@ function renderResults(data) {
   html +=   '</div>';
   if (n > 0) html += '<div class="res-count">' + n + ' avgångar</div>';
   html += '</div>';
+
+  // Auto-advance notice when today has no more trains
+  if (data.autoTomorrow) {
+    html += '<div class="tomorrow-notice">🌙 Inga fler tåg idag – visar avgångar för imorgon (' + esc(data.date) + ')</div>';
+  }
 
   // Outbound departures
   html += buildDepList(data.departures, 'Avgångar', false);

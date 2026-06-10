@@ -110,12 +110,22 @@ public class WebController {
             List<TrainDeparture> departures = trafikverketService.getDepartures(
                 fromStation.get().getSignature(), form.getTo(), date);
 
+            // If no trains left today, automatically show tomorrow's departures
+            boolean autoTomorrow = false;
+            if (departures.isEmpty() && date.equals(LocalDate.now())) {
+                date = date.plusDays(1);
+                departures = trafikverketService.getDepartures(
+                    fromStation.get().getSignature(), form.getTo(), date);
+                autoTomorrow = true;
+            }
+
             java.util.Map<String, Object> result = new java.util.LinkedHashMap<>();
-            result.put("fromName",   fromStation.get().getName());
-            result.put("toName",     (form.getTo() == null || form.getTo().isBlank())
-                                         ? "Alla destinationer" : form.getTo());
-            result.put("date",       date.toString());
-            result.put("departures", departures);
+            result.put("fromName",     fromStation.get().getName());
+            result.put("toName",       (form.getTo() == null || form.getTo().isBlank())
+                                           ? "Alla destinationer" : form.getTo());
+            result.put("date",         date.toString());
+            result.put("autoTomorrow", autoTomorrow);
+            result.put("departures",   departures);
 
             if ("tur".equals(form.getTripType())
                     && form.getTo() != null && !form.getTo().isBlank()
