@@ -1041,6 +1041,7 @@ function clearFormError() {
 
 // ── GPS ──────────────────────────────────────────────────────────
 function fetchGPS() {
+  if (document.getElementById('from').value.trim()) return;
   if (!navigator.geolocation) { setHint('GPS stöds inte.', 'error'); return; }
   var btn = document.getElementById('gps-btn');
   var lbl = document.getElementById('gps-label');
