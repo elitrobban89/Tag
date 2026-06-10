@@ -120,7 +120,10 @@
       border-radius:20px; color:#93c5fd;
     }
     .booking-route {
-      font-size:1rem; font-weight:800; color:#fff; margin-bottom:4px;
+      font-size:1.05rem; font-weight:800; color:#fff; margin-bottom:5px;
+    }
+    .booking-date {
+      font-size:.82rem; font-weight:700; color:#93c5fd; margin-bottom:3px;
     }
     .booking-meta {
       font-size:.73rem; color:rgba(255,255,255,.4); line-height:1.6;
@@ -1205,11 +1208,18 @@ var DEMO_BOOKING_LIMIT = 2;
 
 function addBooking() {
   var s = _seatState;
+  var rawDate = s.outboundDate || _searchDate || '';
+  var niceDate = '';
+  if (rawDate) {
+    var parts = rawDate.split('-');
+    if (parts.length === 3) niceDate = parts[2] + '/' + parts[1] + '/' + parts[0];
+  }
   var booking = {
     ref:       'MP-' + Math.floor(Math.random()*900000+100000),
     fromCity:  s.fromCity      || _searchFromName || '?',
     toCity:    s.destination   || '?',
     depTime:   s.depTime       || '?',
+    date:      niceDate,
     model:     s.model         || '',
     trainId:   s.trainId       || '',
     seatLabel: s.seatLabel     || '',
@@ -1222,7 +1232,7 @@ function addBooking() {
     setTimeout(function() {
       _bookings = [];
       updateBookingsBadge();
-    }, 8000);
+    }, 5 * 60 * 1000);
   }
 }
 
@@ -1243,7 +1253,7 @@ function openBookingsModal() {
     html = '<div class="bookings-empty"><div class="bookings-empty-icon">🎫</div>Inga bokningar ännu.<br>Boka en resa för att se den här.</div>';
   } else {
     if (_bookings.length >= DEMO_BOOKING_LIMIT) {
-      html += '<div class="bookings-reset-notice">⏳ Demo-läge: bokningarna återställs automatiskt om 8 sekunder</div>';
+      html += '<div class="bookings-reset-notice">⏳ Demo-läge: bokningarna återställs automatiskt om 5 minuter</div>';
     }
     _bookings.forEach(function(b) {
       html += '<div class="booking-card">' +
@@ -1252,7 +1262,8 @@ function openBookingsModal() {
           '<div class="booking-class-badge">' + esc(b.cls) + '</div>' +
         '</div>' +
         '<div class="booking-route">' + esc(b.fromCity) + ' → ' + esc(b.toCity) + '</div>' +
-        '<div class="booking-meta">Tåg ' + esc(b.trainId) + ' · ' + esc(b.model) + ' · avg ' + esc(b.depTime) + '</div>' +
+        (b.date ? '<div class="booking-date">📅 ' + esc(b.date) + ' &nbsp;·&nbsp; avg ' + esc(b.depTime) + '</div>' : '<div class="booking-date">avg ' + esc(b.depTime) + '</div>') +
+        '<div class="booking-meta">Tåg ' + esc(b.trainId) + ' · ' + esc(b.model) + '</div>' +
         '<div class="booking-price-row">' +
           '<div class="booking-seat">🪑 ' + esc(b.seatLabel || 'Sittplats bokad') + '</div>' +
           '<div class="booking-price">' + esc(b.price) + '</div>' +
