@@ -109,6 +109,11 @@ Lägg till ett **Anpassad HTML**-block i Gutenberg med:
 
 > `allow="geolocation"` krävs för att GPS-funktionen ska fungera i iframen.
 
+## Driftstatus
+
+Appen monitoreras via [UptimeRobot](https://uptimerobot.com) som pingar `/health` var 5:e minut.
+Detta håller även Render free tier-instansen vaken så att appen svarar direkt utan cold start-fördröjning.
+
 ## Lokal körning
 
 ```bash
