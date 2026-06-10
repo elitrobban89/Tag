@@ -2,6 +2,7 @@ package com.minipristaget;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -9,14 +10,17 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 @RestController
 @CrossOrigin
 public class SuggestController {
 
-    private static final String GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
+    private static final String GROQ_URL   = "https://api.groq.com/openai/v1/chat/completions";
     private static final String GROQ_MODEL = "llama-3.3-70b-versatile";
 
     private static final Map<String, String> CATEGORY_PROMPTS = Map.of(
@@ -24,6 +28,9 @@ public class SuggestController {
         "Natur",    "en naturskön destination med natur, nationalparker eller friluftsliv i Sverige",
         "Strand",   "en strand- eller skärgårdsdestination längs Sveriges kust med bad och sol"
     );
+
+    @Autowired
+    private TrafikverketService trafikverketService;
 
     private final HttpClient httpClient = HttpClient.newHttpClient();
     private final ObjectMapper mapper   = new ObjectMapper();
@@ -43,16 +50,23 @@ public class SuggestController {
 
         String from = (req.getFrom() != null && !req.getFrom().isBlank()) ? req.getFrom().trim() : null;
 
+        // Hämta faktiska direktdestinationer från Trafikverket
+        List<String> reachable = fetchReachableDestinations(from);
+
         String prompt;
-        if (from != null) {
+        if (!reachable.isEmpty()) {
+            prompt =
+                "Du är en tågreseexpert. En resenär åker från " + from + " och söker " +
+                CATEGORY_PROMPTS.get(category) + ".\n\n" +
+                "Dessa direktdestinationer går att nå med tåg från " + from + " idag:\n" +
+                String.join(", ", reachable) + "\n\n" +
+                "Välj den destination från listan ovan som BÄST matchar kategorin. " +
+                "Svara ENBART med ortnamnet exakt som det står i listan, ingenting annat.";
+        } else if (from != null) {
             prompt =
                 "Du är en tågreseexpert i Sverige. En resenär åker från " + from + " med tåg " +
-                "och vill besöka " + CATEGORY_PROMPTS.get(category) + ".\n\n" +
-                "Kriterier:\n" +
-                "- Destinationen MÅSTE gå att nå med DIREKTTÅG från " + from + " (INGA byten)\n" +
-                "- Destinationen får INTE vara " + from + " eller en angränsande ort\n" +
-                "- Välj ett riktigt tågläge i Sverige som trafikeras direkt från " + from + "\n" +
-                "- Om inga lämpliga direkttåg finns för kategorin, välj den närmaste möjliga direktdestinationen\n\n" +
+                "och söker " + CATEGORY_PROMPTS.get(category) + ".\n\n" +
+                "Föreslå ETT resmål med DIREKTTÅG från " + from + " (inga byten). " +
                 "Svara ENBART med ortnamnet, ingenting annat. Exempel: Göteborg";
         } else {
             prompt =
@@ -66,7 +80,7 @@ public class SuggestController {
             String requestBody = mapper.writeValueAsString(Map.of(
                 "model",       GROQ_MODEL,
                 "messages",    List.of(Map.of("role", "user", "content", prompt)),
-                "temperature", 0.8,
+                "temperature", 0.7,
                 "max_tokens",  20
             ));
 
@@ -90,6 +104,27 @@ public class SuggestController {
             System.err.println("Groq error: " + e.getMessage());
             return ResponseEntity.internalServerError()
                 .body(Map.of("error", "Kunde inte hämta förslag. Försök igen."));
+        }
+    }
+
+    private List<String> fetchReachableDestinations(String fromName) {
+        if (fromName == null) return List.of();
+        try {
+            Optional<TrainStation> station = trafikverketService.findStationByName(fromName);
+            if (station.isEmpty()) return List.of();
+            List<TrainDeparture> deps = trafikverketService.getDepartures(
+                station.get().getSignature(), null, LocalDate.now());
+            return deps.stream()
+                .map(TrainDeparture::getDestination)
+                .filter(d -> d != null && !d.isBlank())
+                .map(d -> d.replaceAll("\\s*C$", "").trim()) // ta bort " C" suffix
+                .distinct()
+                .sorted()
+                .limit(25)
+                .collect(Collectors.toList());
+        } catch (Exception e) {
+            System.err.println("Could not fetch reachable destinations: " + e.getMessage());
+            return List.of();
         }
     }
 }
