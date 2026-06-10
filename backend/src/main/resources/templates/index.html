@@ -395,7 +395,7 @@ var cats = {storstad:'Storstad', natur:'Natur', strand:'Strand'};
 Object.keys(cats).forEach(function(id) {
   document.getElementById('cat-' + id).addEventListener('click', function() {
     var from = document.getElementById('from').value.trim();
-    ['storstad','natur','havet'].forEach(function(c) {
+    ['storstad','natur','strand'].forEach(function(c) {
       document.getElementById('cat-' + c).classList.remove('active');
     });
     this.classList.add('active');
