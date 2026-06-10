@@ -412,8 +412,9 @@
     /* ── Seat map modal ── */
     .seat-overlay {
       display:none; position:fixed; inset:0; z-index:1000;
-      background:rgba(0,0,0,.75); backdrop-filter:blur(6px);
-      align-items:center; justify-content:center; padding:16px;
+      background:rgba(7,13,31,.97);
+      align-items:flex-start; justify-content:center;
+      padding:16px; overflow-y:auto;
     }
     .seat-overlay.open { display:flex; }
     .seat-modal {
@@ -425,10 +426,10 @@
     }
     .seat-modal-head {
       display:flex; align-items:center; gap:10px;
-      padding:18px 20px 14px; border-bottom:1px solid rgba(255,255,255,.07);
+      padding:14px 20px 12px; border-bottom:1px solid rgba(255,255,255,.07);
     }
-    .seat-modal-title { font-size:1rem; font-weight:800; color:#fff; flex:1; }
-    .seat-modal-sub   { font-size:.72rem; color:rgba(255,255,255,.4); margin-top:2px; }
+    .seat-modal-title { font-size:.88rem; font-weight:800; color:rgba(255,255,255,.5);
+                        letter-spacing:.06em; text-transform:uppercase; flex:1; }
     .seat-modal-close {
       background:rgba(255,255,255,.08); border:none; color:#fff;
       width:30px; height:30px; border-radius:50%; cursor:pointer;
@@ -436,6 +437,38 @@
       transition:background .15s;
     }
     .seat-modal-close:hover { background:rgba(255,255,255,.18); }
+
+    /* Avgångskort i fokusläge */
+    .seat-journey-card {
+      margin:0 14px 0; padding:14px 16px;
+      background:rgba(255,255,255,.05);
+      border:1px solid rgba(96,165,250,.2); border-radius:14px;
+    }
+    .sjc-top { display:flex; align-items:flex-start; gap:12px; }
+    .sjc-times { flex:1; }
+    .sjc-timerange {
+      font-size:1.45rem; font-weight:800; color:#fff;
+      letter-spacing:-.03em; line-height:1.1; margin-bottom:2px;
+    }
+    .sjc-info { font-size:.74rem; color:rgba(255,255,255,.4); }
+    .sjc-right { text-align:right; }
+    .sjc-price-orig { font-size:.65rem; color:rgba(255,255,255,.25);
+                      text-decoration:line-through; }
+    .sjc-price { font-size:1.2rem; font-weight:800; color:#fff; line-height:1.1; }
+    .sjc-minipris {
+      display:inline-block; background:linear-gradient(135deg,#dc2626,#b91c1c);
+      color:#fff; font-size:.58rem; font-weight:800;
+      padding:2px 7px; border-radius:20px; margin-top:3px;
+    }
+    .sjc-photo {
+      width:100%; height:72px; object-fit:cover; object-position:center 60%;
+      border-radius:9px; margin-top:10px;
+    }
+    .sjc-dest {
+      font-size:.78rem; color:rgba(255,255,255,.55); margin-top:7px;
+      display:flex; align-items:center; gap:6px;
+    }
+    .sjc-dest strong { color:#fff; }
     .wagon-tabs {
       display:flex; gap:6px; padding:12px 20px 0; overflow-x:auto;
     }
@@ -639,16 +672,14 @@
 <body>
 
 <!-- ── Seat map modal ── -->
-<div class="seat-overlay" id="seat-overlay" onclick="seatOverlayClick(event)">
+<div class="seat-overlay" id="seat-overlay">
   <div class="seat-modal" id="seat-modal">
     <div class="seat-modal-head">
-      <div style="flex:1">
-        <div class="seat-modal-title" id="seat-modal-title">Välj sittplats</div>
-        <div class="seat-modal-sub"  id="seat-modal-sub"></div>
-      </div>
+      <div class="seat-modal-title">Din resa</div>
       <button class="seat-modal-close" onclick="closeSeatModal()">✕</button>
     </div>
-    <div class="wagon-tabs" id="wagon-tabs"></div>
+    <div id="seat-journey-card" style="padding:12px 14px 0"></div>
+    <div class="wagon-tabs" id="wagon-tabs" style="margin-top:12px"></div>
     <div class="seat-legend">
       <span><span class="leg-box leg-avail"></span> Ledig</span>
       <span><span class="leg-box leg-taken"></span> Bokad</span>
@@ -1026,20 +1057,47 @@ function seatHash(trainId, wagon, row, col) {
 }
 
 function isTaken(trainId, wagon, row, col) {
-  return seatHash(trainId, wagon, row, col) % 3 === 0; // ~33% bokade
+  // seatsLeft 1–2 → ~90% bokade, 3–4 → ~75%, 5 → ~60%
+  var sl = _seatState.seatsLeft || 5;
+  var threshold = sl <= 2 ? 10 : sl <= 4 ? 4 : 2; // modulo: lower = more taken
+  return seatHash(trainId, wagon, row, col) % threshold !== 0;
 }
 
-function openSeatModal(trainId, layout, model, depTime, price, destination) {
-  _seatState.trainId     = trainId;
-  _seatState.layout      = layout;
-  _seatState.wagon       = 1;
-  _seatState.selected    = '';
-  _seatState.price       = price || '';
-  _seatState.destination = destination || '';
-  _seatState.model       = model || '';
-  _seatState.depTime     = depTime || '';
-  document.getElementById('seat-modal-title').textContent  = 'Välj sittplats';
-  document.getElementById('seat-modal-sub').textContent    = 'Tåg ' + trainId + ' · ' + model + ' · avg ' + depTime;
+function openSeatModal(trainId, layout, model, depTime, price, destination, trainImage, travelMinutes, priceOriginal, seatsLeft) {
+  _seatState.trainId      = trainId;
+  _seatState.layout       = layout;
+  _seatState.wagon        = 1;
+  _seatState.selected     = '';
+  _seatState.price        = price || '';
+  _seatState.destination  = destination || '';
+  _seatState.model        = model || '';
+  _seatState.depTime      = depTime || '';
+  _seatState.trainImage   = trainImage || '';
+  _seatState.travelMins   = parseInt(travelMinutes, 10) || 0;
+  _seatState.priceOriginal= priceOriginal || '';
+  _seatState.seatsLeft    = parseInt(seatsLeft, 10) || 5;
+
+  // Render journey card
+  var arrTime = calcArrival(depTime, _seatState.travelMins);
+  var timeRange = esc(depTime) + (arrTime ? ' – ' + arrTime : '');
+  var cardHtml =
+    '<div class="seat-journey-card">' +
+      '<div class="sjc-top">' +
+        '<div class="sjc-times">' +
+          '<div class="sjc-timerange">' + timeRange + '</div>' +
+          '<div class="sjc-info">Tåg ' + esc(trainId) + ' · ' + esc(model) + ' · 0 byten</div>' +
+        '</div>' +
+        '<div class="sjc-right">' +
+          (priceOriginal ? '<div class="sjc-price-orig">' + esc(priceOriginal) + ' kr</div>' : '') +
+          '<div class="sjc-price">' + esc(price).replace('från ','') + '</div>' +
+          '<div class="sjc-minipris">🏷 MiniPris</div>' +
+        '</div>' +
+      '</div>' +
+      (trainImage ? '<img class="sjc-photo" src="' + esc(trainImage) + '" alt="' + esc(model) + '">' : '') +
+      '<div class="sjc-dest">✈ Till: <strong>' + esc(destination) + '</strong></div>' +
+    '</div>';
+  document.getElementById('seat-journey-card').innerHTML = cardHtml;
+
   document.getElementById('seat-selected-val').textContent = '—';
   document.getElementById('seat-confirm-btn').disabled = true;
   document.getElementById('seat-return-btn').disabled  = true;
@@ -1329,9 +1387,13 @@ function buildDepList(deps, title, isReturn) {
         var trainIdEsc = esc(d.trainId || '');
         var layoutEsc  = esc(d.seatLayout || 'x2000');
         var modelEsc   = esc(d.trainModel || '');
-        var priceEsc = esc(d.price || '');
-        var destEsc  = esc(d.destination || '');
-        html += '<button class="open-seatmap-btn" onclick="openSeatModal(\'' + trainIdEsc + '\',\'' + layoutEsc + '\',\'' + modelEsc + '\',\'' + esc(d.departureTime||'') + '\',\'' + priceEsc + '\',\'' + destEsc + '\')">🪑 Välj sittplats</button>';
+        var priceEsc   = esc(d.price || '');
+        var destEsc    = esc(d.destination || '');
+        var imgEsc     = esc(d.trainImage || '');
+        var origEsc    = String(d.priceOriginal || '');
+        var slEsc      = String(d.seatsLeft || 5);
+        var minsEsc    = String(d.travelMinutes || 0);
+        html += '<button class="open-seatmap-btn" onclick="openSeatModal(\'' + trainIdEsc + '\',\'' + layoutEsc + '\',\'' + modelEsc + '\',\'' + esc(d.departureTime||'') + '\',\'' + priceEsc + '\',\'' + destEsc + '\',\'' + imgEsc + '\',' + minsEsc + ',' + origEsc + ',' + slEsc + ')">🪑 Välj sittplats</button>';
       } else {
         html += '<div class="no-seatmap-note">Öppen placering – välj valfri ledig plats ombord</div>';
       }
