@@ -319,7 +319,28 @@
       letter-spacing:-.03em; line-height:1.1;
       text-shadow:0 0 20px rgba(96,165,250,.5);
     }
+    .card-price-original {
+      font-size:.68rem; color:rgba(255,255,255,.28);
+      text-decoration:line-through; margin-bottom:2px;
+    }
     .card-price-model { font-size:.70rem; color:rgba(255,255,255,.35); margin-bottom:6px; }
+
+    .minipris-badge {
+      display:inline-flex; align-items:center; gap:4px;
+      background:linear-gradient(135deg,#dc2626,#b91c1c);
+      color:#fff; font-size:.64rem; font-weight:800;
+      letter-spacing:.06em; text-transform:uppercase;
+      padding:3px 9px; border-radius:20px;
+      box-shadow:0 2px 8px rgba(220,38,38,.4);
+      margin-bottom:5px;
+    }
+    .seats-badge {
+      font-size:.66rem; font-weight:700; padding:3px 8px;
+      border-radius:10px; white-space:nowrap; margin-bottom:5px;
+    }
+    .seats-1   { background:rgba(220,38,38,.2);  color:#fca5a5; border:1px solid rgba(220,38,38,.35); }
+    .seats-2-3 { background:rgba(234,88,12,.2);  color:#fdba74; border:1px solid rgba(234,88,12,.35); }
+    .seats-4-5 { background:rgba(234,179,8,.15); color:#fde68a; border:1px solid rgba(234,179,8,.3); }
 
     .co2-badge {
       font-size:.66rem; font-weight:700;
@@ -716,12 +737,21 @@ function buildDepList(deps, title, isReturn) {
       html +=       '</div>';
       html +=     '</div>';
 
-      // Höger: pris + badge
+      // Höger: pris + badges
       html +=     '<div class="card-right">';
+      html += '<div class="minipris-badge">🏷 MiniPris</div>';
       if (priceAmt) {
+        if (d.priceOriginal > 0) {
+          html += '<div class="card-price-original">' + d.priceOriginal + ' kr</div>';
+        }
         html += '<div class="card-price-fr">Fr.</div>';
         html += '<div class="card-price-amt">' + esc(priceAmt) + '</div>';
         html += '<div class="card-price-model">' + esc(d.trainModel || '') + '</div>';
+      }
+      if (d.seatsLeft > 0) {
+        var seatsCls = d.seatsLeft === 1 ? 'seats-1' : d.seatsLeft <= 3 ? 'seats-2-3' : 'seats-4-5';
+        var seatsText = d.seatsLeft === 1 ? '🔥 1 plats kvar!' : d.seatsLeft + ' platser kvar';
+        html += '<div class="seats-badge ' + seatsCls + '">' + seatsText + '</div>';
       }
       if (d.co2SavedKg > 0) {
         var co2 = d.co2SavedKg >= 1

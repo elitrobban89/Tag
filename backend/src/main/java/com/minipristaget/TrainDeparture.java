@@ -11,9 +11,11 @@ public class TrainDeparture {
     private boolean canceled;
 
     // Enriched fields
-    private String price;        // 2 klass
-    private String priceLugn;    // 2 klass Lugn
-    private String price1klass;  // 1 klass
+    private String price;          // 2 klass MiniPris
+    private String priceLugn;      // 2 klass Lugn MiniPris
+    private String price1klass;    // 1 klass MiniPris
+    private int    priceOriginal;  // ordinarie pris (visas överstruket)
+    private int    seatsLeft;      // platser kvar
     private String trainModel;
     private String trainColor;
     private String trainImage;
@@ -50,6 +52,12 @@ public class TrainDeparture {
 
     public String getPrice1klass()       { return price1klass; }
     public void setPrice1klass(String v) { this.price1klass = v; }
+
+    public int  getPriceOriginal()     { return priceOriginal; }
+    public void setPriceOriginal(int v){ this.priceOriginal = v; }
+
+    public int  getSeatsLeft()     { return seatsLeft; }
+    public void setSeatsLeft(int v){ this.seatsLeft = v; }
 
     public String getTrainModel()       { return trainModel; }
     public void setTrainModel(String v) { this.trainModel = v; }

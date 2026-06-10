@@ -39,18 +39,24 @@ public class TrainModelService {
         return MODELS.getOrDefault(operator.trim().toUpperCase(), DEFAULT);
     }
 
-    /** Base numeric price for 2 klass. */
-    private int basePrice(double distKm, String trainId) {
-        if (distKm <= 0) return 0;
-        double base = 39 + distKm * 1.15;
-        int variation = (trainId != null ? Math.abs(trainId.hashCode()) % 41 : 0) - 20;
-        int price = Math.max(39, Math.min(1299, (int)(base + variation)));
-        return ((price / 10) * 10) + 9;
+    private static int roundToX9(double v) {
+        int p = Math.max(19, Math.min(2499, (int) v));
+        return ((p / 10) * 10) + 9;
     }
 
-    private static int roundToX9(double v) {
-        int p = Math.max(39, Math.min(2499, (int) v));
-        return ((p / 10) * 10) + 9;
+    /** MiniPris — deeply discounted base price for 2 klass. */
+    private int basePrice(double distKm, String trainId) {
+        if (distKm <= 0) return 0;
+        // Sharp MiniPris flash-sale pricing: ~99–299 kr for typical distances
+        double base = 19 + distKm * 0.38;
+        int variation = (trainId != null ? Math.abs(trainId.hashCode()) % 31 : 0) - 15;
+        return roundToX9(Math.max(19, base + variation));
+    }
+
+    /** Full ordinary price (shown as strikethrough). */
+    public int calculateOrdinaryPrice(double distKm, String trainId) {
+        if (distKm <= 0) return 0;
+        return roundToX9(basePrice(distKm, trainId) * 2.8);
     }
 
     public String calculatePrice(double distKm, String trainId) {
@@ -60,12 +66,18 @@ public class TrainModelService {
 
     public String calculatePriceLugn(double distKm, String trainId) {
         int p = basePrice(distKm, trainId);
-        return p > 0 ? "från " + roundToX9(p * 1.20) + " kr" : "";
+        return p > 0 ? "från " + roundToX9(p * 1.18) + " kr" : "";
     }
 
     public String calculatePrice1Klass(double distKm, String trainId) {
         int p = basePrice(distKm, trainId);
-        return p > 0 ? "från " + roundToX9(p * 1.55) + " kr" : "";
+        return p > 0 ? "från " + roundToX9(p * 1.45) + " kr" : "";
+    }
+
+    /** Seats left: 1–5, deterministic per trainId. */
+    public int calculateSeatsLeft(String trainId) {
+        int hash = trainId != null ? Math.abs(trainId.hashCode()) : 0;
+        return (hash % 5) + 1;
     }
 
     /** Estimated travel time in minutes, rounded to nearest 5. */
