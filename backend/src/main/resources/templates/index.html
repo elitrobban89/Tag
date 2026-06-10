@@ -349,6 +349,11 @@
     .class-option:last-child { margin-bottom: 0; }
     .class-option:hover { background: rgba(59,130,246,.09); border-color: rgba(96,165,250,.2); }
     .class-option.selected { background: rgba(59,130,246,.14); border-color: rgba(96,165,250,.35); }
+    /* Locked state after "Välj sittplats" clicked */
+    .class-panel.locked { pointer-events:none; }
+    .class-panel.locked .class-option:not(.selected) { display:none; }
+    .class-panel.locked .class-option.selected { opacity:.75; cursor:default; }
+    .class-panel.locked .class-panel-title::after { content:' (vald)'; }
     .class-opt-top { display: flex; align-items: center; gap: 8px; }
     .class-badge {
       font-size: .64rem; font-weight: 800; letter-spacing: .03em;
@@ -1349,6 +1354,9 @@ function openSeatMapForCard(btn) {
   var sel        = card ? card.querySelector('.class-option.selected') : null;
   var price      = sel ? sel.getAttribute('data-price')      : btn.getAttribute('data-price');
   var classLabel = sel ? sel.getAttribute('data-class-name') : '2 klass';
+  // Lock class panel so class can't be changed after seat selection starts
+  var panel = card ? card.querySelector('.class-panel') : null;
+  if (panel) panel.classList.add('locked');
   openSeatModal(
     btn.getAttribute('data-train-id'),
     btn.getAttribute('data-layout'),
