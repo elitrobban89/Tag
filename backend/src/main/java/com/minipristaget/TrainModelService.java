@@ -7,31 +7,32 @@ import java.util.Map;
 public class TrainModelService {
 
     public record TrainModelInfo(
-        String name, String color, int avgSpeedKmh, String description, String imageUrl) {}
+        String name, String color, int avgSpeedKmh, String description,
+        String imageUrl, boolean hasSeatMap, String seatLayout) {}
 
     private static final TrainModelInfo DEFAULT =
         new TrainModelInfo("Regionaltåg", "#6b7280", 100, "Regionaltåg",
-                           "/images/train-sj-regional.png");
+                           "/images/train-sj-regional.png", false, "none");
 
     private static final Map<String, TrainModelInfo> MODELS = Map.ofEntries(
-        Map.entry("SJ",         new TrainModelInfo("SJ X2000",          "#CC0000", 160,
-                                    "Snabbtåg · 200 km/h max",    "/images/train-sj-x2000.jpg")),
-        Map.entry("MTRX",       new TrainModelInfo("X74",              "#1a5e35", 175,
-                                    "X74 · 200 km/h, nordisk design", "/images/train-vy.jpg")),
-        Map.entry("VR",         new TrainModelInfo("X74",              "#1a5e35", 175,
-                                    "X74 (VR) · 200 km/h max",    "/images/train-vy.jpg")),
-        Map.entry("MTRXEX",     new TrainModelInfo("X74",              "#1a5e35", 175,
-                                    "X74 · 200 km/h max",          "/images/train-vy.jpg")),
-        Map.entry("VASTTRAF",   new TrainModelInfo("X61 Västtåg",      "#0055a5", 110,
-                                    "Regionaltåg västkusten",      "/images/train-sj-regional.png")),
-        Map.entry("Ö-TÅG",      new TrainModelInfo("Öresundståg X31", "#004EA8", 120,
-                                    "Regionaltåg Skåne",           "/images/train-oresundstag.jpg")),
-        Map.entry("SKANE",      new TrainModelInfo("Öresundståg X31", "#004EA8", 120,
-                                    "Regionaltåg Skåne",           "/images/train-oresundstag.jpg")),
-        Map.entry("SNALLTAGET", new TrainModelInfo("Snälltåget",       "#1a1a2e", 150,
-                                    "Fjärrtåg & nattåg",           "/images/train-sj-fast.png")),
-        Map.entry("MTR",        new TrainModelInfo("MTR Express",      "#e85d00", 155,
-                                    "Stockholm–Göteborg",          "/images/train-sj-fast.png"))
+        Map.entry("SJ",         new TrainModelInfo("SJ X2000",         "#CC0000", 160,
+                                    "Snabbtåg · 200 km/h max",     "/images/train-sj-x2000.jpg",  true,  "x2000")),
+        Map.entry("MTRX",       new TrainModelInfo("X74",             "#1a5e35", 175,
+                                    "X74 · 200 km/h, nordisk design","/images/train-vy.jpg",        true,  "x74")),
+        Map.entry("VR",         new TrainModelInfo("X74",             "#1a5e35", 175,
+                                    "X74 (VR) · 200 km/h max",     "/images/train-vy.jpg",        true,  "x74")),
+        Map.entry("MTRXEX",     new TrainModelInfo("X74",             "#1a5e35", 175,
+                                    "X74 · 200 km/h max",           "/images/train-vy.jpg",        true,  "x74")),
+        Map.entry("VASTTRAF",   new TrainModelInfo("X61 Västtåg",     "#0055a5", 110,
+                                    "Regionaltåg västkusten",       "/images/train-sj-regional.png", false, "none")),
+        Map.entry("Ö-TÅG",      new TrainModelInfo("Öresundståg X31","#004EA8", 120,
+                                    "Regionaltåg Skåne",            "/images/train-oresundstag.jpg", false, "none")),
+        Map.entry("SKANE",      new TrainModelInfo("Öresundståg X31","#004EA8", 120,
+                                    "Regionaltåg Skåne",            "/images/train-oresundstag.jpg", false, "none")),
+        Map.entry("SNALLTAGET", new TrainModelInfo("Snälltåget",      "#1a1a2e", 150,
+                                    "Fjärrtåg & nattåg",            "/images/train-sj-fast.png",   true,  "snalltaget")),
+        Map.entry("MTR",        new TrainModelInfo("MTR Express",     "#e85d00", 155,
+                                    "Stockholm–Göteborg",           "/images/train-sj-fast.png",   true,  "mtr"))
     );
 
     public TrainModelInfo getModel(String operator) {

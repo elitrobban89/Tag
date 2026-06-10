@@ -408,9 +408,167 @@
     }
     .return-dep-list .list-dot    { background:#a78bfa; box-shadow:0 0 6px rgba(167,139,250,.8); }
     .return-dep-list .list-header { color:rgba(196,181,253,.75); }
+
+    /* ── Seat map modal ── */
+    .seat-overlay {
+      display:none; position:fixed; inset:0; z-index:1000;
+      background:rgba(0,0,0,.75); backdrop-filter:blur(6px);
+      align-items:center; justify-content:center; padding:16px;
+    }
+    .seat-overlay.open { display:flex; }
+    .seat-modal {
+      background:linear-gradient(160deg,rgba(10,20,50,.97),rgba(5,10,30,.99));
+      border:1px solid rgba(96,165,250,.25);
+      border-radius:20px; width:100%; max-width:520px;
+      max-height:90vh; overflow-y:auto;
+      box-shadow:0 20px 60px rgba(0,0,0,.6);
+    }
+    .seat-modal-head {
+      display:flex; align-items:center; gap:10px;
+      padding:18px 20px 14px; border-bottom:1px solid rgba(255,255,255,.07);
+    }
+    .seat-modal-title { font-size:1rem; font-weight:800; color:#fff; flex:1; }
+    .seat-modal-sub   { font-size:.72rem; color:rgba(255,255,255,.4); margin-top:2px; }
+    .seat-modal-close {
+      background:rgba(255,255,255,.08); border:none; color:#fff;
+      width:30px; height:30px; border-radius:50%; cursor:pointer;
+      font-size:.9rem; display:flex; align-items:center; justify-content:center;
+      transition:background .15s;
+    }
+    .seat-modal-close:hover { background:rgba(255,255,255,.18); }
+    .wagon-tabs {
+      display:flex; gap:6px; padding:12px 20px 0; overflow-x:auto;
+    }
+    .wagon-tab {
+      background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.1);
+      color:rgba(255,255,255,.55); font-size:.75rem; font-weight:700;
+      padding:5px 14px; border-radius:20px; cursor:pointer; white-space:nowrap;
+      transition:all .15s;
+    }
+    .wagon-tab.active {
+      background:rgba(59,130,246,.25); border-color:rgba(96,165,250,.4); color:#93c5fd;
+    }
+    .seat-legend {
+      display:flex; gap:14px; padding:10px 20px;
+      font-size:.68rem; color:rgba(255,255,255,.4);
+      border-bottom:1px solid rgba(255,255,255,.05);
+    }
+    .seat-legend span { display:flex; align-items:center; gap:5px; }
+    .leg-box {
+      width:14px; height:14px; border-radius:3px; display:inline-block;
+    }
+    .leg-avail  { background:rgba(59,130,246,.35); border:1px solid rgba(96,165,250,.5); }
+    .leg-taken  { background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.12); }
+    .leg-sel    { background:rgba(34,197,94,.4);   border:1px solid rgba(74,222,128,.6); }
+
+    .seat-map-wrap { padding:16px 20px; overflow-x:auto; }
+    .seat-train-body {
+      background:rgba(255,255,255,.03);
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:12px; padding:10px 14px;
+      min-width:260px;
+    }
+    .seat-row {
+      display:flex; align-items:center; gap:4px; margin-bottom:4px;
+    }
+    .seat-row-num {
+      font-size:.6rem; color:rgba(255,255,255,.2);
+      width:18px; text-align:right; flex-shrink:0;
+    }
+    .seat-aisle { width:18px; flex-shrink:0; }
+    .seat {
+      width:28px; height:28px; border-radius:4px; cursor:pointer;
+      font-size:.6rem; font-weight:700; color:rgba(255,255,255,.6);
+      display:flex; align-items:center; justify-content:center;
+      transition:all .15s; flex-shrink:0; user-select:none;
+      border:1px solid transparent;
+    }
+    .seat.avail {
+      background:rgba(59,130,246,.25); border-color:rgba(96,165,250,.4); color:#93c5fd;
+    }
+    .seat.avail:hover {
+      background:rgba(59,130,246,.5); border-color:rgba(96,165,250,.7); transform:scale(1.1);
+    }
+    .seat.taken {
+      background:rgba(255,255,255,.06); border-color:rgba(255,255,255,.1);
+      color:rgba(255,255,255,.2); cursor:not-allowed;
+    }
+    .seat.selected {
+      background:rgba(34,197,94,.35); border-color:rgba(74,222,128,.6); color:#86efac;
+      box-shadow:0 0 8px rgba(34,197,94,.4);
+    }
+    .seat-col-header {
+      display:flex; align-items:center; gap:4px;
+      margin-bottom:6px; padding-left:22px;
+    }
+    .seat-col-lbl {
+      width:28px; text-align:center;
+      font-size:.6rem; font-weight:700; color:rgba(255,255,255,.25);
+      flex-shrink:0;
+    }
+    .seat-col-lbl.aisle-lbl { width:18px; }
+    .seat-class-zone {
+      font-size:.64rem; font-weight:700; letter-spacing:.06em;
+      text-transform:uppercase; color:rgba(255,255,255,.25);
+      padding:4px 0 2px; border-top:1px solid rgba(255,255,255,.05);
+      margin: 6px 0 4px;
+    }
+    .seat-footer {
+      padding:12px 20px 18px;
+      border-top:1px solid rgba(255,255,255,.06);
+      display:flex; align-items:center; gap:12px;
+    }
+    .seat-selected-lbl { flex:1; font-size:.82rem; color:rgba(255,255,255,.5); }
+    .seat-selected-val { color:#fff; font-weight:700; }
+    .seat-confirm-btn {
+      background:linear-gradient(135deg,#2563eb,#1d4ed8);
+      border:none; color:#fff; font-weight:800; font-size:.82rem;
+      padding:9px 20px; border-radius:12px; cursor:pointer;
+      box-shadow:0 4px 12px rgba(37,99,235,.4);
+      transition:opacity .15s;
+    }
+    .seat-confirm-btn:disabled { opacity:.35; cursor:not-allowed; }
+    .open-seatmap-btn {
+      display:inline-flex; align-items:center; gap:6px;
+      background:rgba(59,130,246,.15); border:1px solid rgba(96,165,250,.3);
+      color:#93c5fd; font-size:.74rem; font-weight:700;
+      padding:7px 14px; border-radius:10px; cursor:pointer;
+      margin-top:8px; width:100%; justify-content:center;
+      transition:background .15s;
+    }
+    .open-seatmap-btn:hover { background:rgba(59,130,246,.28); }
+    .no-seatmap-note {
+      font-size:.68rem; color:rgba(255,255,255,.25);
+      margin-top:8px; text-align:center; font-style:italic;
+    }
   </style>
 </head>
 <body>
+
+<!-- ── Seat map modal ── -->
+<div class="seat-overlay" id="seat-overlay" onclick="seatOverlayClick(event)">
+  <div class="seat-modal" id="seat-modal">
+    <div class="seat-modal-head">
+      <div style="flex:1">
+        <div class="seat-modal-title" id="seat-modal-title">Välj sittplats</div>
+        <div class="seat-modal-sub"  id="seat-modal-sub"></div>
+      </div>
+      <button class="seat-modal-close" onclick="closeSeatModal()">✕</button>
+    </div>
+    <div class="wagon-tabs" id="wagon-tabs"></div>
+    <div class="seat-legend">
+      <span><span class="leg-box leg-avail"></span> Ledig</span>
+      <span><span class="leg-box leg-taken"></span> Bokad</span>
+      <span><span class="leg-box leg-sel"></span>   Vald</span>
+    </div>
+    <div class="seat-map-wrap" id="seat-map-wrap"></div>
+    <div class="seat-footer">
+      <div class="seat-selected-lbl">Vald plats: <span class="seat-selected-val" id="seat-selected-val">—</span></div>
+      <button class="seat-confirm-btn" id="seat-confirm-btn" disabled onclick="confirmSeat()">Bekräfta</button>
+    </div>
+  </div>
+</div>
+
 <div class="wrap">
 
   <!-- ── App header ── -->
@@ -671,6 +829,160 @@ function formatDuration(minutes) {
   return h + 'h ' + m + 'min';
 }
 
+// ── Platskarta ────────────────────────────────────────────────────
+var _seatState = { trainId:'', layout:'', wagon:1, selected:'' };
+
+// Tåglayouter: { wagons, classes: [{name, rows:[{num,seats:[]}], dir}] }
+var LAYOUTS = {
+  x2000: {
+    wagons: 3,
+    wagonLabel: ['Vagn 1 · 2 klass', 'Vagn 2 · 2 klass Lugn', 'Vagn 3 · 1 klass'],
+    configs: [
+      // Vagn 1+2: 2 klass, rader 11-34, layout A B | C D
+      { zones: [{ label:'2 klass', rows: rowRange(11,34), cols:['A','B',null,'C','D'] }] },
+      { zones: [{ label:'2 klass Lugn', rows: rowRange(11,30), cols:['A','B',null,'C','D'] }] },
+      // Vagn 3: 1 klass, rader 1-14, layout A | B C
+      { zones: [{ label:'1 klass', rows: rowRange(1,14), cols:['A',null,'B','C'] }] }
+    ]
+  },
+  x74: {
+    wagons: 2,
+    wagonLabel: ['Vagn 1 · 2 klass', 'Vagn 2 · 2 klass Lugn'],
+    configs: [
+      { zones: [{ label:'2 klass', rows: rowRange(1,26), cols:['1','2',null,'3','4'] }] },
+      { zones: [{ label:'2 klass Lugn', rows: rowRange(1,22), cols:['1','2',null,'3','4'] }] }
+    ]
+  },
+  snalltaget: {
+    wagons: 2,
+    wagonLabel: ['Vagn 1 · 2 klass', 'Vagn 2 · 2 klass'],
+    configs: [
+      { zones: [{ label:'2 klass', rows: rowRange(1,24), cols:['A','B',null,'C','D'] }] },
+      { zones: [{ label:'2 klass', rows: rowRange(1,24), cols:['A','B',null,'C','D'] }] }
+    ]
+  },
+  mtr: {
+    wagons: 2,
+    wagonLabel: ['Vagn 1 · 2 klass', 'Vagn 2 · 1 klass'],
+    configs: [
+      { zones: [{ label:'2 klass', rows: rowRange(1,28), cols:['A','B',null,'C','D'] }] },
+      { zones: [{ label:'1 klass', rows: rowRange(1,12), cols:['A',null,'B','C'] }] }
+    ]
+  }
+};
+
+function rowRange(from, to) {
+  var r = [];
+  for (var i = from; i <= to; i++) r.push(i);
+  return r;
+}
+
+function seatHash(trainId, wagon, row, col) {
+  var s = trainId + '|' + wagon + '|' + row + '|' + col;
+  var h = 5381;
+  for (var i = 0; i < s.length; i++) h = ((h << 5) + h) + s.charCodeAt(i);
+  return Math.abs(h);
+}
+
+function isTaken(trainId, wagon, row, col) {
+  return seatHash(trainId, wagon, row, col) % 3 === 0; // ~33% bokade
+}
+
+function openSeatModal(trainId, layout, model, depTime) {
+  _seatState.trainId  = trainId;
+  _seatState.layout   = layout;
+  _seatState.wagon    = 1;
+  _seatState.selected = '';
+  document.getElementById('seat-modal-title').textContent = 'Välj sittplats';
+  document.getElementById('seat-modal-sub').textContent   = 'Tåg ' + trainId + ' · ' + model + ' · avg ' + depTime;
+  document.getElementById('seat-selected-val').textContent = '—';
+  document.getElementById('seat-confirm-btn').disabled = true;
+  renderWagonTabs();
+  renderSeatMap();
+  document.getElementById('seat-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeSeatModal() {
+  document.getElementById('seat-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function seatOverlayClick(e) {
+  if (e.target === document.getElementById('seat-overlay')) closeSeatModal();
+}
+
+function renderWagonTabs() {
+  var cfg = LAYOUTS[_seatState.layout];
+  if (!cfg) return;
+  var html = '';
+  for (var i = 0; i < cfg.wagons; i++) {
+    var active = (i + 1 === _seatState.wagon) ? ' active' : '';
+    html += '<button class="wagon-tab' + active + '" onclick="switchWagon(' + (i+1) + ')">' + cfg.wagonLabel[i] + '</button>';
+  }
+  document.getElementById('wagon-tabs').innerHTML = html;
+}
+
+function switchWagon(n) {
+  _seatState.wagon = n;
+  renderWagonTabs();
+  renderSeatMap();
+}
+
+function renderSeatMap() {
+  var cfg = LAYOUTS[_seatState.layout];
+  if (!cfg) { document.getElementById('seat-map-wrap').innerHTML = '<p style="color:rgba(255,255,255,.3);padding:20px">Ingen platskarta tillgänglig.</p>'; return; }
+  var wCfg   = cfg.configs[_seatState.wagon - 1];
+  var trainId = _seatState.trainId;
+  var wagon   = _seatState.wagon;
+
+  var html = '<div class="seat-train-body">';
+  wCfg.zones.forEach(function(zone) {
+    html += '<div class="seat-class-zone">' + zone.label + '</div>';
+    // Column headers
+    html += '<div class="seat-col-header"><div style="width:18px"></div>';
+    zone.cols.forEach(function(c) {
+      if (c === null) html += '<div class="seat-col-lbl aisle-lbl"></div>';
+      else            html += '<div class="seat-col-lbl">' + c + '</div>';
+    });
+    html += '</div>';
+    // Rows
+    zone.rows.forEach(function(rowNum) {
+      html += '<div class="seat-row"><div class="seat-row-num">' + rowNum + '</div>';
+      zone.cols.forEach(function(c) {
+        if (c === null) { html += '<div class="seat-aisle"></div>'; return; }
+        var seatId  = wagon + '-' + rowNum + c;
+        var taken   = isTaken(trainId, wagon, rowNum, c);
+        var selCls  = (_seatState.selected === seatId) ? ' selected' : (taken ? ' taken' : ' avail');
+        var onclick = taken ? '' : ' onclick="selectSeat(\'' + seatId + '\',\'' + rowNum + '\',\'' + c + '\')"';
+        html += '<div class="seat' + selCls + '"' + onclick + '>' + c + '</div>';
+      });
+      html += '</div>';
+    });
+  });
+  html += '</div>';
+  document.getElementById('seat-map-wrap').innerHTML = html;
+}
+
+function selectSeat(seatId, row, col) {
+  _seatState.selected = seatId;
+  var vagn = 'Vagn ' + _seatState.wagon + ', plats ' + row + col;
+  document.getElementById('seat-selected-val').textContent = vagn;
+  document.getElementById('seat-confirm-btn').disabled = false;
+  renderSeatMap();
+}
+
+function confirmSeat() {
+  var val = document.getElementById('seat-selected-val').textContent;
+  closeSeatModal();
+  // Show brief confirmation toast
+  var toast = document.createElement('div');
+  toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:rgba(34,197,94,.9);color:#fff;font-weight:700;padding:10px 20px;border-radius:12px;z-index:2000;font-size:.82rem;box-shadow:0 4px 20px rgba(0,0,0,.4)';
+  toast.textContent = '✓ ' + val + ' reserverad!';
+  document.body.appendChild(toast);
+  setTimeout(function() { toast.remove(); }, 3000);
+}
+
 // ── Reseklass expand/select ───────────────────────────────────────
 function toggleClassPanel(cardEl) {
   cardEl.classList.toggle('expanded');
@@ -800,6 +1112,16 @@ function buildDepList(deps, title, isReturn) {
       html +=     '</div>';
       html +=     '<div class="class-perks">🪑 Breda säten med extra benutrymme &middot; ☕ Kaffe, te &amp; frukt i vagnen &middot; 🥐 Frukost serveras vid platsen (avgångar före 09:00) &middot; 🏛️ SJ Lounge i Stockholm, Göteborg &amp; Malmö</div>';
       html +=   '</div>';
+
+      // Välj sittplats-knapp eller öppen-placering-notering
+      if (d.hasSeatMap) {
+        var trainIdEsc = esc(d.trainId || '');
+        var layoutEsc  = esc(d.seatLayout || 'x2000');
+        var modelEsc   = esc(d.trainModel || '');
+        html += '<button class="open-seatmap-btn" onclick="openSeatModal(\'' + trainIdEsc + '\',\'' + layoutEsc + '\',\'' + modelEsc + '\',\'' + esc(d.departureTime||'') + '\')">🪑 Välj sittplats</button>';
+      } else {
+        html += '<div class="no-seatmap-note">Öppen placering – välj valfri ledig plats ombord</div>';
+      }
 
       html += '</div>'; // class-panel
 

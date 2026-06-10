@@ -162,6 +162,8 @@ public class TrafikverketService {
                     dep.setPrice1klass(trainModelService.calculatePrice1Klass(dist, dep.getTrainId()));
                     dep.setPriceOriginal(trainModelService.calculateOrdinaryPrice(dist, dep.getTrainId()));
                     dep.setSeatsLeft(trainModelService.calculateSeatsLeft(dep.getTrainId()));
+                    dep.setHasSeatMap(model.hasSeatMap());
+                    dep.setSeatLayout(model.seatLayout());
                     dep.setTravelMinutes(trainModelService.estimateTravelMinutes(dist, model.avgSpeedKmh()));
                     // CO2 savings: car ~110 g/km vs Swedish train ~6 g/km
                     double co2 = Math.round((110.0 - 6.0) * dist / 1000.0 * 10.0) / 10.0;

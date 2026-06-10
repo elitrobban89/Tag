@@ -14,9 +14,11 @@ public class TrainDeparture {
     private String price;          // 2 klass MiniPris
     private String priceLugn;      // 2 klass Lugn MiniPris
     private String price1klass;    // 1 klass MiniPris
-    private int    priceOriginal;  // ordinarie pris (visas överstruket)
-    private int    seatsLeft;      // platser kvar
-    private String trainModel;
+    private int     priceOriginal;  // ordinarie pris (visas överstruket)
+    private int     seatsLeft;      // platser kvar
+    private boolean hasSeatMap;     // om tågtypen stöder platsval
+    private String  seatLayout;     // "x2000", "x74", "snalltaget", "mtr", "none"
+    private String  trainModel;
     private String trainColor;
     private String trainImage;
     private int    travelMinutes;
@@ -58,6 +60,12 @@ public class TrainDeparture {
 
     public int  getSeatsLeft()     { return seatsLeft; }
     public void setSeatsLeft(int v){ this.seatsLeft = v; }
+
+    public boolean isHasSeatMap()        { return hasSeatMap; }
+    public void    setHasSeatMap(boolean v){ this.hasSeatMap = v; }
+
+    public String getSeatLayout()       { return seatLayout; }
+    public void   setSeatLayout(String v){ this.seatLayout = v; }
 
     public String getTrainModel()       { return trainModel; }
     public void setTrainModel(String v) { this.trainModel = v; }
