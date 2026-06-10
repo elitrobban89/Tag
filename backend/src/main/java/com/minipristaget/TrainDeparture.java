@@ -11,7 +11,9 @@ public class TrainDeparture {
     private boolean canceled;
 
     // Enriched fields
-    private String price;
+    private String price;        // 2 klass
+    private String priceLugn;    // 2 klass Lugn
+    private String price1klass;  // 1 klass
     private String trainModel;
     private String trainColor;
     private String trainImage;
@@ -42,6 +44,12 @@ public class TrainDeparture {
 
     public String getPrice()       { return price; }
     public void setPrice(String v) { this.price = v; }
+
+    public String getPriceLugn()       { return priceLugn; }
+    public void setPriceLugn(String v) { this.priceLugn = v; }
+
+    public String getPrice1klass()       { return price1klass; }
+    public void setPrice1klass(String v) { this.price1klass = v; }
 
     public String getTrainModel()       { return trainModel; }
     public void setTrainModel(String v) { this.trainModel = v; }

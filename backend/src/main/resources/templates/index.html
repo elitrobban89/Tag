@@ -227,6 +227,7 @@
       border: 1px solid rgba(255,255,255,.08);
       box-shadow: 0 2px 10px rgba(0,0,0,.25);
       transition: box-shadow .2s, transform .2s, border-color .2s;
+      cursor: pointer;
     }
     .dep-card:last-child { margin-bottom: 0; }
     .dep-card:hover {
@@ -236,6 +237,55 @@
     }
     .dep-card.canceled { opacity:.4; }
     .dep-card.delayed  { border-left:3px solid #f59e0b; }
+    .dep-card.expanded {
+      border-color: rgba(96,165,250,.35);
+      box-shadow: 0 4px 24px rgba(59,130,246,.18);
+      transform: none;
+    }
+
+    /* ── Class selector panel ── */
+    .class-panel {
+      display: none;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(255,255,255,.07);
+    }
+    .dep-card.expanded .class-panel { display: block; }
+    .class-panel-title {
+      font-size: .67rem; font-weight: 700; letter-spacing: .08em;
+      color: rgba(255,255,255,.3); text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .class-option {
+      display: flex; flex-direction: column; gap: 5px;
+      padding: 10px 12px; border-radius: 10px; margin-bottom: 6px;
+      border: 1px solid rgba(255,255,255,.05);
+      background: rgba(255,255,255,.02);
+      transition: background .15s, border-color .15s;
+    }
+    .class-option:last-child { margin-bottom: 0; }
+    .class-option:hover { background: rgba(59,130,246,.09); border-color: rgba(96,165,250,.2); }
+    .class-option.selected { background: rgba(59,130,246,.14); border-color: rgba(96,165,250,.35); }
+    .class-opt-top { display: flex; align-items: center; gap: 8px; }
+    .class-badge {
+      font-size: .64rem; font-weight: 800; letter-spacing: .03em;
+      padding: 2px 9px; border-radius: 20px; white-space: nowrap;
+    }
+    .cls-2    { background:rgba(100,116,139,.3); color:#cbd5e1; border:1px solid rgba(148,163,184,.25); }
+    .cls-lugn { background:rgba(139,92,246,.2);  color:#c4b5fd; border:1px solid rgba(167,139,250,.3); }
+    .cls-1    { background:rgba(234,179,8,.17);  color:#fde68a; border:1px solid rgba(234,179,8,.3); }
+    .class-price-lbl {
+      margin-left: auto;
+      font-size: .86rem; font-weight: 800; color: #93c5fd;
+    }
+    .class-perks {
+      font-size: .70rem; color: rgba(255,255,255,.4); line-height: 1.55;
+      padding-left: 2px;
+    }
+    .card-expand-hint {
+      font-size: .62rem; color: rgba(255,255,255,.2);
+      margin-top: 6px; text-align: right;
+    }
 
     .card-main { display:flex; align-items:flex-start; gap:14px; }
     .card-left { flex:1; min-width:0; }
@@ -600,6 +650,21 @@ function formatDuration(minutes) {
   return h + 'h ' + m + 'min';
 }
 
+// ── Reseklass expand/select ───────────────────────────────────────
+function toggleClassPanel(cardEl) {
+  cardEl.classList.toggle('expanded');
+  var hint = cardEl.querySelector('.card-expand-hint');
+  if (hint) hint.textContent = cardEl.classList.contains('expanded')
+    ? 'Klicka för att stänga ↑'
+    : 'Klicka för att välja reseklass ↓';
+}
+
+function selectClassOption(optEl) {
+  var panel = optEl.closest('.class-panel');
+  panel.querySelectorAll('.class-option').forEach(function(o) { o.classList.remove('selected'); });
+  optEl.classList.add('selected');
+}
+
 // ── Bygg avgångslista HTML (SJ-stil) ─────────────────────────────
 function buildDepList(deps, title, isReturn) {
   var cls = 'dep-list' + (isReturn ? ' return-dep-list' : '');
@@ -631,7 +696,7 @@ function buildDepList(deps, title, isReturn) {
         priceAmt = d.price.replace('från ', '').replace(' kr', ':-');
       }
 
-      html += '<div class="' + cardCls + '">';
+      html += '<div class="' + cardCls + '" onclick="toggleClassPanel(this)">';
       html +=   '<div class="card-main">';
 
       // Vänster: tider + tåg
@@ -670,6 +735,44 @@ function buildDepList(deps, title, isReturn) {
       html +=     '</div>';
 
       html +=   '</div>'; // card-main
+
+      // Expand hint + class panel
+      html += '<div class="card-expand-hint">Klicka för att välja reseklass ↓</div>';
+      html += '<div class="class-panel" onclick="event.stopPropagation()">';
+      html +=   '<div class="class-panel-title">Välj reseklass</div>';
+
+      // 2 klass
+      var p2 = d.price || '';
+      html +=   '<div class="class-option selected" onclick="selectClassOption(this)">';
+      html +=     '<div class="class-opt-top">';
+      html +=       '<span class="class-badge cls-2">2 klass</span>';
+      html +=       '<span class="class-price-lbl">' + esc(p2) + '</span>';
+      html +=     '</div>';
+      html +=     '<div class="class-perks">Res bekvämt till ett bra pris &middot; Mat kan förbeställas och hämtas i bistron</div>';
+      html +=   '</div>';
+
+      // 2 klass Lugn
+      var pLugn = d.priceLugn || '';
+      html +=   '<div class="class-option" onclick="selectClassOption(this)">';
+      html +=     '<div class="class-opt-top">';
+      html +=       '<span class="class-badge cls-lugn">2 klass Lugn</span>';
+      html +=       '<span class="class-price-lbl">' + esc(pLugn) + '</span>';
+      html +=     '</div>';
+      html +=     '<div class="class-perks">🔇 Tyst zon, mobiler på ljudlöst &middot; ☕ Kaffe &amp; te ingår &middot; 🥐 Frukost ingår på avgångar före 09:00</div>';
+      html +=   '</div>';
+
+      // 1 klass
+      var p1 = d.price1klass || '';
+      html +=   '<div class="class-option" onclick="selectClassOption(this)">';
+      html +=     '<div class="class-opt-top">';
+      html +=       '<span class="class-badge cls-1">1 klass</span>';
+      html +=       '<span class="class-price-lbl">' + esc(p1) + '</span>';
+      html +=     '</div>';
+      html +=     '<div class="class-perks">🪑 Breda säten med extra benutrymme &middot; ☕ Kaffe, te &amp; frukt i vagnen &middot; 🥐 Frukost serveras vid platsen (avgångar före 09:00) &middot; 🏛️ SJ Lounge i Stockholm, Göteborg &amp; Malmö</div>';
+      html +=   '</div>';
+
+      html += '</div>'; // class-panel
+
       html += '</div>';   // dep-card
     }
   }

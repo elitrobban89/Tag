@@ -158,6 +158,8 @@ public class TrafikverketService {
                     double dist = haversine(fromSt.getLat(), fromSt.getLon(),
                                             toSt.getLat(),   toSt.getLon());
                     dep.setPrice(trainModelService.calculatePrice(dist, dep.getTrainId()));
+                    dep.setPriceLugn(trainModelService.calculatePriceLugn(dist, dep.getTrainId()));
+                    dep.setPrice1klass(trainModelService.calculatePrice1Klass(dist, dep.getTrainId()));
                     dep.setTravelMinutes(trainModelService.estimateTravelMinutes(dist, model.avgSpeedKmh()));
                     // CO2 savings: car ~110 g/km vs Swedish train ~6 g/km
                     double co2 = Math.round((110.0 - 6.0) * dist / 1000.0 * 10.0) / 10.0;

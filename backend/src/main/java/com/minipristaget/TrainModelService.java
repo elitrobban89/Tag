@@ -39,14 +39,33 @@ public class TrainModelService {
         return MODELS.getOrDefault(operator.trim().toUpperCase(), DEFAULT);
     }
 
-    /** Fake price based on distance + deterministic variation per trainId. */
-    public String calculatePrice(double distKm, String trainId) {
-        if (distKm <= 0) return "";
+    /** Base numeric price for 2 klass. */
+    private int basePrice(double distKm, String trainId) {
+        if (distKm <= 0) return 0;
         double base = 39 + distKm * 1.15;
         int variation = (trainId != null ? Math.abs(trainId.hashCode()) % 41 : 0) - 20;
         int price = Math.max(39, Math.min(1299, (int)(base + variation)));
-        price = ((price / 10) * 10) + 9;
-        return "från " + price + " kr";
+        return ((price / 10) * 10) + 9;
+    }
+
+    private static int roundToX9(double v) {
+        int p = Math.max(39, Math.min(2499, (int) v));
+        return ((p / 10) * 10) + 9;
+    }
+
+    public String calculatePrice(double distKm, String trainId) {
+        int p = basePrice(distKm, trainId);
+        return p > 0 ? "från " + p + " kr" : "";
+    }
+
+    public String calculatePriceLugn(double distKm, String trainId) {
+        int p = basePrice(distKm, trainId);
+        return p > 0 ? "från " + roundToX9(p * 1.20) + " kr" : "";
+    }
+
+    public String calculatePrice1Klass(double distKm, String trainId) {
+        int p = basePrice(distKm, trainId);
+        return p > 0 ? "från " + roundToX9(p * 1.55) + " kr" : "";
     }
 
     /** Estimated travel time in minutes, rounded to nearest 5. */
