@@ -32,7 +32,8 @@ function mpFetchGPS() {
       .then(function(r) { return r.json(); })
       .then(function(data) {
         var a    = data.address || {};
-        var city = a.city || a.town || a.village || a.municipality || a.county || '';
+        var city = (a.city || a.town || a.village || a.municipality || a.county || '')
+                   .replace(/\s+station$/i, '').trim();
         var fromEl = document.getElementById('mp-from');
         if (fromEl && city) fromEl.value = city;
         mpSetHint('', '');
