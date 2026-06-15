@@ -214,7 +214,7 @@ public class WebController {
                 return ResponseEntity.ok(Map.of("reply", "Inga meddelanden."));
             return ResponseEntity.ok(Map.of("reply", groqChatService.chat(messages, context)));
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+            return ResponseEntity.ok(Map.of("error", e.getMessage()));
         }
     }
 

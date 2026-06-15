@@ -32,6 +32,9 @@ public class GroqChatService {
     }
 
     public String chat(List<Map<String, String>> messages, String departureContext) throws Exception {
+        if (!isConfigured())
+            return "AI-assistenten är inte konfigurerad just nu. Försök igen senare.";
+
         StringBuilder systemPrompt = new StringBuilder();
         systemPrompt.append("""
                 Du är en hjälpsam tågassistent på appen MiniPrisTåget. Du hjälper användare med:
@@ -92,8 +95,12 @@ public class GroqChatService {
 
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
+        if (response.statusCode() == 401)
+            throw new RuntimeException("AI-tjänsten är inte korrekt konfigurerad. Kontakta oss om felet kvarstår.");
+        if (response.statusCode() == 429)
+            throw new RuntimeException("För många frågor till AI:n just nu — vänta en stund och försök igen.");
         if (response.statusCode() != 200)
-            throw new RuntimeException("Groq svarade " + response.statusCode());
+            throw new RuntimeException("AI-tjänsten svarade med fel " + response.statusCode() + ". Försök igen om en stund.");
 
         JsonNode json = mapper.readTree(response.body());
         return json.at("/choices/0/message/content").asText("Inget svar.");
