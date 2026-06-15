@@ -44,6 +44,7 @@ Tågsökningsapp med MiniPris-deals inbyggd via iframe på [elitrobban.se/minipr
 - **Markdown** – svarar med **fetstil** och `- listor` som renderas till HTML
 - **Rensa** – knapp för att starta ett nytt samtal utan att ladda om sidan
 - **Tåginformation** – AI:n känner till tågtyper (X2000, MTRX, Öresundståg m.fl.), WiFi/5G ombord och restider för topp 5-rutter
+- **Tågbilder** – när AI:n nämner en tågtyp (X2000, MTRX X74, Öresundståg, Snälltåget, MTR Express, Västtåg X61) visas motsvarande tågfoto automatiskt under svaret
 - **Rate limiting** – chatboten begränsad till 10 meddelanden per IP per minut (glidande fönster)
 
 ### Övrigt
