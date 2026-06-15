@@ -1890,6 +1890,7 @@ function buildDepList(deps, title, isReturn) {
 
 // ── Visa resultat ─────────────────────────────────────────────────
 function renderResults(data) {
+  window._trainSearchData = data;
   _searchFromName = data.fromName || '';
   _searchToName   = data.toName   || '';
   _searchDate     = data.date     || '';
@@ -2046,5 +2047,6 @@ function swapFromTo() {
   toEl.value   = tmp;
 }
 </script>
+<script src="/train-chat.js" defer></script>
 </body>
 </html>

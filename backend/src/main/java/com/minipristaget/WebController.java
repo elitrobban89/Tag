@@ -1,18 +1,23 @@
 package com.minipristaget;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 @Controller
@@ -20,6 +25,13 @@ public class WebController {
 
     @Autowired
     private TrafikverketService trafikverketService;
+
+    @Autowired
+    private GroqChatService groqChatService;
+
+    private static final int CHAT_RATE_LIMIT = 10;
+    private static final long CHAT_WINDOW_MS  = 60_000L;
+    private final ConcurrentHashMap<String, Deque<Long>> chatTimestamps = new ConcurrentHashMap<>();
 
     // ── Startsida ─────────────────────────────────────────────────
     @GetMapping("/")
@@ -171,6 +183,38 @@ public class WebController {
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body(
                 Map.of("error", "Kunde inte hämta avgångar: " + e.getMessage()));
+        }
+    }
+
+    @PostMapping("/api/chat")
+    @ResponseBody
+    public ResponseEntity<?> chat(@RequestBody Map<String, Object> req, HttpServletRequest httpReq) {
+        String ip = Optional.ofNullable(httpReq.getHeader("X-Forwarded-For"))
+                .filter(h -> !h.isBlank()).map(h -> h.split(",")[0].trim())
+                .orElse(httpReq.getRemoteAddr());
+
+        long now = System.currentTimeMillis();
+        Deque<Long> times = chatTimestamps.computeIfAbsent(ip, k -> new ArrayDeque<>());
+        synchronized (times) {
+            while (!times.isEmpty() && now - times.peekFirst() > CHAT_WINDOW_MS) times.pollFirst();
+            if (times.size() >= CHAT_RATE_LIMIT)
+                return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                        .body(Map.of("error", "För många frågor — vänta en minut och försök igen."));
+            times.addLast(now);
+        }
+
+        if (!groqChatService.isConfigured())
+            return ResponseEntity.ok(Map.of("reply", "AI-assistenten är inte konfigurerad ännu."));
+
+        try {
+            @SuppressWarnings("unchecked")
+            List<Map<String, String>> messages = (List<Map<String, String>>) req.get("messages");
+            String context = (String) req.get("context");
+            if (messages == null || messages.isEmpty())
+                return ResponseEntity.ok(Map.of("reply", "Inga meddelanden."));
+            return ResponseEntity.ok(Map.of("reply", groqChatService.chat(messages, context)));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
         }
     }
 
