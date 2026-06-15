@@ -1,0 +1,13 @@
+{
+  "name": "MiniPrisTåget",
+  "short_name": "Tåget",
+  "description": "Sök tåg med MiniPris-deals i Sverige",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#070d1f",
+  "theme_color": "#3b82f6",
+  "lang": "sv",
+  "icons": [
+    { "src": "/images/logo.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

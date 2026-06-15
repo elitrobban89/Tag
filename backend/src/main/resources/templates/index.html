@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MiniPrisTåget – Sök tåg</title>
+  <link rel="manifest" href="/manifest.json">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -926,6 +927,15 @@
     }
     .fav-save-btn:hover { color: #fbbf24; border-color: rgba(251,191,36,.3); }
     .fav-save-btn.saved { color: #fbbf24; border-color: rgba(251,191,36,.35); }
+    .dep-share-btn {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 9px; font-size: .67rem;
+      background: transparent; border: 1px solid rgba(255,255,255,.1);
+      border-radius: 14px; color: rgba(255,255,255,.28); cursor: pointer;
+      transition: color .15s, border-color .15s; white-space: nowrap;
+    }
+    .dep-share-btn:hover { color: #93c5fd; border-color: rgba(147,197,253,.3); }
+    .dep-share-btn.copied { color: #86efac; border-color: rgba(134,239,172,.3); }
   </style>
 </head>
 <body>
@@ -1351,6 +1361,29 @@ function loadFavRoute(idx) {
   document.getElementById('from').value = r.from;
   document.getElementById('to').value = r.to;
   doSearch();
+}
+
+// ── Dela avgång ───────────────────────────────────────────────────
+function shareDepRef(btn) {
+  var from = _searchFromName || document.getElementById('from').value.trim();
+  var to   = _searchToName   || document.getElementById('to').value.trim();
+  var date = document.getElementById('dep-date').value;
+  var dep  = btn.dataset.dep || '';
+  var url  = window.location.origin + window.location.pathname +
+    '?from=' + encodeURIComponent(from) +
+    '&to='   + encodeURIComponent(to) +
+    '&date=' + encodeURIComponent(date) +
+    (dep ? '&dep=' + encodeURIComponent(dep) : '');
+  if (navigator.share) {
+    navigator.share({ title: from + ' → ' + to + (dep ? ' · avg ' + dep : ''), url: url }).catch(function(){});
+  } else {
+    navigator.clipboard.writeText(url).then(function() {
+      var orig = btn.textContent;
+      btn.textContent = '✓ Kopierad';
+      btn.classList.add('copied');
+      setTimeout(function() { btn.textContent = orig; btn.classList.remove('copied'); }, 2000);
+    }).catch(function() { prompt('Kopiera länken:', url); });
+  }
 }
 
 // ── Räkna ut ankomsttid ───────────────────────────────────────────
@@ -1971,6 +2004,11 @@ function buildDepList(deps, title, isReturn) {
 
       html +=   '</div>'; // card-main
 
+      // Dela-knapp
+      html += '<div style="display:flex;justify-content:flex-end;padding:2px 6px 0" onclick="event.stopPropagation()">';
+      html += '<button class="dep-share-btn" data-dep="' + esc(d.departureTime || '') + '" onclick="event.stopPropagation();shareDepRef(this)">🔗 Dela avgång</button>';
+      html += '</div>';
+
       // Expand hint + class panel
       html += '<div class="card-expand-hint">Klicka för att välja reseklass ↓</div>';
       html += '<div class="class-panel" onclick="event.stopPropagation()">';
@@ -2114,6 +2152,20 @@ var today = new Date().toISOString().split('T')[0];
 document.getElementById('dep-date').value = today;
 document.getElementById('ret-date').value = today;
 renderFavChips();
+
+// ── URL-parametrar: ?from=X&to=Y&date=YYYY-MM-DD&dep=HH:MM ──────
+(function() {
+  var params = new URLSearchParams(window.location.search);
+  var pFrom = params.get('from');
+  var pTo   = params.get('to');
+  var pDate = params.get('date');
+  if (pFrom && pTo) {
+    document.getElementById('from').value = pFrom;
+    document.getElementById('to').value   = pTo;
+    if (pDate) document.getElementById('dep-date').value = pDate;
+    doSearch();
+  }
+})();
 
 // ── Starta GPS ───────────────────────────────────────────────────
 document.getElementById('gps-btn').addEventListener('click', fetchGPS);

@@ -53,10 +53,12 @@ Tågsökningsapp med MiniPris-deals inbyggd via iframe på [elitrobban.se/minipr
 ### Övrigt
 - **Skeleton loader** – animerade shimmer-platshållare visas omedelbart när sökning startar, ersätts av riktiga avgångskort när svaret kommer
 - **Favoritresor** – hjärtknapp i sökresultatet sparar aktuell rutt (Från → Till) i webbläsaren; sparade rutter syns som snabbknappar under sökformuläret; max 5 favoriter, enkelt att ta bort
+- **Dela avgång** – 🔗-knapp på varje avgångskort genererar en delbar länk med från/till/datum som URL-parametrar; `navigator.share` på mobil, kopierar till urklipp på desktop; sidan auto-söker direkt om URL-parametrar finns vid sidladdning
 - **AI-förslag** – tre kategoriknappar (Storstad / Natur / Strand) via Groq AI
 - **CO2-besparing** – visar kg CO2 sparat jämfört med bilresa
 - **Mobilanpassad** – responsiv layout med media queries för smala skärmar
 - **UptimeRobot** – pingar `/health` var 5:e minut, håller Render-instansen varm
+- **PWA-stöd** – `manifest.json` gör appen installerbar på Android/iOS via "Lägg till på startskärm"
 
 ## Teknikstack
 
