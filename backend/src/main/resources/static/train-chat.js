@@ -556,6 +556,24 @@
       return;
     }
 
+    // Fallback for browsers without ReadableStream support
+    if (!resp.body || typeof resp.body.getReader !== "function") {
+      try {
+        var fbResp = await fetch(TRAIN_CHAT_API + "/api/chat", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ messages: limited, context: context })
+        });
+        var fbData = await fbResp.json();
+        var fbReply = fbData.reply || fbData.error || "Inget svar.";
+        trainChatHistory.push({ role: "assistant", content: fbReply });
+        tcSaveChatHistory();
+        var fbOuter = tcAppendBot(fbReply, true);
+        tcInjectTrainImages(fbReply, fbOuter);
+        tcAddFollowupChips(fbReply, fbOuter);
+      } catch(_) { tcAppendBot("Kunde inte nå assistenten.", false); }
+      return;
+    }
+
     // Create streaming bubble
     var outer = document.createElement("div");
     var bubble = document.createElement("div");

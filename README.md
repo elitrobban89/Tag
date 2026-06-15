@@ -45,12 +45,14 @@ Tågsökningsapp med MiniPris-deals inbyggd via iframe på [elitrobban.se/minipr
 - **Rensa** – knapp för att starta ett nytt samtal utan att ladda om sidan
 - **Tåginformation** – AI:n känner till tågtyper (X2000, MTRX, Öresundståg m.fl.), WiFi/5G ombord och restider för topp 5-rutter
 - **Tågbilder** – när AI:n nämner en tågtyp (X2000, MTRX X74, Öresundståg, Snälltåget, MTR Express, Västtåg X61) visas motsvarande tågfoto automatiskt under svaret
-- **Streaming-svar** – svaret strömmar direkt token för token från Groq till chatbubblan utan att vänta på hela svaret, via `/api/chat/stream` (SSE)
+- **Streaming-svar** – svaret strömmar direkt token för token från Groq till chatbubblan utan att vänta på hela svaret, via `/api/chat/stream` (SSE); automatisk fallback till `/api/chat` om webbläsaren saknar ReadableStream-stöd
 - **Dynamiska follow-up chips** – efter varje svar visas 2–3 kontextuella snabbknappar baserade på vad AI:n svarade (tågtyp, pris, WiFi, restid)
 - **Avgångshighlighting** – om AI:n nämner en avgångstid (t.ex. "07:45") scrollas och highlightas det avgångskortet automatiskt i listan
 - **Rate limiting** – chatboten begränsad till 10 meddelanden per IP per minut (glidande fönster)
 
 ### Övrigt
+- **Skeleton loader** – animerade shimmer-platshållare visas omedelbart när sökning startar, ersätts av riktiga avgångskort när svaret kommer
+- **Favoritresor** – hjärtknapp i sökresultatet sparar aktuell rutt (Från → Till) i webbläsaren; sparade rutter syns som snabbknappar under sökformuläret; max 5 favoriter, enkelt att ta bort
 - **AI-förslag** – tre kategoriknappar (Storstad / Natur / Strand) via Groq AI
 - **CO2-besparing** – visar kg CO2 sparat jämfört med bilresa
 - **Mobilanpassad** – responsiv layout med media queries för smala skärmar

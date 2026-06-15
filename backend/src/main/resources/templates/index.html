@@ -876,6 +876,56 @@
     .return-error {
       text-align:center; padding:20px; color:rgba(239,68,68,.7); font-size:.82rem;
     }
+
+    /* ── Skeleton loader ── */
+    .sk-wrap { padding: 12px 0; }
+    .sk-card {
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(96,165,250,.07);
+      border-radius: 16px; padding: 20px 22px; margin-bottom: 12px;
+    }
+    .sk-line {
+      background: linear-gradient(90deg, rgba(255,255,255,.05) 25%, rgba(255,255,255,.11) 50%, rgba(255,255,255,.05) 75%);
+      background-size: 200% 100%;
+      animation: sk-shimmer 1.6s ease-in-out infinite;
+      border-radius: 6px; height: 13px; margin-bottom: 10px;
+    }
+    .sk-line:last-child { margin-bottom: 0; }
+    .sk-w70 { width: 68%; } .sk-w50 { width: 50%; } .sk-w35 { width: 35%; height: 10px; }
+    @keyframes sk-shimmer {
+      0%   { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* ── Favorite routes ── */
+    .fav-section { margin-top: 14px; display: none; }
+    .fav-label {
+      font-size: .67rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
+      color: rgba(147,197,253,.45); margin-bottom: 8px;
+    }
+    .fav-chips { display: flex; flex-wrap: wrap; gap: 7px; }
+    .fav-chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 5px 11px; font-size: .75rem;
+      background: rgba(59,130,246,.09); border: 1px solid rgba(96,165,250,.2);
+      border-radius: 20px; color: #93c5fd; cursor: pointer;
+      transition: background .15s, border-color .15s;
+    }
+    .fav-chip:hover { background: rgba(59,130,246,.18); border-color: rgba(96,165,250,.38); }
+    .fav-chip-x {
+      font-size: .65rem; color: rgba(147,197,253,.35); cursor: pointer;
+      margin-left: 2px; line-height: 1;
+    }
+    .fav-chip-x:hover { color: rgba(239,68,68,.65); }
+    .fav-save-btn {
+      margin-left: auto; display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 10px; font-size: .7rem;
+      background: transparent; border: 1px solid rgba(255,255,255,.1);
+      border-radius: 20px; color: rgba(255,255,255,.35); cursor: pointer;
+      transition: color .15s, border-color .15s;
+    }
+    .fav-save-btn:hover { color: #fbbf24; border-color: rgba(251,191,36,.3); }
+    .fav-save-btn.saved { color: #fbbf24; border-color: rgba(251,191,36,.35); }
   </style>
 </head>
 <body>
@@ -1060,6 +1110,9 @@
 
       <button type="submit" id="search-btn" class="search-btn">🔍 Sök resa</button>
 
+      <!-- Sparade rutter -->
+      <div id="fav-section" class="fav-section"></div>
+
       <!-- AI-kategorier -->
       <div id="cat-section" class="cat-section">
         <div class="cat-title">Vad vill du uppleva?</div>
@@ -1203,6 +1256,17 @@ function doSearch() {
   btn.disabled = true;
   btn.textContent = '⏳ Söker avgångar...';
 
+  // Show skeleton while loading
+  var section = document.getElementById('results-section');
+  section.innerHTML = '<div class="sk-wrap">' +
+    '<div class="sk-card"><div class="sk-line sk-w70"></div><div class="sk-line sk-w50"></div><div class="sk-line sk-w35"></div></div>' +
+    '<div class="sk-card"><div class="sk-line sk-w70"></div><div class="sk-line sk-w50"></div><div class="sk-line sk-w35"></div></div>' +
+    '<div class="sk-card"><div class="sk-line sk-w70"></div><div class="sk-line sk-w50"></div><div class="sk-line sk-w35"></div></div>' +
+    '</div>';
+  section.style.display = 'block';
+  document.getElementById('form-card').style.display = 'none';
+  document.getElementById('app-header').style.borderRadius = '20px';
+
   var payload = {
     from:       document.getElementById('from').value.trim(),
     to:         document.getElementById('to').value.trim(),
@@ -1221,6 +1285,7 @@ function doSearch() {
     btn.disabled = false;
     btn.innerHTML = '🔍 Sök resa';
     if (data.error) {
+      showForm();
       showFormError(data.error);
     } else {
       renderResults(data);
@@ -1229,6 +1294,7 @@ function doSearch() {
   .catch(function() {
     btn.disabled = false;
     btn.innerHTML = '🔍 Sök resa';
+    showForm();
     showFormError('Kunde inte söka avgångar. Kontrollera att du har angett stationer korrekt.');
   });
 }
@@ -1239,6 +1305,52 @@ function showForm() {
   document.getElementById('results-section').innerHTML = '';
   document.getElementById('form-card').style.display = '';
   document.getElementById('app-header').style.borderRadius = '20px 20px 0 0';
+}
+
+// ── Favoritresor ──────────────────────────────────────────────────
+function renderFavChips() {
+  var section = document.getElementById('fav-section');
+  if (!section) return;
+  if (_favRoutes.length === 0) { section.style.display = 'none'; return; }
+  section.style.display = '';
+  var html = '<div class="fav-label">⭐ Sparade rutter</div><div class="fav-chips">';
+  _favRoutes.forEach(function(r, i) {
+    html += '<div class="fav-chip" onclick="loadFavRoute(' + i + ')">';
+    html += esc(r.from) + ' → ' + esc(r.to);
+    html += '<span class="fav-chip-x" onclick="event.stopPropagation();removeFavRoute(' + i + ')">✕</span>';
+    html += '</div>';
+  });
+  html += '</div>';
+  section.innerHTML = html;
+}
+
+function saveFavRoute() {
+  var from = _searchFromName || document.getElementById('from').value.trim();
+  var to   = _searchToName   || document.getElementById('to').value.trim();
+  if (!from || !to) return;
+  var exists = _favRoutes.some(function(r) { return r.from === from && r.to === to; });
+  if (!exists) {
+    _favRoutes.unshift({ from: from, to: to });
+    if (_favRoutes.length > 5) _favRoutes.pop();
+    localStorage.setItem('mp-fav-routes', JSON.stringify(_favRoutes));
+    renderFavChips();
+  }
+  var btn = document.getElementById('fav-route-btn');
+  if (btn) { btn.textContent = '♥ Sparad'; btn.classList.add('saved'); }
+}
+
+function removeFavRoute(idx) {
+  _favRoutes.splice(idx, 1);
+  localStorage.setItem('mp-fav-routes', JSON.stringify(_favRoutes));
+  renderFavChips();
+}
+
+function loadFavRoute(idx) {
+  var r = _favRoutes[idx];
+  if (!r) return;
+  document.getElementById('from').value = r.from;
+  document.getElementById('to').value = r.to;
+  doSearch();
 }
 
 // ── Räkna ut ankomsttid ───────────────────────────────────────────
@@ -1269,6 +1381,9 @@ var _searchToName   = '';
 var _searchDate     = '';
 var _bookings       = [];
 var _pendingOutbound = null;
+var _favRoutes = (function() {
+  try { return JSON.parse(localStorage.getItem('mp-fav-routes') || '[]'); } catch(e) { return []; }
+})();
 var DEMO_BOOKING_LIMIT = 2;
 
 function addBooking() {
@@ -1940,11 +2055,15 @@ function renderResults(data) {
   var html = '';
 
   // Outbound header
+  var isFaved = _favRoutes.some(function(r) { return r.from === data.fromName && r.to === data.toName; });
   html += '<div class="res-header">';
-  html +=   '<button class="res-back-btn" onclick="showForm()">';
-  html +=     '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>';
-  html +=     ' Ny sökning';
-  html +=   '</button>';
+  html +=   '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">';
+  html +=     '<button class="res-back-btn" style="margin-bottom:0" onclick="showForm()">';
+  html +=       '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>';
+  html +=       ' Ny sökning';
+  html +=     '</button>';
+  html +=     '<button id="fav-route-btn" class="fav-save-btn' + (isFaved ? ' saved' : '') + '" onclick="saveFavRoute()">' + (isFaved ? '♥ Sparad' : '♡ Spara rutt') + '</button>';
+  html +=   '</div>';
   html +=   '<div class="res-route">';
   html +=     '<span class="res-station">' + esc(data.fromName) + '</span>';
   html +=     '<span class="res-arrow"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg></span>';
@@ -1994,6 +2113,7 @@ function renderResults(data) {
 var today = new Date().toISOString().split('T')[0];
 document.getElementById('dep-date').value = today;
 document.getElementById('ret-date').value = today;
+renderFavChips();
 
 // ── Starta GPS ───────────────────────────────────────────────────
 document.getElementById('gps-btn').addEventListener('click', fetchGPS);
