@@ -78,7 +78,7 @@ backend/
 └── src/main/
     ├── java/com/minipristaget/
     │   ├── Application.java
-    │   ├── WebController.java          # GET /, POST /api/search, /api/chat, GET /nearest-station
+    │   ├── WebController.java          # GET /, POST /api/search, /api/chat, /api/chat/stream, GET /nearest-station
     │   ├── GroqChatService.java        # Avgångskontextuell AI-chatt via Groq
     │   ├── SuggestController.java      # POST /suggest (Groq AI + rate limiting)
     │   ├── TrafikverketService.java    # Hämtar stationer + avgångar (Swedish timezone)
@@ -112,6 +112,7 @@ backend/
 | GET | `/nearest-station?lat=X&lon=Y` | Närmaste tågstation (JSON) |
 | POST | `/api/search` | Sök avgångar (JSON) – returnerar `autoTomorrow: true` vid auto-datumbyte |
 | POST | `/api/chat` | AI-chatbot med avgångskontext (JSON) – rate limited (10/min per IP) |
+| POST | `/api/chat/stream` | AI-chatbot streaming (SSE) – returnerar svar token för token – rate limited (10/min per IP) |
 | POST | `/suggest` | AI-destination via Groq (JSON) – rate limited |
 | GET | `/health` | Hälsokontroll |
 
