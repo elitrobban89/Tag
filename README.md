@@ -33,10 +33,19 @@ Tågsökningsapp med MiniPris-deals inbyggd via iframe på [elitrobban.se/minipr
 - **Bokningskort** – visar bokningsref, rutt, datum, avgångstid, plats, klass och pris
 - **Demo-reset** – listan återställs automatiskt efter 5 minuter (demo-läge)
 
+### AI-chatt
+- **Avgångskontextuell chatbot** – vet exakt vilka avgångar som visas: operatör, avgångstid, pris, restid och platser kvar
+- **Tågassistent** – hjälper med billigaste biljett, snabbaste avgång och var det finns platser kvar just nu
+- **Glassmorphism-design** – blå/mörkblå panel med `backdrop-filter: blur(24px)` och svg-tågikon
+- **Snabbknappar** – 💰 Billigast, ⚡ Snabbast, 🎫 Platser kvar, 🤖 Ge råd
+- **Kontext-bar** – visar aktuell rutt, datum och antal avgångar som AI:n känner till
+- **Markdown** – svarar med **fetstil** och `- listor` som renderas till HTML
+- **Rensa** – knapp för att starta ett nytt samtal utan att ladda om sidan
+- **Rate limiting** – chatboten begränsad till 10 meddelanden per IP per minut (glidande fönster)
+
 ### Övrigt
 - **AI-förslag** – tre kategoriknappar (Storstad / Natur / Strand) via Groq AI
 - **CO2-besparing** – visar kg CO2 sparat jämfört med bilresa
-- **Rate limiting** – AI-endpointen begränsad till 10 förfrågningar per IP per 10 minuter
 - **Mobilanpassad** – responsiv layout med media queries för smala skärmar
 - **UptimeRobot** – pingar `/health` var 5:e minut, håller Render-instansen varm
 
@@ -44,8 +53,9 @@ Tågsökningsapp med MiniPris-deals inbyggd via iframe på [elitrobban.se/minipr
 
 | Lager | Teknik |
 |---|---|
-| Backend | Java 17, Spring Boot 3.2.5, Thymeleaf |
+| Backend | Java 21, Spring Boot 3.2.5, Thymeleaf |
 | Avgångsdata | Trafikverket Open Data API |
+| AI-chatbot | Groq API (llama-3.3-70b-versatile), avgångskontextuell |
 | AI-förslag | Groq API (llama-3.3-70b-versatile) |
 | Deploy | Render (Docker, free tier) |
 | Frontend | Inbyggd via `<iframe>` i WordPress/Gutenberg |
@@ -59,7 +69,8 @@ backend/
 └── src/main/
     ├── java/com/minipristaget/
     │   ├── Application.java
-    │   ├── WebController.java          # GET /, POST /api/search, GET /nearest-station
+    │   ├── WebController.java          # GET /, POST /api/search, /api/chat, GET /nearest-station
+    │   ├── GroqChatService.java        # Avgångskontextuell AI-chatt via Groq
     │   ├── SuggestController.java      # POST /suggest (Groq AI + rate limiting)
     │   ├── TrafikverketService.java    # Hämtar stationer + avgångar (Swedish timezone)
     │   ├── TrainModelService.java      # Tågmodell-DB, prisberäkning, platsbegränsning
@@ -76,6 +87,8 @@ backend/
         │   ├── train-sj-regional.png
         │   ├── train-sj-fast.png
         │   └── train-oresundstag.jpg
+        ├── static/
+        │   └── train-chat.js           # AI-chatbot (glassmorphism, avgångskontextuell)
         └── templates/
             ├── index.html              # Sökformulär + AJAX-resultat (glassmorphism)
             └── results.html            # Fallback Thymeleaf-vy
@@ -89,6 +102,7 @@ backend/
 | GET | `/api/stations?q=xxx` | Stationsautocomplete – returnerar upp till 8 matchande stationer (JSON) |
 | GET | `/nearest-station?lat=X&lon=Y` | Närmaste tågstation (JSON) |
 | POST | `/api/search` | Sök avgångar (JSON) – returnerar `autoTomorrow: true` vid auto-datumbyte |
+| POST | `/api/chat` | AI-chatbot med avgångskontext (JSON) – rate limited (10/min per IP) |
 | POST | `/suggest` | AI-destination via Groq (JSON) – rate limited |
 | GET | `/health` | Hälsokontroll |
 
@@ -117,7 +131,7 @@ backend/
 | Variabel | Beskrivning |
 |---|---|
 | `TRAFIKVERKET_API_KEY` | API-nyckel från Trafikverket Open Data |
-| `GROQ_API_KEY` | API-nyckel från Groq |
+| `GROQ_API_KEY` | API-nyckel från Groq (används av chatbot + AI-förslag) |
 
 ## WordPress-inbäddning
 
