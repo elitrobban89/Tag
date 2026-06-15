@@ -1268,6 +1268,7 @@ var _searchFromName = '';
 var _searchToName   = '';
 var _searchDate     = '';
 var _bookings       = [];
+var _pendingOutbound = null;
 var DEMO_BOOKING_LIMIT = 2;
 
 function addBooking() {
@@ -1466,13 +1467,20 @@ function openSeatModal(trainId, layout, model, depTime, price, destination, trai
         '</div>' +
       '</div>' +
       (trainImage ? '<img class="sjc-photo" src="' + esc(trainImage) + '" alt="' + esc(model) + '">' : '') +
-      '<div class="sjc-dest">✈ Till: <strong>' + esc(destination) + '</strong></div>' +
+      '<div class="sjc-dest">🚉 Till: <strong>' + esc(destination) + '</strong></div>' +
     '</div>';
   document.getElementById('seat-journey-card').innerHTML = cardHtml;
 
   document.getElementById('seat-selected-val').textContent = '—';
   document.getElementById('seat-confirm-btn').disabled = true;
   document.getElementById('seat-return-btn').disabled  = true;
+  if (_pendingOutbound) {
+    document.getElementById('seat-return-btn').style.display  = 'none';
+    document.getElementById('seat-confirm-btn').textContent   = '💳 Betala båda resorna';
+  } else {
+    document.getElementById('seat-return-btn').style.display  = '';
+    document.getElementById('seat-confirm-btn').textContent   = '💳 Betala med Swish';
+  }
   renderWagonTabs();
   renderSeatMap();
   document.getElementById('seat-overlay').classList.add('open');
@@ -1562,6 +1570,7 @@ function confirmSeat() {
 }
 
 function addReturnTrip() {
+  _pendingOutbound = Object.assign({}, _seatState);
   openReturnModal();
 }
 
@@ -1640,20 +1649,36 @@ function searchReturnTrip() {
 // ── Swish payment ─────────────────────────────────────────────────
 function openSwishModal() {
   var s = _seatState;
-  // Journey summary
-  document.getElementById('swish-journey-box').innerHTML =
-    '<strong>' + esc(s.destination || 'Destination') + '</strong><br>' +
-    'Tåg ' + esc(s.trainId) + ' · ' + esc(s.model) + ' · avg ' + esc(s.depTime) + '<br>' +
-    esc(s.seatLabel || '') + ' · ' + esc(s.selectedClass || '2 klass') + ' MiniPris';
-  // Amount — extract number from e.g. "från 259 kr"
-  var amtRaw = s.price || '';
-  var amtNum = amtRaw.replace(/[^0-9]/g,'');
-  document.getElementById('swish-amount-val').textContent = (amtNum || '—') + ' kr';
-  // Ticket box (shown on success)
-  document.getElementById('swish-ticket-box').innerHTML =
-    '🎫 Bokningsref: <strong>MP-' + Math.floor(Math.random()*900000+100000) + '</strong><br>' +
-    esc(s.destination) + ' · avg ' + esc(s.depTime) + '<br>' +
-    esc(s.seatLabel || '') + '<br>Biljett skickas till din e-post';
+
+  if (_pendingOutbound) {
+    var ob    = _pendingOutbound;
+    var obAmt = parseInt((ob.price || '').replace(/[^0-9]/g, ''), 10) || 0;
+    var rtAmt = parseInt((s.price  || '').replace(/[^0-9]/g, ''), 10) || 0;
+    document.getElementById('swish-journey-box').innerHTML =
+      '<div style="margin-bottom:3px"><strong>🚆 Utresa</strong></div>' +
+      '<div style="font-size:.83rem;opacity:.85">' + esc(ob.fromCity||'') + ' → ' + esc(ob.destination||'') + ' · avg ' + esc(ob.depTime||'') + '</div>' +
+      '<div style="font-size:.78rem;opacity:.6;margin-bottom:10px">' + esc(ob.seatLabel||'') + ' · ' + esc(ob.selectedClass||'2 klass') + '</div>' +
+      '<div style="margin-bottom:3px"><strong>↩ Återresa</strong></div>' +
+      '<div style="font-size:.83rem;opacity:.85">' + esc(s.fromCity||'') + ' → ' + esc(s.destination||'') + ' · avg ' + esc(s.depTime||'') + '</div>' +
+      '<div style="font-size:.78rem;opacity:.6">' + esc(s.seatLabel||'') + ' · ' + esc(s.selectedClass||'2 klass') + '</div>';
+    document.getElementById('swish-amount-val').textContent = (obAmt + rtAmt) + ' kr';
+    document.getElementById('swish-ticket-box').innerHTML =
+      '🎫 <strong>' + esc(ob.destination||'') + '</strong> · avg ' + esc(ob.depTime||'') + ' · ' + esc(ob.seatLabel||'') + '<br>' +
+      '🎫 <strong>' + esc(s.destination||'') + '</strong> · avg ' + esc(s.depTime||'') + ' · ' + esc(s.seatLabel||'') + '<br>' +
+      'Biljetter skickas till din e-post';
+  } else {
+    document.getElementById('swish-journey-box').innerHTML =
+      '<strong>' + esc(s.destination || 'Destination') + '</strong><br>' +
+      'Tåg ' + esc(s.trainId) + ' · ' + esc(s.model) + ' · avg ' + esc(s.depTime) + '<br>' +
+      esc(s.seatLabel || '') + ' · ' + esc(s.selectedClass || '2 klass') + ' MiniPris';
+    var amtNum = (s.price || '').replace(/[^0-9]/g,'');
+    document.getElementById('swish-amount-val').textContent = (amtNum || '—') + ' kr';
+    document.getElementById('swish-ticket-box').innerHTML =
+      '🎫 Bokningsref: <strong>MP-' + Math.floor(Math.random()*900000+100000) + '</strong><br>' +
+      esc(s.destination) + ' · avg ' + esc(s.depTime) + '<br>' +
+      esc(s.seatLabel || '') + '<br>Biljett skickas till din e-post';
+  }
+
   // Reset to idle state
   document.getElementById('swish-state-idle').style.display    = '';
   document.getElementById('swish-state-waiting').style.display = 'none';
@@ -1665,6 +1690,7 @@ function openSwishModal() {
 function closeSwishModal() {
   document.getElementById('swish-overlay').classList.remove('open');
   document.body.style.overflow = '';
+  _pendingOutbound = null;
 }
 
 function swishOverlayClick(e) {
@@ -1672,24 +1698,40 @@ function swishOverlayClick(e) {
 }
 
 function initiateSwish() {
-  // Try to open Swish deep link on mobile
-  var s      = _seatState;
-  var amtNum = (s.price || '').replace(/[^0-9]/g,'') || '0';
-  var data   = JSON.stringify({ version:1,
+  var s = _seatState;
+  var amtNum;
+  if (_pendingOutbound) {
+    var obAmt = parseInt((_pendingOutbound.price || '').replace(/[^0-9]/g, ''), 10) || 0;
+    var rtAmt = parseInt((s.price || '').replace(/[^0-9]/g, ''), 10) || 0;
+    amtNum = String(obAmt + rtAmt);
+  } else {
+    amtNum = (s.price || '').replace(/[^0-9]/g,'') || '0';
+  }
+  var data = JSON.stringify({ version:1,
     payee:   { value:'1231231230', editable:false },
     amount:  { value:parseInt(amtNum, 10), editable:false },
     message: { value:'MiniPrisTåget ' + (s.destination||''), editable:false }
   });
   window.location.href = 'swish://payment?data=' + encodeURIComponent(data);
-  // Show waiting state
   document.getElementById('swish-state-idle').style.display    = 'none';
   document.getElementById('swish-state-waiting').style.display = '';
-  // Simulate successful payment after 3s (demo)
   setTimeout(function() {
     document.getElementById('swish-state-waiting').style.display = 'none';
     document.getElementById('swish-state-success').style.display = '';
-    decrementSeatsDisplay(_seatState.trainId);
-    addBooking();
+    if (_pendingOutbound) {
+      var ob = _pendingOutbound;
+      var rt = Object.assign({}, _seatState);
+      Object.assign(_seatState, ob);
+      decrementSeatsDisplay(_seatState.trainId);
+      addBooking();
+      Object.assign(_seatState, rt);
+      decrementSeatsDisplay(_seatState.trainId);
+      addBooking();
+      _pendingOutbound = null;
+    } else {
+      decrementSeatsDisplay(_seatState.trainId);
+      addBooking();
+    }
   }, 3000);
 }
 

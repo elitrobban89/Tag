@@ -24,9 +24,11 @@ Tågsökningsapp med MiniPris-deals inbyggd via iframe på [elitrobban.se/minipr
 - **Swish-betalning** – demo-flöde med `swish://` deep link, spinner och bokningsbekräftelse
 - **Platser räknas ned** – efter betalning minskar antalet platser kvar i realtid
 
-### Återresa
-- **Återresemodul** – efter bokning öppnas en ny skärm med omvänd rutt och datumväljare (default nästa dag)
-- **Fullständigt flöde** – återresan har eget sök, platskarta och Swish-betalning
+### Återresa & kombinerad bokning
+- **Spara utresa** – väljer man "Lägg till återresa" istället för att betala direkt sparas utresans vagn och platsnummer automatiskt
+- **Kombinerad checkout** – när man sedan valt sittplats på återresan visas en gemensam Swish-kassa med båda resorna och ett totalpris
+- **En Swish-betalning** – utresa + återresa betalas i en enda transaktion; båda platserna bokas och räknas ned i samma steg
+- **Återresemodul** – omvänd rutt med datumväljare (default nästa dag), eget sök och platskarta
 
 ### Mina bokningar
 - **Bokningshistorik** – knapp i headern med badge-räknare efter varje genomförd betalning
@@ -157,7 +159,7 @@ Appen är ett demonstrationsprojekt — ingen riktig bokning eller betalning ske
 
 | Funktion | Beteende |
 |---|---|
-| Swish-betalning | Simulerad — `swish://` deep link öppnar appen på mobil men ingen transaktion genomförs. Efter 3 sekunder visas ett lyckat svar automatiskt. |
+| Swish-betalning | Simulerad — `swish://` deep link öppnar appen på mobil men ingen transaktion genomförs. Efter 3 sekunder visas ett lyckat svar automatiskt. Vid kombinerad tur/retur betalas båda resorna med ett enda simulerat Swish-anrop och totalpriset summeras. |
 | Bokningsreferens | Slumpmässigt genererad i JavaScript (t.ex. MP-482931) |
 | Platser kvar | Deterministiskt beräknade per tåg-ID, inte realtidsdata |
 | Priser | Simulerade MiniPris-priser baserade på avstånd, inte SJ:s riktiga priser |
