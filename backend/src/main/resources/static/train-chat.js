@@ -1,7 +1,34 @@
 (function () {
   var TRAIN_CHAT_API = window.TRAIN_API_URL || "";
-  var trainChatHistory = [];
-  window._trainSearchData = null;
+  var trainChatHistory = (function(){ try{ return JSON.parse(localStorage.getItem('tc-chat')||'[]'); }catch(e){ return []; } })();
+
+  // Intercept _trainSearchData to enable live context update + auto-chip
+  var _searchDataVal = null;
+  Object.defineProperty(window, '_trainSearchData', {
+    get: function() { return _searchDataVal; },
+    set: function(val) {
+      _searchDataVal = val;
+      updateContextBar();
+      if (val && val.departures && val.departures.length > 0) showSearchChip(val);
+    },
+    configurable: true
+  });
+
+  function showSearchChip(data) {
+    var existing = document.getElementById('tc-search-chip');
+    if (existing) existing.remove();
+    var chip = document.createElement('div');
+    chip.id = 'tc-search-chip';
+    chip.style.cssText = 'position:fixed;bottom:100px;right:24px;z-index:9997;background:linear-gradient(135deg,rgba(29,78,216,0.92),rgba(59,130,246,0.88));backdrop-filter:blur(12px);border:1px solid rgba(147,197,253,0.35);border-radius:22px;padding:8px 14px 8px 10px;display:flex;align-items:center;gap:8px;cursor:pointer;box-shadow:0 4px 20px rgba(0,0,0,0.5);font-family:-apple-system,BlinkMacSystemFont,sans-serif;font-size:12px;font-weight:600;color:#dbeafe;animation:tc-chip-in .3s ease-out;';
+    chip.innerHTML = '<span style="font-size:16px">🚂</span><span>' + data.fromName + ' → ' + data.toName + '<br><span style="font-weight:400;font-size:11px;opacity:.8">' + data.departures.length + ' avgångar — fråga AI</span></span>';
+    chip.addEventListener('click', function() { chip.remove(); var panel = document.getElementById('tc-panel'); if (panel && panel.style.display === 'none') { panel.style.display = 'flex'; updateContextBar(); var inp = document.getElementById('tc-input'); if (inp) inp.focus(); } });
+    setTimeout(function() { if (chip.parentNode) chip.remove(); }, 8000);
+    document.body.appendChild(chip);
+  }
+
+  function tcSaveChatHistory() {
+    try { localStorage.setItem('tc-chat', JSON.stringify(trainChatHistory.slice(-20))); } catch(e) {}
+  }
 
   function buildDepartureContext(data) {
     if (!data || !data.departures || data.departures.length === 0) return null;
@@ -165,6 +192,15 @@
       .tc-typing span:nth-child(2){animation-delay:.15s;}
       .tc-typing span:nth-child(3){animation-delay:.3s;}
       @keyframes tc-bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-6px)}}
+      .tc-cursor{display:inline-block;width:2px;height:13px;background:#93c5fd;margin-left:2px;border-radius:1px;animation:tc-cursor-blink .55s steps(1) infinite;vertical-align:middle;}
+      @keyframes tc-cursor-blink{0%,100%{opacity:1}50%{opacity:0}}
+      .tc-feedback{display:flex;gap:6px;margin-top:6px;padding-left:2px;align-items:center;}
+      .tc-thumb{background:none;border:1px solid rgba(96,165,250,0.18);color:rgba(147,197,253,0.38);font-size:12px;padding:2px 8px;border-radius:10px;cursor:pointer;transition:all .15s;line-height:1.5;}
+      .tc-thumb:hover{border-color:rgba(96,165,250,0.5);color:#93c5fd;}
+      .tc-thumb.voted{border-color:rgba(96,165,250,0.65);color:#93c5fd;background:rgba(96,165,250,0.08);}
+      .tc-retry{background:none;border:1px solid rgba(239,68,68,0.3);color:rgba(239,68,68,0.65);font-size:11px;font-weight:600;padding:4px 11px;border-radius:20px;cursor:pointer;margin-top:7px;display:inline-block;transition:all .15s;}
+      .tc-retry:hover{border-color:rgba(239,68,68,0.6);color:#ef4444;}
+      @keyframes tc-chip-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
       @media(max-width:400px){
         .tc-panel{width:calc(100vw - 16px);right:8px;bottom:92px;}
         .tc-fab-wrap{right:12px;bottom:12px;}
@@ -264,7 +300,15 @@
     `;
     document.body.appendChild(root);
 
-    tcAppendBot("Hej! Jag hjälper dig hitta rätt tåg 🚂 Gör en sökning så kan jag svara på frågor om priser, platser och restider!");
+    tcAppendBot("Hej! Jag hjälper dig hitta rätt tåg 🚂 Gör en sökning så kan jag svara på frågor om priser, platser och restider!", false);
+
+    if (trainChatHistory.length > 0) {
+      document.getElementById("tc-quick").style.display = "none";
+      trainChatHistory.forEach(function(m) {
+        if (m.role === "user") tcAppendUser(m.content);
+        else if (m.role === "assistant") tcAppendBot(m.content, false);
+      });
+    }
 
     document.getElementById("tc-fab").addEventListener("click", tcToggle);
     document.getElementById("tc-close").addEventListener("click", tcToggle);
@@ -307,13 +351,49 @@
       .replace(/\n/g,"<br>");
   }
 
-  function tcAppendBot(text) {
+  function tcAppendBot(text, animate) {
     var msgs = document.getElementById("tc-messages");
-    var div = document.createElement("div");
-    div.innerHTML = '<div class="tc-bubble bot">' + tcMarkdown(text) + '</div>';
-    msgs.appendChild(div);
+    var outer = document.createElement("div");
+    var bubble = document.createElement("div");
+    bubble.className = "tc-bubble bot";
+    outer.appendChild(bubble);
+    msgs.appendChild(outer);
     msgs.scrollTop = msgs.scrollHeight;
-    return div;
+    if (animate !== false && text.length > 0) {
+      var i = 0;
+      var speed = Math.max(6, Math.min(20, 2600 / text.length));
+      (function tick() {
+        i += 3;
+        if (i >= text.length) {
+          bubble.innerHTML = tcMarkdown(text);
+          tcAddFeedback(outer);
+          msgs.scrollTop = msgs.scrollHeight;
+        } else {
+          bubble.textContent = text.slice(0, i);
+          var cur = document.createElement("span"); cur.className = "tc-cursor";
+          bubble.appendChild(cur);
+          msgs.scrollTop = msgs.scrollHeight;
+          setTimeout(tick, speed);
+        }
+      })();
+    } else {
+      bubble.innerHTML = tcMarkdown(text);
+      if (animate !== false) tcAddFeedback(outer);
+    }
+    return outer;
+  }
+
+  function tcAddFeedback(outer) {
+    var fb = document.createElement("div"); fb.className = "tc-feedback";
+    fb.innerHTML = '<button class="tc-thumb">👍</button><button class="tc-thumb">👎</button>';
+    fb.querySelectorAll(".tc-thumb").forEach(function(btn) {
+      btn.addEventListener("click", function() {
+        fb.querySelectorAll(".tc-thumb").forEach(function(b) { b.classList.remove("voted"); });
+        btn.classList.add("voted");
+        setTimeout(function() { fb.innerHTML = '<span style="font-size:11px;color:rgba(147,197,253,0.45)">Tack!</span>'; }, 350);
+      });
+    });
+    outer.appendChild(fb);
   }
 
   function tcAppendUser(text) {
@@ -326,9 +406,10 @@
 
   function tcClear() {
     trainChatHistory = [];
+    try { localStorage.removeItem("tc-chat"); } catch(e) {}
     document.getElementById("tc-messages").innerHTML = "";
     document.getElementById("tc-quick").style.display = "flex";
-    tcAppendBot("Hej! Jag hjälper dig hitta rätt tåg 🚂 Gör en sökning så kan jag svara på frågor om priser, platser och restider!");
+    tcAppendBot("Hej! Jag hjälper dig hitta rätt tåg 🚂 Gör en sökning så kan jag svara på frågor om priser, platser och restider!", false);
   }
 
   function tcSend() {
@@ -342,7 +423,6 @@
   function tcSendMessage(message) {
     document.getElementById("tc-quick").style.display = "none";
     tcAppendUser(message);
-    trainChatHistory.push({ role: "user", content: message });
 
     var msgs = document.getElementById("tc-messages");
     var typingDiv = document.createElement("div");
@@ -350,26 +430,42 @@
     msgs.appendChild(typingDiv);
     msgs.scrollTop = msgs.scrollHeight;
 
+    trainChatHistory.push({ role: "user", content: message });
+    tcSaveChatHistory();
+
     var context = buildDepartureContext(window._trainSearchData);
+    var limited = trainChatHistory.slice(-10);
 
     fetch(TRAIN_CHAT_API + "/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ messages: trainChatHistory, context: context })
+      body: JSON.stringify({ messages: limited, context: context })
     }).then(function(resp) {
       typingDiv.remove();
       if (resp.status === 429) {
-        tcAppendBot("Du har ställt för många frågor på kort tid — vänta en minut och försök igen.");
-        return;
+        tcAppendBot("Du har ställt för många frågor — vänta en minut och försök igen.", false);
+        return null;
       }
-      resp.json().then(function(data) {
-        var reply = data.reply || data.error || "Inget svar.";
-        trainChatHistory.push({ role: "assistant", content: reply });
-        tcAppendBot(reply);
-      });
+      if (!resp.ok) {
+        var errDiv = tcAppendBot("Något gick fel (fel " + resp.status + ").", false);
+        var btn = document.createElement("button"); btn.className = "tc-retry"; btn.textContent = "↺ Försök igen";
+        btn.onclick = function() { errDiv.remove(); trainChatHistory.pop(); tcSaveChatHistory(); tcSendMessage(message); };
+        errDiv.appendChild(btn);
+        return null;
+      }
+      return resp.json();
+    }).then(function(data) {
+      if (!data) return;
+      var reply = data.reply || data.error || "Inget svar.";
+      trainChatHistory.push({ role: "assistant", content: reply });
+      tcSaveChatHistory();
+      tcAppendBot(reply, true);
     }).catch(function() {
       typingDiv.remove();
-      tcAppendBot("Kunde inte nå assistenten just nu — försök igen om en stund.");
+      var errDiv = tcAppendBot("Kunde inte nå assistenten — kontrollera anslutningen.", false);
+      var btn = document.createElement("button"); btn.className = "tc-retry"; btn.textContent = "↺ Försök igen";
+      btn.onclick = function() { errDiv.remove(); trainChatHistory.pop(); tcSaveChatHistory(); tcSendMessage(message); };
+      errDiv.appendChild(btn);
     });
   }
 
