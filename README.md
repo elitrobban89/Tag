@@ -36,11 +36,12 @@ Tågsökningsapp med MiniPris-deals inbyggd via iframe på [elitrobban.se/minipr
 ### AI-chatt
 - **Avgångskontextuell chatbot** – vet exakt vilka avgångar som visas: operatör, avgångstid, pris, restid och platser kvar
 - **Tågassistent** – hjälper med billigaste biljett, snabbaste avgång och var det finns platser kvar just nu
-- **Glassmorphism-design** – blå/mörkblå panel med `backdrop-filter: blur(24px)` och svg-tågikon
+- **Glassmorphism-design** – blå/mörkblå panel med `backdrop-filter: blur(24px)` och färgglad svg-tågikon (teal + orange vagnar + blå lokomotiv med räls)
 - **Snabbknappar** – 💰 Billigast, ⚡ Snabbast, 🎫 Platser kvar, 🤖 Ge råd
 - **Kontext-bar** – visar aktuell rutt, datum och antal avgångar som AI:n känner till
 - **Markdown** – svarar med **fetstil** och `- listor` som renderas till HTML
 - **Rensa** – knapp för att starta ett nytt samtal utan att ladda om sidan
+- **Tåginformation** – AI:n känner till tågtyper (X2000, MTRX, Öresundståg m.fl.), WiFi/5G ombord och restider för topp 5-rutter
 - **Rate limiting** – chatboten begränsad till 10 meddelanden per IP per minut (glidande fönster)
 
 ### Övrigt
