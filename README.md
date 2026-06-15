@@ -34,7 +34,7 @@ Tågsökningsapp med MiniPris-deals inbyggd via iframe på [elitrobban.se/minipr
 - **Demo-reset** – listan återställs automatiskt efter 5 minuter (demo-läge)
 
 ### AI-chatt
-- **Avgångskontextuell chatbot** – vet exakt vilka avgångar som visas: operatör, avgångstid, pris, restid och platser kvar
+- **Kontextkänslig chatbot** – läser automatiskt av din sökning och vet exakt vilka avgångar som visas: operatör, avgångstid, pris, restid och platser kvar. Söker du Göteborg C → Stockholm C ser AI:n alla avgångar och kan direkt svara "avgång 07:45 MTRX är snabbast men har inga platser — nästa med MiniPris är 09:15"
 - **Tågassistent** – hjälper med billigaste biljett, snabbaste avgång och var det finns platser kvar just nu
 - **Glassmorphism-design** – blå/mörkblå panel med `backdrop-filter: blur(24px)` och färgglad svg-tågikon (teal + orange vagnar + blå lokomotiv med räls)
 - **Snabbknappar** – 💰 Billigast, ⚡ Snabbast, 🎫 Platser kvar, 🤖 Ge råd
