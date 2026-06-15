@@ -10,6 +10,13 @@ import org.springframework.web.bind.annotation.*;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayDeque;
@@ -19,6 +26,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 @Controller
 public class WebController {
@@ -28,6 +36,8 @@ public class WebController {
 
     @Autowired
     private GroqChatService groqChatService;
+
+    private final ObjectMapper mapper = new ObjectMapper();
 
     private static final int CHAT_RATE_LIMIT = 10;
     private static final long CHAT_WINDOW_MS  = 60_000L;
@@ -216,6 +226,58 @@ public class WebController {
         } catch (Exception e) {
             return ResponseEntity.ok(Map.of("error", e.getMessage()));
         }
+    }
+
+    @PostMapping(value = "/api/chat/stream", produces = "text/event-stream")
+    @ResponseBody
+    public ResponseEntity<StreamingResponseBody> chatStream(@RequestBody Map<String, Object> req, HttpServletRequest httpReq) {
+        String ip = Optional.ofNullable(httpReq.getHeader("X-Forwarded-For"))
+                .filter(h -> !h.isBlank()).map(h -> h.split(",")[0].trim())
+                .orElse(httpReq.getRemoteAddr());
+        long now = System.currentTimeMillis();
+        Deque<Long> times = chatTimestamps.computeIfAbsent(ip, k -> new ArrayDeque<>());
+        synchronized (times) {
+            while (!times.isEmpty() && now - times.peekFirst() > CHAT_WINDOW_MS) times.pollFirst();
+            if (times.size() >= CHAT_RATE_LIMIT)
+                return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).build();
+            times.addLast(now);
+        }
+        @SuppressWarnings("unchecked")
+        List<Map<String, String>> messages = (List<Map<String, String>>) req.get("messages");
+        String context = (String) req.get("context");
+
+        StreamingResponseBody body = outputStream -> {
+            try (InputStream is = groqChatService.chatStream(messages, context);
+                 BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    if (!line.startsWith("data: ")) continue;
+                    String data = line.substring(6).trim();
+                    if ("[DONE]".equals(data)) break;
+                    try {
+                        JsonNode node = mapper.readTree(data);
+                        String token = node.at("/choices/0/delta/content").asText("");
+                        if (!token.isEmpty()) {
+                            outputStream.write(("data: " + mapper.writeValueAsString(token) + "\n\n")
+                                    .getBytes(StandardCharsets.UTF_8));
+                            outputStream.flush();
+                        }
+                    } catch (Exception ignored) {}
+                }
+            } catch (Exception e) {
+                outputStream.write(("data: " + mapper.writeValueAsString("[ERR]" + e.getMessage()) + "\n\n")
+                        .getBytes(StandardCharsets.UTF_8));
+                outputStream.flush();
+            }
+            outputStream.write("data: [DONE]\n\n".getBytes(StandardCharsets.UTF_8));
+            outputStream.flush();
+        };
+
+        return ResponseEntity.ok()
+                .header("Content-Type", "text/event-stream; charset=UTF-8")
+                .header("Cache-Control", "no-cache")
+                .header("X-Accel-Buffering", "no")
+                .body(body);
     }
 
     private LocalDate parseDate(String dateStr) {

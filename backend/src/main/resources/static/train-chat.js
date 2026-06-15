@@ -203,6 +203,11 @@
       .tc-train-imgs{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
       .tc-train-img{width:100%;max-height:130px;object-fit:cover;border-radius:10px;opacity:.88;transition:opacity .2s;}
       .tc-train-img:hover{opacity:1;}
+      .tc-followup-chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px;}
+      .tc-followup-chip{background:rgba(96,165,250,.09);border:1px solid rgba(96,165,250,.22);color:rgba(147,197,253,.72);font-size:11px;padding:3px 10px;border-radius:20px;cursor:pointer;transition:all .15s;}
+      .tc-followup-chip:hover{background:rgba(96,165,250,.2);border-color:rgba(96,165,250,.45);color:#93c5fd;}
+      @keyframes tc-dep-flash{0%,100%{box-shadow:none}30%,70%{box-shadow:0 0 0 3px rgba(96,165,250,.6),0 0 20px rgba(96,165,250,.2)}}
+      .tc-dep-highlight{animation:tc-dep-flash 2s ease;}
       @keyframes tc-chip-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
       @media(max-width:400px){
         .tc-panel{width:calc(100vw - 16px);right:8px;bottom:92px;}
@@ -381,6 +386,49 @@
     outer.appendChild(wrap);
   }
 
+  function tcAddFollowupChips(text, outer) {
+    var lower = text.toLowerCase();
+    var chips = [];
+    if (/x2000/.test(lower))            chips.push('Vilka klasser finns på X2000?', 'Finns bistro ombord?');
+    else if (/x74|mtrx/.test(lower))    chips.push('Vilka klasser finns på X74?', 'Hur snabbt är X74?');
+    else if (/öresundståg/.test(lower)) chips.push('Vad kostar Öresundståget?', 'Öppen placering?');
+    else if (/snälltåget/.test(lower))  chips.push('Finns liggvagn?', 'Vilka rutter trafikerar Snälltåget?');
+    if (/wifi|5g/.test(lower) && chips.length < 2)    chips.push('Vad mer finns ombord?');
+    if (/pris|kr|billig/.test(lower) && chips.length < 2) chips.push('Finns billigare alternativ?');
+    if (/restid|timm|minut/.test(lower) && chips.length < 2) chips.push('Snabbaste avgången?');
+    if (chips.length === 0) chips = ['Billigaste biljett?', 'Finns platser kvar?'];
+    var wrap = document.createElement('div');
+    wrap.className = 'tc-followup-chips';
+    chips.slice(0, 3).forEach(function(chip) {
+      var btn = document.createElement('button');
+      btn.className = 'tc-followup-chip';
+      btn.textContent = chip;
+      btn.onclick = function() { wrap.remove(); document.getElementById('tc-input').value = chip; tcSend(); };
+      wrap.appendChild(btn);
+    });
+    outer.appendChild(wrap);
+  }
+
+  function tcHighlightDepartures(text) {
+    var times = text.match(/\b(\d{1,2}:\d{2})\b/g);
+    if (!times) return;
+    var seen = {};
+    times.forEach(function(t) {
+      if (seen[t]) return; seen[t] = true;
+      document.querySelectorAll('.card-time-range').forEach(function(el) {
+        if (el.textContent.indexOf(t) !== -1) {
+          var card = el.closest('.dep-card');
+          if (card) {
+            card.classList.remove('tc-dep-highlight');
+            void card.offsetWidth;
+            card.classList.add('tc-dep-highlight');
+            card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }
+        }
+      });
+    });
+  }
+
   function tcMarkdown(text) {
     return text
       .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
@@ -462,15 +510,15 @@
     tcSendMessage(msg);
   }
 
-  function tcSendMessage(message) {
+  async function tcSendMessage(message) {
     document.getElementById("tc-quick").style.display = "none";
     tcAppendUser(message);
 
-    var msgs = document.getElementById("tc-messages");
+    var msgsEl = document.getElementById("tc-messages");
     var typingDiv = document.createElement("div");
     typingDiv.innerHTML = '<div class="tc-bubble bot"><div class="tc-typing"><span></span><span></span><span></span></div></div>';
-    msgs.appendChild(typingDiv);
-    msgs.scrollTop = msgs.scrollHeight;
+    msgsEl.appendChild(typingDiv);
+    msgsEl.scrollTop = msgsEl.scrollHeight;
 
     trainChatHistory.push({ role: "user", content: message });
     tcSaveChatHistory();
@@ -478,37 +526,93 @@
     var context = buildDepartureContext(window._trainSearchData);
     var limited = trainChatHistory.slice(-10);
 
-    fetch(TRAIN_CHAT_API + "/api/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ messages: limited, context: context })
-    }).then(function(resp) {
-      typingDiv.remove();
-      if (resp.status === 429) {
-        tcAppendBot("Du har ställt för många frågor — vänta en minut och försök igen.", false);
-        return null;
-      }
-      if (!resp.ok) {
-        var errDiv = tcAppendBot("Något gick fel (fel " + resp.status + ").", false);
-        var btn = document.createElement("button"); btn.className = "tc-retry"; btn.textContent = "↺ Försök igen";
-        btn.onclick = function() { errDiv.remove(); trainChatHistory.pop(); tcSaveChatHistory(); tcSendMessage(message); };
-        errDiv.appendChild(btn);
-        return null;
-      }
-      return resp.json();
-    }).then(function(data) {
-      if (!data) return;
-      var reply = data.reply || data.error || "Inget svar.";
-      trainChatHistory.push({ role: "assistant", content: reply });
-      tcSaveChatHistory();
-      tcAppendBot(reply, true);
-    }).catch(function() {
+    var resp;
+    try {
+      resp = await fetch(TRAIN_CHAT_API + "/api/chat/stream", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: limited, context: context })
+      });
+    } catch(e) {
       typingDiv.remove();
       var errDiv = tcAppendBot("Kunde inte nå assistenten — kontrollera anslutningen.", false);
       var btn = document.createElement("button"); btn.className = "tc-retry"; btn.textContent = "↺ Försök igen";
       btn.onclick = function() { errDiv.remove(); trainChatHistory.pop(); tcSaveChatHistory(); tcSendMessage(message); };
       errDiv.appendChild(btn);
-    });
+      return;
+    }
+
+    typingDiv.remove();
+
+    if (resp.status === 429) {
+      tcAppendBot("Du har ställt för många frågor — vänta en minut och försök igen.", false);
+      return;
+    }
+    if (!resp.ok) {
+      var errDiv2 = tcAppendBot("Något gick fel (fel " + resp.status + ").", false);
+      var btn2 = document.createElement("button"); btn2.className = "tc-retry"; btn2.textContent = "↺ Försök igen";
+      btn2.onclick = function() { errDiv2.remove(); trainChatHistory.pop(); tcSaveChatHistory(); tcSendMessage(message); };
+      errDiv2.appendChild(btn2);
+      return;
+    }
+
+    // Create streaming bubble
+    var outer = document.createElement("div");
+    var bubble = document.createElement("div");
+    bubble.className = "tc-bubble bot";
+    outer.appendChild(bubble);
+    msgsEl.appendChild(outer);
+
+    var fullText = "";
+    var reader = resp.body.getReader();
+    var decoder = new TextDecoder();
+    var buf = "";
+    var streamDone = false;
+
+    try {
+      while (!streamDone) {
+        var chunk = await reader.read();
+        if (chunk.done) break;
+        buf += decoder.decode(chunk.value, { stream: true });
+        var lines = buf.split("\n");
+        buf = lines.pop();
+        for (var i = 0; i < lines.length; i++) {
+          var line = lines[i].trim();
+          if (!line.startsWith("data:")) continue;
+          var data = line.slice(5).trim();
+          if (data === "[DONE]") { streamDone = true; break; }
+          try {
+            var token = JSON.parse(data);
+            if (token.startsWith("[ERR]")) throw new Error(token.slice(5));
+            fullText += token;
+            bubble.textContent = fullText;
+            msgsEl.scrollTop = msgsEl.scrollHeight;
+          } catch(parseErr) {
+            if (parseErr.message && !parseErr.message.startsWith("JSON")) throw parseErr;
+          }
+        }
+      }
+    } catch(streamErr) {
+      if (!fullText) {
+        outer.remove();
+        var errDiv3 = tcAppendBot(streamErr.message || "Kunde inte nå assistenten.", false);
+        var btn3 = document.createElement("button"); btn3.className = "tc-retry"; btn3.textContent = "↺ Försök igen";
+        btn3.onclick = function() { errDiv3.remove(); trainChatHistory.pop(); tcSaveChatHistory(); tcSendMessage(message); };
+        errDiv3.appendChild(btn3);
+        return;
+      }
+    }
+
+    // Finalize bubble
+    bubble.innerHTML = tcMarkdown(fullText);
+    tcInjectTrainImages(fullText, outer);
+    tcHighlightDepartures(fullText);
+    tcAddFeedback(outer);
+    tcAddFollowupChips(fullText, outer);
+    msgsEl.scrollTop = msgsEl.scrollHeight;
+
+    trainChatHistory.push({ role: "assistant", content: fullText });
+    tcSaveChatHistory();
   }
 
   initTrainChat();
