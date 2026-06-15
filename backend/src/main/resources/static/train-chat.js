@@ -200,6 +200,9 @@
       .tc-thumb.voted{border-color:rgba(96,165,250,0.65);color:#93c5fd;background:rgba(96,165,250,0.08);}
       .tc-retry{background:none;border:1px solid rgba(239,68,68,0.3);color:rgba(239,68,68,0.65);font-size:11px;font-weight:600;padding:4px 11px;border-radius:20px;cursor:pointer;margin-top:7px;display:inline-block;transition:all .15s;}
       .tc-retry:hover{border-color:rgba(239,68,68,0.6);color:#ef4444;}
+      .tc-train-imgs{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+      .tc-train-img{width:100%;max-height:130px;object-fit:cover;border-radius:10px;opacity:.88;transition:opacity .2s;}
+      .tc-train-img:hover{opacity:1;}
       @keyframes tc-chip-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
       @media(max-width:400px){
         .tc-panel{width:calc(100vw - 16px);right:8px;bottom:92px;}
@@ -341,6 +344,43 @@
     }
   }
 
+  var TC_TRAIN_IMAGES = [
+    { keys: ['x2000'],                      src: '/images/train-sj-x2000.jpg',    alt: 'SJ X2000' },
+    { keys: ['x74', 'mtrx'],               src: '/images/train-vy.jpg',           alt: 'MTRX X74' },
+    { keys: ['öresundståg', 'x31'],        src: '/images/train-oresundstag.jpg',  alt: 'Öresundståg X31' },
+    { keys: ['snälltåget', 'snälltåg'],    src: '/images/train-sj-fast.png',     alt: 'Snälltåget' },
+    { keys: ['mtr express'],               src: '/images/train-sj-fast.png',     alt: 'MTR Express' },
+    { keys: ['x61', 'västtåg', 'västtrafik'], src: '/images/train-sj-regional.png', alt: 'Västtåg X61' },
+  ];
+
+  function tcInjectTrainImages(text, outer) {
+    var lower = text.toLowerCase();
+    var seen = {};
+    var matches = [];
+    TC_TRAIN_IMAGES.forEach(function(entry) {
+      if (seen[entry.src]) return;
+      for (var i = 0; i < entry.keys.length; i++) {
+        if (lower.indexOf(entry.keys[i]) !== -1) {
+          seen[entry.src] = true;
+          matches.push(entry);
+          break;
+        }
+      }
+    });
+    if (matches.length === 0) return;
+    var wrap = document.createElement('div');
+    wrap.className = 'tc-train-imgs';
+    matches.forEach(function(entry) {
+      var img = document.createElement('img');
+      img.className = 'tc-train-img';
+      img.src = entry.src;
+      img.alt = entry.alt;
+      img.title = entry.alt;
+      wrap.appendChild(img);
+    });
+    outer.appendChild(wrap);
+  }
+
   function tcMarkdown(text) {
     return text
       .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
@@ -366,6 +406,7 @@
         i += 3;
         if (i >= text.length) {
           bubble.innerHTML = tcMarkdown(text);
+          tcInjectTrainImages(text, outer);
           tcAddFeedback(outer);
           msgs.scrollTop = msgs.scrollHeight;
         } else {
@@ -378,6 +419,7 @@
       })();
     } else {
       bubble.innerHTML = tcMarkdown(text);
+      tcInjectTrainImages(text, outer);
       if (animate !== false) tcAddFeedback(outer);
     }
     return outer;
