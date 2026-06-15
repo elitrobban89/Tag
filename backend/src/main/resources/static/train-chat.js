@@ -181,24 +181,61 @@
           <span class="tc-spark">⚡</span>
           <span class="tc-spark">🎫</span>
           <button class="tc-fab" id="tc-fab" title="Fråga tågassistenten">
-            <svg viewBox="0 0 52 44" width="38" height="30" xmlns="http://www.w3.org/2000/svg">
-              <!-- tåg-kropp -->
-              <rect x="4" y="14" width="44" height="22" rx="6" fill="rgba(255,255,255,0.15)" stroke="rgba(147,197,253,0.45)" stroke-width="1.2"/>
-              <!-- fönster -->
-              <rect x="10" y="19" width="8" height="6" rx="2" fill="rgba(147,197,253,0.35)" stroke="rgba(147,197,253,0.4)" stroke-width="0.8"/>
-              <rect x="22" y="19" width="8" height="6" rx="2" fill="rgba(147,197,253,0.35)" stroke="rgba(147,197,253,0.4)" stroke-width="0.8"/>
-              <rect x="34" y="19" width="8" height="6" rx="2" fill="rgba(147,197,253,0.35)" stroke="rgba(147,197,253,0.4)" stroke-width="0.8"/>
-              <!-- hjul -->
-              <circle cx="13" cy="38" r="4.5" fill="#0f172a" stroke="rgba(147,197,253,0.5)" stroke-width="1.5"/>
-              <circle cx="13" cy="38" r="2" fill="rgba(147,197,253,0.4)"/>
-              <circle cx="39" cy="38" r="4.5" fill="#0f172a" stroke="rgba(147,197,253,0.5)" stroke-width="1.5"/>
-              <circle cx="39" cy="38" r="2" fill="rgba(147,197,253,0.4)"/>
-              <!-- lyktor -->
-              <rect x="46" y="20" width="4" height="3" rx="1.5" fill="#fef08a"/>
-              <!-- skena -->
-              <line x1="2" y1="43" x2="50" y2="43" stroke="rgba(147,197,253,0.3)" stroke-width="1.5" stroke-linecap="round"/>
-              <!-- blixt -->
-              <path d="M24 10 L21 17 L25.5 15 L23 22" fill="#fef08a" stroke="#fef08a" stroke-width="0.4" stroke-linejoin="round"/>
+            <svg viewBox="0 0 88 42" width="48" height="26" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="g-loco" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#60a5fa"/><stop offset="100%" stop-color="#1d4ed8"/></linearGradient>
+                <linearGradient id="g-w1"   x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#fb923c"/><stop offset="100%" stop-color="#c2410c"/></linearGradient>
+                <linearGradient id="g-w2"   x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#34d399"/><stop offset="100%" stop-color="#047857"/></linearGradient>
+              </defs>
+              <!-- vagn 2 (teal) -->
+              <rect x="2" y="7" width="26" height="19" rx="3" fill="url(#g-w2)" stroke="rgba(52,211,153,0.6)" stroke-width="0.8"/>
+              <rect x="6"  y="11" width="7" height="5" rx="1.5" fill="rgba(255,255,255,0.3)"/>
+              <rect x="17" y="11" width="7" height="5" rx="1.5" fill="rgba(255,255,255,0.3)"/>
+              <line x1="2" y1="21" x2="28" y2="21" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"/>
+              <!-- koppling -->
+              <rect x="28" y="15" width="4" height="3" rx="1" fill="rgba(200,220,255,0.35)"/>
+              <!-- vagn 1 (orange) -->
+              <rect x="32" y="7" width="24" height="19" rx="2" fill="url(#g-w1)" stroke="rgba(251,146,60,0.6)" stroke-width="0.8"/>
+              <rect x="36" y="11" width="7" height="5" rx="1.5" fill="rgba(255,255,255,0.3)"/>
+              <rect x="46" y="11" width="7" height="5" rx="1.5" fill="rgba(255,255,255,0.3)"/>
+              <line x1="32" y1="21" x2="56" y2="21" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"/>
+              <!-- koppling -->
+              <rect x="56" y="15" width="4" height="3" rx="1" fill="rgba(200,220,255,0.35)"/>
+              <!-- lokomotiv (blå, spetsig nos) -->
+              <path d="M 60 7 L 82 7 L 88 16.5 L 82 26 L 60 26 Z" fill="url(#g-loco)" stroke="rgba(147,197,253,0.55)" stroke-width="0.8"/>
+              <!-- förarhyttsfönster -->
+              <path d="M 82 11 L 87 16.5 L 82 22" fill="rgba(186,230,253,0.4)" stroke="rgba(186,230,253,0.5)" stroke-width="0.6"/>
+              <!-- sidofönster loko -->
+              <rect x="64" y="11" width="7" height="5" rx="1.5" fill="rgba(255,255,255,0.3)"/>
+              <rect x="74" y="11" width="6" height="5" rx="1.5" fill="rgba(255,255,255,0.3)"/>
+              <!-- strålkastare -->
+              <ellipse cx="87.5" cy="16.5" rx="1.8" ry="1.3" fill="#fef08a"/>
+              <ellipse cx="87.5" cy="16.5" rx="0.8" ry="0.6" fill="#fff"/>
+              <line x1="60" y1="21" x2="82" y2="21" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"/>
+              <!-- hjul (färgade per vagn) -->
+              <circle cx="10"  cy="30" r="3.5" fill="#082f1f" stroke="#34d399" stroke-width="1.3"/><circle cx="10"  cy="30" r="1.4" fill="rgba(52,211,153,0.5)"/>
+              <circle cx="22"  cy="30" r="3.5" fill="#082f1f" stroke="#34d399" stroke-width="1.3"/><circle cx="22"  cy="30" r="1.4" fill="rgba(52,211,153,0.5)"/>
+              <circle cx="40"  cy="30" r="3.5" fill="#1c0a00" stroke="#fb923c" stroke-width="1.3"/><circle cx="40"  cy="30" r="1.4" fill="rgba(251,146,60,0.5)"/>
+              <circle cx="52"  cy="30" r="3.5" fill="#1c0a00" stroke="#fb923c" stroke-width="1.3"/><circle cx="52"  cy="30" r="1.4" fill="rgba(251,146,60,0.5)"/>
+              <circle cx="68"  cy="30" r="3.5" fill="#060d1f" stroke="#60a5fa" stroke-width="1.3"/><circle cx="68"  cy="30" r="1.4" fill="rgba(96,165,250,0.5)"/>
+              <circle cx="80"  cy="30" r="3.5" fill="#060d1f" stroke="#60a5fa" stroke-width="1.3"/><circle cx="80"  cy="30" r="1.4" fill="rgba(96,165,250,0.5)"/>
+              <!-- sliprar -->
+              <rect x="0"  y="33.5" width="4" height="5" rx="0.7" fill="rgba(100,140,200,0.22)"/>
+              <rect x="7"  y="33.5" width="4" height="5" rx="0.7" fill="rgba(100,140,200,0.22)"/>
+              <rect x="14" y="33.5" width="4" height="5" rx="0.7" fill="rgba(100,140,200,0.22)"/>
+              <rect x="21" y="33.5" width="4" height="5" rx="0.7" fill="rgba(100,140,200,0.22)"/>
+              <rect x="28" y="33.5" width="4" height="5" rx="0.7" fill="rgba(100,140,200,0.22)"/>
+              <rect x="35" y="33.5" width="4" height="5" rx="0.7" fill="rgba(100,140,200,0.22)"/>
+              <rect x="42" y="33.5" width="4" height="5" rx="0.7" fill="rgba(100,140,200,0.22)"/>
+              <rect x="49" y="33.5" width="4" height="5" rx="0.7" fill="rgba(100,140,200,0.22)"/>
+              <rect x="56" y="33.5" width="4" height="5" rx="0.7" fill="rgba(100,140,200,0.22)"/>
+              <rect x="63" y="33.5" width="4" height="5" rx="0.7" fill="rgba(100,140,200,0.22)"/>
+              <rect x="70" y="33.5" width="4" height="5" rx="0.7" fill="rgba(100,140,200,0.22)"/>
+              <rect x="77" y="33.5" width="4" height="5" rx="0.7" fill="rgba(100,140,200,0.22)"/>
+              <rect x="84" y="33.5" width="4" height="5" rx="0.7" fill="rgba(100,140,200,0.22)"/>
+              <!-- räls -->
+              <line x1="0" y1="33.5" x2="88" y2="33.5" stroke="rgba(147,197,253,0.7)" stroke-width="1.8" stroke-linecap="round"/>
+              <line x1="0" y1="37.5" x2="88" y2="37.5" stroke="rgba(147,197,253,0.7)" stroke-width="1.8" stroke-linecap="round"/>
             </svg>
           </button>
         </div>
