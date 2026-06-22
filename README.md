@@ -37,12 +37,13 @@ Tågsökningsapp med MiniPris-deals inbyggd via iframe på [elitrobban.se/minipr
 
 ### AI-chatt
 - **Kontextkänslig chatbot** – läser automatiskt av din sökning och vet exakt vilka avgångar som visas: operatör, avgångstid, pris, restid och platser kvar. Söker du Göteborg C → Stockholm C ser AI:n alla avgångar och kan direkt svara "avgång 07:45 MTRX är snabbast men har inga platser — nästa med MiniPris är 09:15"
+- **Avgångsfokuserad kontext** – klickar du på ett avgångskort för att expandera det fokuseras chatboten automatiskt på just den avgången. Kontextbaren uppdateras till t.ex. "🚂 15:05 – 19:15 · 4h 10min · Göteborg → Stockholm", snabbchipsen byts till avgångsspecifika (🪑 Vilken klass?, 🛜 WiFi & 5G, 🧳 Bagage, 🗺 Till centrum) och en intro-bubbla visas med tider, pris och platser kvar. Väljer du ett annat kort uppdateras kontexten direkt.
 - **Tågassistent** – hjälper med billigaste biljett, snabbaste avgång och var det finns platser kvar just nu
 - **Glassmorphism-design** – blå/mörkblå panel med `backdrop-filter: blur(24px)` och färgglad svg-tågikon (teal + orange vagnar + blå lokomotiv med räls)
-- **Snabbknappar** – 💰 Billigast, ⚡ Snabbast, 🎫 Platser kvar, 🤖 Ge råd
-- **Kontext-bar** – visar aktuell rutt, datum och antal avgångar som AI:n känner till
+- **Snabbknappar** – 💰 Billigast, ⚡ Snabbast, 🎫 Platser kvar, 🤖 Ge råd (byts till avgångsspecifika vid expanderat kort)
+- **Kontext-bar** – visar aktuell rutt + antal avgångar vid sökning, eller specifik avgångstid vid fokuserat kort
 - **Markdown** – svarar med **fetstil** och `- listor` som renderas till HTML
-- **Rensa** – knapp för att starta ett nytt samtal utan att ladda om sidan
+- **Rensa** – knapp för att starta ett nytt samtal och återställa avgångsfokus
 - **Tåginformation** – AI:n känner till tågtyper (X2000, MTRX, Öresundståg m.fl.), WiFi/5G ombord och restider för topp 5-rutter
 - **Tågbilder** – när AI:n nämner en tågtyp (X2000, MTRX X74, Öresundståg, Snälltåget, MTR Express, Västtåg X61) visas motsvarande tågfoto automatiskt under svaret
 - **Streaming-svar** – svaret strömmar direkt token för token från Groq till chatbubblan utan att vänta på hela svaret, via `/api/chat/stream` (SSE); automatisk fallback till `/api/chat` om webbläsaren saknar ReadableStream-stöd
