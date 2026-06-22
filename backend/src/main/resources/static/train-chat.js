@@ -1,6 +1,8 @@
 (function () {
   var TRAIN_CHAT_API = window.TRAIN_API_URL || "";
   var trainChatHistory = (function(){ try{ return JSON.parse(localStorage.getItem('tc-chat')||'[]'); }catch(e){ return []; } })();
+  var _focusedDepContext = null;
+  var _focusedDep = null;
 
   // Intercept _trainSearchData to enable live context update + auto-chip
   var _searchDataVal = null;
@@ -8,6 +10,8 @@
     get: function() { return _searchDataVal; },
     set: function(val) {
       _searchDataVal = val;
+      _focusedDepContext = null;
+      _focusedDep = null;
       updateContextBar();
       if (val && val.departures && val.departures.length > 0) showSearchChip(val);
     },
@@ -323,8 +327,9 @@
     document.getElementById("tc-send").addEventListener("click", tcSend);
     document.getElementById("tc-clear").addEventListener("click", tcClear);
     document.getElementById("tc-input").addEventListener("keydown", function(e) { if (e.key === "Enter") tcSend(); });
-    document.querySelectorAll(".tc-quick-btn").forEach(function(btn) {
-      btn.addEventListener("click", function() { tcSendMessage(btn.dataset.q); });
+    document.getElementById("tc-quick").addEventListener("click", function(e) {
+      var btn = e.target.closest(".tc-quick-btn");
+      if (btn) tcSendMessage(btn.dataset.q);
     });
   }
 
@@ -340,6 +345,13 @@
 
   function updateContextBar() {
     var bar = document.getElementById("tc-context-bar");
+    if (!bar) return;
+    if (_focusedDep) {
+      var tr = _focusedDep.depTime + (_focusedDep.arrTime ? ' – ' + _focusedDep.arrTime : '');
+      bar.textContent = "🚂 " + tr + " · " + _focusedDep.fromName + " → " + _focusedDep.toName;
+      bar.style.display = "block";
+      return;
+    }
     var data = window._trainSearchData;
     if (data && data.fromName) {
       bar.textContent = "🔍 " + data.fromName + " → " + data.toName + "  |  📅 " + data.date + "  |  🚂 " + (data.departures ? data.departures.length : 0) + " avgångar";
@@ -496,9 +508,18 @@
 
   function tcClear() {
     trainChatHistory = [];
+    _focusedDepContext = null;
+    _focusedDep = null;
     try { localStorage.removeItem("tc-chat"); } catch(e) {}
     document.getElementById("tc-messages").innerHTML = "";
-    document.getElementById("tc-quick").style.display = "flex";
+    var quick = document.getElementById("tc-quick");
+    quick.innerHTML =
+      '<button class="tc-quick-btn" data-q="Vilken avgång är billigast?">💰 Billigast</button>' +
+      '<button class="tc-quick-btn" data-q="Vilken avgång är snabbast?">⚡ Snabbast</button>' +
+      '<button class="tc-quick-btn" data-q="Vilka avgångar har MiniPris-platser kvar?">🎫 Platser kvar</button>' +
+      '<button class="tc-quick-btn" data-q="Ge mig råd om vilken avgång jag ska välja">🤖 Ge råd</button>';
+    quick.style.display = "flex";
+    updateContextBar();
     tcAppendBot("Hej! Jag hjälper dig hitta rätt tåg 🚂 Gör en sökning så kan jag svara på frågor om priser, platser och restider!", false);
   }
 
@@ -523,7 +544,7 @@
     trainChatHistory.push({ role: "user", content: message });
     tcSaveChatHistory();
 
-    var context = buildDepartureContext(window._trainSearchData);
+    var context = _focusedDepContext || buildDepartureContext(window._trainSearchData);
     var limited = trainChatHistory.slice(-10);
 
     var resp;
@@ -632,6 +653,80 @@
     trainChatHistory.push({ role: "assistant", content: fullText });
     tcSaveChatHistory();
   }
+
+  window.tcFocusDeparture = function(btn) {
+    var depTime    = btn.getAttribute('data-dep-time')    || '';
+    var arrTime    = btn.getAttribute('data-arr-time')    || '';
+    var trainId    = btn.getAttribute('data-train-id')    || '';
+    var model      = btn.getAttribute('data-model')       || '';
+    var dest       = btn.getAttribute('data-destination') || '';
+    var price      = btn.getAttribute('data-price')       || '';
+    var seatsLeft  = parseInt(btn.getAttribute('data-seats-left'),  10) || 0;
+    var travelMins = parseInt(btn.getAttribute('data-travel-mins'), 10) || 0;
+
+    var fromName = (window._trainSearchData && window._trainSearchData.fromName) || '';
+    var toName   = (window._trainSearchData && window._trainSearchData.toName)   || dest;
+    var date     = (window._trainSearchData && window._trainSearchData.date)     || '';
+
+    var dur = '';
+    if (travelMins > 0) {
+      var h = Math.floor(travelMins / 60);
+      var m = travelMins % 60;
+      dur = (h > 0 ? h + 'h' : '') + (m > 0 ? ' ' + m + 'min' : '');
+    }
+    var timeRange = depTime + (arrTime ? ' – ' + arrTime : '');
+
+    _focusedDepContext =
+      'Användaren tittar på en SPECIFIK avgång:\n' +
+      'Sträcka: ' + fromName + ' → ' + toName + '\n' +
+      'Datum: ' + date + '\n' +
+      'Avgångstid: ' + depTime + (arrTime ? ', ankomst: ' + arrTime : '') + '\n' +
+      (dur ? 'Restid: ' + dur + ' · 0 byten\n' : '') +
+      'Tåg: ' + trainId + (model ? ' (' + model + ')' : '') + '\n' +
+      'Pris: ' + price + '\n' +
+      (seatsLeft > 0 ? 'MiniPris-platser kvar: ' + seatsLeft + '\n' : 'Inga MiniPris-platser kvar\n') +
+      '\nSvara med fokus på just denna avgång.';
+
+    _focusedDep = { depTime: depTime, arrTime: arrTime, fromName: fromName, toName: toName };
+
+    var bar = document.getElementById('tc-context-bar');
+    if (bar) {
+      bar.textContent = '🚂 ' + timeRange + (dur ? ' · ' + dur : '') + ' · ' + fromName + ' → ' + toName;
+      bar.style.display = 'block';
+    }
+
+    var quick = document.getElementById('tc-quick');
+    if (quick) {
+      quick.innerHTML =
+        '<button class="tc-quick-btn" data-q="Vilken reseklass passar bäst för denna avgång?">🪑 Vilken klass?</button>' +
+        '<button class="tc-quick-btn" data-q="Finns WiFi och 5G på ' + (model || 'detta tåg') + '?">🛜 WiFi & 5G</button>' +
+        '<button class="tc-quick-btn" data-q="Vad gäller för bagage på denna avgång?">🧳 Bagage</button>' +
+        '<button class="tc-quick-btn" data-q="Hur lång tid tar det från ' + toName + ' centralstation till centrum?">🗺 Till centrum</button>';
+      quick.style.display = 'flex';
+    }
+
+    var panel = document.getElementById('tc-panel');
+    if (panel && panel.style.display === 'none') panel.style.display = 'flex';
+
+    var seatsMsg = seatsLeft > 0
+      ? ' Det finns **' + seatsLeft + ' MiniPris-platser kvar**.'
+      : ' Inga MiniPris-platser kvar – men du kan ändå köpa ordinarie biljett.';
+    var introText =
+      'Du tittar på tåget **' + timeRange + '**' +
+      (model ? ' (' + model + ')' : '') +
+      (dur ? ' — restid ' + dur : '') +
+      ', från **' + fromName + '** till **' + toName + '**.' +
+      (price ? ' Pris från **' + price.replace('från ', '') + '**.' : '') +
+      seatsMsg +
+      '\n\nVad vill du veta mer om denna resa?';
+    tcAppendBot(introText, false);
+
+    var inp = document.getElementById('tc-input');
+    if (inp) {
+      inp.placeholder = 'Fråga om tåget ' + timeRange + '…';
+      inp.focus();
+    }
+  };
 
   initTrainChat();
 })();
