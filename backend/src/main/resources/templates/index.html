@@ -303,8 +303,7 @@
     .res-arrow   { color:rgba(255,255,255,.4); }
     .res-meta    { font-size:.78rem; color:rgba(255,255,255,.5);
                    display:flex; align-items:center; gap:12px; }
-    .res-count   { position:absolute; top:18px; right:20px;
-                   background:rgba(255,255,255,.12); color:#fff;
+    .res-count   { background:rgba(255,255,255,.12); color:#fff;
                    font-size:.72rem; font-weight:700; padding:3px 10px; border-radius:16px; }
 
     /* ── Departure list container ── */
@@ -2123,8 +2122,8 @@ function renderResults(data) {
   html +=   '<div class="res-meta">';
   html +=     '<span>📅 ' + esc(data.date) + '</span>';
   html +=     '<span>🚂 Tåg</span>';
+  if (n > 0) html += '<span class="res-count">' + n + ' avgångar</span>';
   html +=   '</div>';
-  if (n > 0) html += '<div class="res-count">' + n + ' avgångar</div>';
   html += '</div>';
 
   // Auto-advance notice when today has no more trains
