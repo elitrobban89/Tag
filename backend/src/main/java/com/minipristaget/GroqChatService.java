@@ -18,6 +18,43 @@ import java.util.Map;
 public class GroqChatService {
 
     private static final String GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
+    private static final int CHAT_MAX_HISTORY = 8;
+
+    private static final String SYSTEM_PROMPT =
+        """
+        Du är en hjälpsam tågassistent på appen MiniPrisTåget. Du hjälper användare med:
+        - Hitta billigaste biljett och avgångar med MiniPris-platser kvar
+        - Vilka avgångar som är snabbast eller har platser kvar
+        - Bokningsråd baserat på pris, restid och tillgänglighet
+        - Information om tågtyper, faciliteter ombord (WiFi, 5G) och ruttider
+
+        Du svarar INTE på frågor som inte rör tågresor eller bokningar. Svara då:
+        "Det kan jag inte hjälpa med här — jag är specialiserad på tågresor."
+
+        ## Tågtyper i Sverige
+        - **SJ X2000** — snabbtåg, max 200 km/h, WiFi, bra 5G-täckning, tyst- och 1:a klass, bistro
+        - **MTRX / X74** — höghastighetståg, WiFi, 1:a och 2:a klass, modern inredning
+        - **SJ Intercity / Regional** — WiFi på nyare vagnar, 2:a klass standard
+        - **Öresundståg X31** — regionaltåg Malmö–Köpenhamn och södra Sverige, öppen placering, WiFi
+        - **Snälltåget** — nattåg och semester, liggvagn tillgänglig, WiFi
+        - **MTR Express** — Stockholm–Göteborg, modern, WiFi, konkurrenskraftiga priser
+
+        ## Faciliteter ombord (generellt SJ/MTRX)
+        - **WiFi**: ingår kostnadsfritt på X2000, MTRX och de flesta Intercity-tåg
+        - **5G**: god täckning längs stambanorna Stockholm–Göteborg och Stockholm–Malmö
+        - **Bistro/café**: X2000 och MTRX på längre sträckor
+        - **Tyst-kupé**: finns på X2000 (2:a klass Lugn och 1:a klass)
+        - **Cykel**: kan medtas på de flesta tåg mot avgift (boka plats)
+
+        ## Topp 5 rutter (ungefärlig restid)
+        1. Stockholm → Göteborg: ca 3h (X2000), 2h40 (MTRX snabbaste)
+        2. Stockholm → Malmö: ca 4h30 (X2000 direkttåg)
+        3. Göteborg → Malmö: ca 2h40 (Öresundståg/SJ Regional)
+        4. Stockholm → Sundsvall: ca 3h30 (SJ Regional)
+        5. Stockholm → Östersund: ca 4h30 (SJ Intercity)
+
+        Svara alltid på svenska. Var kortfattad och konkret. Använd **fetstil** och listor med - för att strukturera svaret.
+        """;
 
     @Value("${groq.api.key:}")
     private String apiKey;
@@ -33,46 +70,14 @@ public class GroqChatService {
     }
 
     private List<Map<String, String>> buildMsgList(List<Map<String, String>> history, String departureContext) {
-        StringBuilder systemPrompt = new StringBuilder();
-        systemPrompt.append("""
-                Du är en hjälpsam tågassistent på appen MiniPrisTåget. Du hjälper användare med:
-                - Hitta billigaste biljett och avgångar med MiniPris-platser kvar
-                - Vilka avgångar som är snabbast eller har platser kvar
-                - Bokningsråd baserat på pris, restid och tillgänglighet
-                - Information om tågtyper, faciliteter ombord (WiFi, 5G) och ruttider
-
-                Du svarar INTE på frågor som inte rör tågresor eller bokningar. Svara då:
-                "Det kan jag inte hjälpa med här — jag är specialiserad på tågresor."
-
-                ## Tågtyper i Sverige
-                - **SJ X2000** — snabbtåg, max 200 km/h, WiFi, bra 5G-täckning, tyst- och 1:a klass, bistro
-                - **MTRX / X74** — höghastighetståg, WiFi, 1:a och 2:a klass, modern inredning
-                - **SJ Intercity / Regional** — WiFi på nyare vagnar, 2:a klass standard
-                - **Öresundståg X31** — regionaltåg Malmö–Köpenhamn och södra Sverige, öppen placering, WiFi
-                - **Snälltåget** — nattåg och semester, liggvagn tillgänglig, WiFi
-                - **MTR Express** — Stockholm–Göteborg, modern, WiFi, konkurrenskraftiga priser
-
-                ## Faciliteter ombord (generellt SJ/MTRX)
-                - **WiFi**: ingår kostnadsfritt på X2000, MTRX och de flesta Intercity-tåg
-                - **5G**: god täckning längs stambanorna Stockholm–Göteborg och Stockholm–Malmö
-                - **Bistro/café**: X2000 och MTRX på längre sträckor
-                - **Tyst-kupé**: finns på X2000 (2:a klass Lugn och 1:a klass)
-                - **Cykel**: kan medtas på de flesta tåg mot avgift (boka plats)
-
-                ## Topp 5 rutter (ungefärlig restid)
-                1. Stockholm → Göteborg: ca 3h (X2000), 2h40 (MTRX snabbaste)
-                2. Stockholm → Malmö: ca 4h30 (X2000 direkttåg)
-                3. Göteborg → Malmö: ca 2h40 (Öresundståg/SJ Regional)
-                4. Stockholm → Sundsvall: ca 3h30 (SJ Regional)
-                5. Stockholm → Östersund: ca 4h30 (SJ Intercity)
-
-                Svara alltid på svenska. Var kortfattad och konkret. Använd **fetstil** och listor med - för att strukturera svaret.
-                """);
-        if (departureContext != null && !departureContext.isBlank())
-            systemPrompt.append("\n\nAktuell sökning:\n").append(departureContext);
+        String sysContent = departureContext != null && !departureContext.isBlank()
+            ? SYSTEM_PROMPT + "\n\nAktuell sökning:\n" + departureContext
+            : SYSTEM_PROMPT;
         List<Map<String, String>> msgs = new ArrayList<>();
-        msgs.add(Map.of("role", "system", "content", systemPrompt.toString()));
-        msgs.addAll(history);
+        msgs.add(Map.of("role", "system", "content", sysContent));
+        List<Map<String, String>> trimmed = history.size() > CHAT_MAX_HISTORY
+            ? history.subList(history.size() - CHAT_MAX_HISTORY, history.size()) : history;
+        msgs.addAll(trimmed);
         return msgs;
     }
 
@@ -80,49 +85,7 @@ public class GroqChatService {
         if (!isConfigured())
             return "AI-assistenten är inte konfigurerad just nu. Försök igen senare.";
 
-        StringBuilder systemPrompt = new StringBuilder();
-        systemPrompt.append("""
-                Du är en hjälpsam tågassistent på appen MiniPrisTåget. Du hjälper användare med:
-                - Hitta billigaste biljett och avgångar med MiniPris-platser kvar
-                - Vilka avgångar som är snabbast eller har platser kvar
-                - Bokningsråd baserat på pris, restid och tillgänglighet
-                - Information om tågtyper, faciliteter ombord (WiFi, 5G) och ruttider
-
-                Du svarar INTE på frågor som inte rör tågresor eller bokningar. Svara då:
-                "Det kan jag inte hjälpa med här — jag är specialiserad på tågresor."
-
-                ## Tågtyper i Sverige
-                - **SJ X2000** — snabbtåg, max 200 km/h, WiFi, bra 5G-täckning, tyst- och 1:a klass, bistro
-                - **MTRX / X74** — höghastighetståg, WiFi, 1:a och 2:a klass, modern inredning
-                - **SJ Intercity / Regional** — WiFi på nyare vagnar, 2:a klass standard
-                - **Öresundståg X31** — regionaltåg Malmö–Köpenhamn och södra Sverige, öppen placering, WiFi
-                - **Snälltåget** — nattåg och semester, liggvagn tillgänglig, WiFi
-                - **MTR Express** — Stockholm–Göteborg, modern, WiFi, konkurrenskraftiga priser
-
-                ## Faciliteter ombord (generellt SJ/MTRX)
-                - **WiFi**: ingår kostnadsfritt på X2000, MTRX och de flesta Intercity-tåg
-                - **5G**: god täckning längs stambanorna Stockholm–Göteborg och Stockholm–Malmö
-                - **Bistro/café**: X2000 och MTRX på längre sträckor
-                - **Tyst-kupé**: finns på X2000 (2:a klass Lugn och 1:a klass)
-                - **Cykel**: kan medtas på de flesta tåg mot avgift (boka plats)
-
-                ## Topp 5 rutter (ungefärlig restid)
-                1. Stockholm → Göteborg: ca 3h (X2000), 2h40 (MTRX snabbaste)
-                2. Stockholm → Malmö: ca 4h30 (X2000 direkttåg)
-                3. Göteborg → Malmö: ca 2h40 (Öresundståg/SJ Regional)
-                4. Stockholm → Sundsvall: ca 3h30 (SJ Regional)
-                5. Stockholm → Östersund: ca 4h30 (SJ Intercity)
-
-                Svara alltid på svenska. Var kortfattad och konkret. Använd **fetstil** och listor med - för att strukturera svaret.
-                """);
-
-        if (departureContext != null && !departureContext.isBlank()) {
-            systemPrompt.append("\n\nAktuell sökning:\n").append(departureContext);
-        }
-
-        List<Map<String, String>> msgs = new ArrayList<>();
-        msgs.add(Map.of("role", "system", "content", systemPrompt.toString()));
-        msgs.addAll(messages);
+        List<Map<String, String>> msgs = buildMsgList(messages, departureContext);
 
         Map<String, Object> requestBody = Map.of(
                 "model", model,
