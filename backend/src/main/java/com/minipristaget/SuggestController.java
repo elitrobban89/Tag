@@ -25,8 +25,13 @@ import java.util.stream.Collectors;
 @CrossOrigin
 public class SuggestController {
 
-    private static final String GROQ_URL   = "https://api.groq.com/openai/v1/chat/completions";
-    private static final String GROQ_MODEL = "llama-3.3-70b-versatile";
+    private static final String GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
+
+    @org.springframework.beans.factory.annotation.Value("${groq.model:openai/gpt-oss-120b}")
+    private String groqModel;
+
+    @org.springframework.beans.factory.annotation.Value("${groq.api.key:}")
+    private String groqApiKey;
 
     private static final Map<String, String> CATEGORY_PROMPTS = Map.of(
         "Storstad", "en svensk storstad med kultur, nöjen och shopping",
@@ -35,10 +40,20 @@ public class SuggestController {
     );
 
     // Rate limit: max 10 requests per IP per 10 minutes
-    private static final int RATE_LIMIT        = 10;
-    private static final long WINDOW_MS        = 10 * 60 * 1000L;
+    private static final int RATE_LIMIT  = 10;
+    private static final long WINDOW_MS  = 10 * 60 * 1000L;
     private record RateEntry(AtomicInteger count, long windowStart) {}
     private final ConcurrentHashMap<String, RateEntry> rateLimiter = new ConcurrentHashMap<>();
+
+    // Cache: suggest result per (from|category) — 2h TTL
+    private static final long SUGGEST_TTL_MS    = 2 * 60 * 60 * 1000L;
+    private record SuggestEntry(String destination, long timestamp) {}
+    private final ConcurrentHashMap<String, SuggestEntry> suggestCache = new ConcurrentHashMap<>();
+
+    // Cache: reachable destinations per station — 30 min TTL
+    private static final long REACHABLE_TTL_MS  = 30 * 60 * 1000L;
+    private record ReachableEntry(List<String> destinations, long timestamp) {}
+    private final ConcurrentHashMap<String, ReachableEntry> reachableCache = new ConcurrentHashMap<>();
 
     @Autowired
     private TrafikverketService trafikverketService;
@@ -74,7 +89,13 @@ public class SuggestController {
 
         String from = (req.getFrom() != null && !req.getFrom().isBlank()) ? req.getFrom().trim() : null;
 
-        // Hämta faktiska direktdestinationer från Trafikverket
+        // Suggest cache
+        String suggestKey = (from != null ? from.toLowerCase() : "") + "|" + category;
+        SuggestEntry cached = suggestCache.get(suggestKey);
+        if (cached != null && System.currentTimeMillis() - cached.timestamp() < SUGGEST_TTL_MS)
+            return ResponseEntity.ok(Map.of("destination", cached.destination));
+
+        // Hämta faktiska direktdestinationer från Trafikverket (med cache)
         List<String> reachable = fetchReachableDestinations(from);
 
         String prompt;
@@ -102,7 +123,7 @@ public class SuggestController {
 
         try {
             String requestBody = mapper.writeValueAsString(Map.of(
-                "model",       GROQ_MODEL,
+                "model",       groqModel,
                 "messages",    List.of(Map.of("role", "user", "content", prompt)),
                 "temperature", 0.7,
                 "max_tokens",  20
@@ -110,7 +131,7 @@ public class SuggestController {
 
             HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(GROQ_URL))
-                .header("Authorization", "Bearer " + System.getenv("GROQ_API_KEY"))
+                .header("Authorization", "Bearer " + groqApiKey)
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(requestBody))
                 .build();
@@ -122,6 +143,7 @@ public class SuggestController {
                                        .path("message").path("content")
                                        .asText().trim().replaceAll("[\".]", "");
 
+            suggestCache.put(suggestKey, new SuggestEntry(destination, System.currentTimeMillis()));
             return ResponseEntity.ok(Map.of("destination", destination));
 
         } catch (Exception e) {
@@ -133,19 +155,24 @@ public class SuggestController {
 
     private List<String> fetchReachableDestinations(String fromName) {
         if (fromName == null) return List.of();
+        ReachableEntry cached = reachableCache.get(fromName.toLowerCase());
+        if (cached != null && System.currentTimeMillis() - cached.timestamp() < REACHABLE_TTL_MS)
+            return cached.destinations();
         try {
             Optional<TrainStation> station = trafikverketService.findStationByName(fromName);
             if (station.isEmpty()) return List.of();
             List<TrainDeparture> deps = trafikverketService.getDepartures(
                 station.get().getSignature(), null, LocalDate.now(ZoneId.of("Europe/Stockholm")));
-            return deps.stream()
+            List<String> result = deps.stream()
                 .map(TrainDeparture::getDestination)
                 .filter(d -> d != null && !d.isBlank())
-                .map(d -> d.replaceAll("\\s*C$", "").trim()) // ta bort " C" suffix
+                .map(d -> d.replaceAll("\\s*C$", "").trim())
                 .distinct()
                 .sorted()
                 .limit(25)
                 .collect(Collectors.toList());
+            reachableCache.put(fromName.toLowerCase(), new ReachableEntry(result, System.currentTimeMillis()));
+            return result;
         } catch (Exception e) {
             System.err.println("Could not fetch reachable destinations: " + e.getMessage());
             return List.of();

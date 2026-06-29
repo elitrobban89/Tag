@@ -16,8 +16,11 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -36,7 +39,12 @@ public class TrafikverketService {
     private final HttpClient   httpClient = HttpClient.newHttpClient();
     private final ObjectMapper mapper     = new ObjectMapper();
 
+    private static final long DEPARTURE_CACHE_TTL_MS = 2 * 60 * 1000L;
+    private record DepartureCacheEntry(List<TrainDeparture> departures, long timestamp) {}
+
     private List<TrainStation> stationCache = null;
+    private Map<String, TrainStation> stationIndex = null;
+    private final ConcurrentHashMap<String, DepartureCacheEntry> departureCache = new ConcurrentHashMap<>();
 
     // ── Hämta alla stationer (cachas i minnet) ────────────────────
     public List<TrainStation> getAllStations() throws Exception {
@@ -74,6 +82,9 @@ public class TrafikverketService {
             }
         }
         stationCache = list;
+        Map<String, TrainStation> index = new HashMap<>();
+        for (TrainStation s : list) index.put(s.getSignature().toUpperCase(), s);
+        stationIndex = index;
         return list;
     }
 
@@ -94,6 +105,11 @@ public class TrafikverketService {
 
     // ── Hämta avgångar ────────────────────────────────────────────
     public List<TrainDeparture> getDepartures(String fromSignature, String toName, LocalDate date) throws Exception {
+        String cacheKey = fromSignature + "|" + (toName != null ? toName.toLowerCase() : "") + "|" + date;
+        DepartureCacheEntry hit = departureCache.get(cacheKey);
+        if (hit != null && System.currentTimeMillis() - hit.timestamp() < DEPARTURE_CACHE_TTL_MS)
+            return hit.departures();
+
         int limit = (toName == null || toName.isBlank()) ? 50 : 200;
         // Trafikverket times are in Swedish local time — use Stockholm timezone for comparison
         ZoneId stockholm = ZoneId.of("Europe/Stockholm");
@@ -136,10 +152,7 @@ public class TrafikverketService {
         }
 
         // Enrich with train model info, price and travel time
-        TrainStation fromSt = stationCache == null ? null :
-            stationCache.stream()
-                .filter(s -> s.getSignature().equalsIgnoreCase(fromSignature))
-                .findFirst().orElse(null);
+        TrainStation fromSt = stationIndex != null ? stationIndex.get(fromSignature.toUpperCase()) : null;
 
         for (TrainDeparture dep : departures) {
             TrainModelService.TrainModelInfo model = trainModelService.getModel(dep.getOperator());
@@ -148,11 +161,9 @@ public class TrafikverketService {
             dep.setTrainImage(model.imageUrl());
             dep.setTransfers(0);
 
-            if (fromSt != null && dep.getDestinationSignature() != null && stationCache != null) {
+            if (fromSt != null && dep.getDestinationSignature() != null && stationIndex != null) {
                 final String destSig = dep.getDestinationSignature();
-                TrainStation toSt = stationCache.stream()
-                    .filter(s -> s.getSignature().equalsIgnoreCase(destSig))
-                    .findFirst().orElse(null);
+                TrainStation toSt = stationIndex.get(destSig.toUpperCase());
 
                 if (toSt != null) {
                     double dist = haversine(fromSt.getLat(), fromSt.getLon(),
@@ -172,6 +183,7 @@ public class TrafikverketService {
             }
         }
 
+        departureCache.put(cacheKey, new DepartureCacheEntry(departures, System.currentTimeMillis()));
         return departures;
     }
 
@@ -186,11 +198,9 @@ public class TrafikverketService {
 
             if (sig.toLowerCase().startsWith(lower.substring(0, Math.min(3, lower.length())))) return true;
 
-            if (stationCache != null) {
-                for (TrainStation s : stationCache) {
-                    if (s.getSignature().equalsIgnoreCase(sig) &&
-                        s.getName().toLowerCase().contains(lower)) return true;
-                }
+            if (stationIndex != null) {
+                TrainStation s = stationIndex.get(sig.toUpperCase());
+                if (s != null && s.getName().toLowerCase().contains(lower)) return true;
             }
         }
         return false;
@@ -213,12 +223,9 @@ public class TrafikverketService {
             String lastSig = locs.get(locs.size() - 1).path("LocationName").asText();
             dep.setDestinationSignature(lastSig);
             String friendlyName = lastSig;
-            if (stationCache != null) {
-                friendlyName = stationCache.stream()
-                    .filter(s -> s.getSignature().equalsIgnoreCase(lastSig))
-                    .map(TrainStation::getName)
-                    .findFirst()
-                    .orElse(lastSig);
+            if (stationIndex != null) {
+                TrainStation found = stationIndex.get(lastSig.toUpperCase());
+                if (found != null) friendlyName = found.getName();
             }
             dep.setDestination(friendlyName);
         }
