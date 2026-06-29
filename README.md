@@ -50,6 +50,8 @@ Tågsökningsapp med MiniPris-deals inbyggd via iframe på [elitrobban.se/minipr
 - **Dynamiska follow-up chips** – efter varje svar visas 2–3 kontextuella snabbknappar baserade på vad AI:n svarade (tågtyp, pris, WiFi, restid)
 - **Avgångshighlighting** – om AI:n nämner en avgångstid (t.ex. "07:45") scrollas och highlightas det avgångskortet automatiskt i listan
 - **Rate limiting** – chatboten begränsad till 10 meddelanden per IP per minut (glidande fönster)
+- **Historiktrimning** – max 8 meddelanden skickas till Groq per anrop, äldre meddelanden klipps bort för att hålla token-användningen i schack
+- **Cache** – destinationsförslag (`/suggest`) cachas 2 h per (from+kategori); nåbara destinationer per startstation cachas 30 min; avgångssvar cachas 2 min per from+till+datum
 
 ### Övrigt
 - **Skeleton loader** – animerade shimmer-platshållare visas omedelbart när sökning startar, ersätts av riktiga avgångskort när svaret kommer
@@ -67,8 +69,8 @@ Tågsökningsapp med MiniPris-deals inbyggd via iframe på [elitrobban.se/minipr
 |---|---|
 | Backend | Java 21, Spring Boot 3.2.5, Thymeleaf |
 | Avgångsdata | Trafikverket Open Data API |
-| AI-chatbot | Groq API (llama-3.3-70b-versatile), avgångskontextuell |
-| AI-förslag | Groq API (llama-3.3-70b-versatile) |
+| AI-chatbot | Groq API (`openai/gpt-oss-120b`), avgångskontextuell, max 8 meddelanden historik |
+| AI-förslag | Groq API (`openai/gpt-oss-120b`), cache 2 h per (from+kategori) |
 | Deploy | Render (Docker, free tier) |
 | Frontend | Inbyggd via `<iframe>` i WordPress/Gutenberg |
 
