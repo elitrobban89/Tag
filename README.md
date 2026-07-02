@@ -69,8 +69,8 @@ Tågsökningsapp med MiniPris-deals inbyggd via iframe på [elitrobban.se/minipr
 |---|---|
 | Backend | Java 21, Spring Boot 3.2.5, Thymeleaf |
 | Avgångsdata | Trafikverket Open Data API |
-| AI-chatbot | Groq API (`openai/gpt-oss-120b`), avgångskontextuell, max 8 meddelanden historik |
-| AI-förslag | Groq API (`openai/gpt-oss-120b`), cache 2 h per (from+kategori) |
+| AI-chatbot | Groq API (`openai/gpt-oss-120b`, `reasoning_effort: low`), avgångskontextuell, max 8 meddelanden historik |
+| AI-förslag | Groq API (`openai/gpt-oss-120b`, `reasoning_effort: low`), cache 2 h per (from+kategori) |
 | Deploy | Render (Docker, free tier) |
 | Frontend | Inbyggd via `<iframe>` i WordPress/Gutenberg |
 
@@ -147,6 +147,7 @@ backend/
 |---|---|
 | `TRAFIKVERKET_API_KEY` | API-nyckel från Trafikverket Open Data |
 | `GROQ_API_KEY` | API-nyckel från Groq (används av chatbot + AI-förslag) |
+| `GROQ_MODEL` | (valfri) Groq-modell för chatbot + AI-förslag — default `openai/gpt-oss-120b` |
 
 ## WordPress-inbäddning
 
