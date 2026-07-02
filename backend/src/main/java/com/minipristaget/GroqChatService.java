@@ -91,6 +91,7 @@ public class GroqChatService {
                 "model", model,
                 "max_tokens", 500,
                 "temperature", 0.4,
+                "reasoning_effort", "low",
                 "messages", msgs
         );
 
@@ -120,7 +121,8 @@ public class GroqChatService {
 
         List<Map<String, String>> msgs = buildMsgList(messages, departureContext);
         Map<String, Object> requestBody = Map.of(
-                "model", model, "max_tokens", 500, "temperature", 0.4, "stream", true, "messages", msgs);
+                "model", model, "max_tokens", 500, "temperature", 0.4, "stream", true,
+                "reasoning_effort", "low", "messages", msgs);
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(GROQ_URL))

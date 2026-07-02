@@ -126,7 +126,8 @@ public class SuggestController {
                 "model",       groqModel,
                 "messages",    List.of(Map.of("role", "user", "content", prompt)),
                 "temperature", 0.7,
-                "max_tokens",  20
+                "max_tokens",  100,
+                "reasoning_effort", "low"
             ));
 
             HttpRequest request = HttpRequest.newBuilder()
