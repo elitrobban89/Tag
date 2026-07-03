@@ -36,3 +36,5 @@ backend/node_modules/
 ### Maven ###
 target/
 backend/target/
+### Maven wrapper ###
+backend/.mvn/wrapper/maven-wrapper.jar
