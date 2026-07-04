@@ -69,7 +69,7 @@ public class GroqChatService {
         return apiKey != null && !apiKey.isBlank();
     }
 
-    private List<Map<String, String>> buildMsgList(List<Map<String, String>> history, String departureContext) {
+    List<Map<String, String>> buildMsgList(List<Map<String, String>> history, String departureContext) {
         String sysContent = departureContext != null && !departureContext.isBlank()
             ? SYSTEM_PROMPT + "\n\nAktuell sökning:\n" + departureContext
             : SYSTEM_PROMPT;
