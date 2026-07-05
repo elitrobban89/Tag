@@ -1,5 +1,7 @@
 # MiniPrisTåget
 
+[![Build & Test](https://github.com/elitrobban89/Tag/actions/workflows/maven.yml/badge.svg)](https://github.com/elitrobban89/Tag/actions/workflows/maven.yml)
+
 Tågsökningsapp med MiniPris-deals inbyggd via iframe på [elitrobban.se/minipristaget](https://elitrobban.se/minipristaget/).
 
 ## Funktioner
