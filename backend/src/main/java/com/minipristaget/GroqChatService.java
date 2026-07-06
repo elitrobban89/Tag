@@ -17,7 +17,6 @@ import java.util.Map;
 @Service
 public class GroqChatService {
 
-    private static final String GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
     private static final int CHAT_MAX_HISTORY = 8;
 
     private static final String SYSTEM_PROMPT =
@@ -59,6 +58,10 @@ public class GroqChatService {
     @Value("${groq.api.key:}")
     private String apiKey;
 
+    // Överstyrbar i tester — pekas mot en lokal stubbserver
+    @Value("${groq.api.url:https://api.groq.com/openai/v1/chat/completions}")
+    private String groqUrl;
+
     @Value("${groq.model:openai/gpt-oss-120b}")
     private String model;
 
@@ -96,7 +99,7 @@ public class GroqChatService {
         );
 
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(GROQ_URL))
+                .uri(URI.create(groqUrl))
                 .header("Authorization", "Bearer " + apiKey)
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(mapper.writeValueAsString(requestBody)))
@@ -125,7 +128,7 @@ public class GroqChatService {
                 "reasoning_effort", "low", "messages", msgs);
 
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(GROQ_URL))
+                .uri(URI.create(groqUrl))
                 .header("Authorization", "Bearer " + apiKey)
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(mapper.writeValueAsString(requestBody)))
