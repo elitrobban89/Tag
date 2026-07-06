@@ -76,6 +76,25 @@ Tågsökningsapp med MiniPris-deals inbyggd via iframe på [elitrobban.se/minipr
 | Deploy | Render (Docker, free tier) |
 | Frontend | Inbyggd via `<iframe>` i WordPress/Gutenberg |
 
+## Tester & CI
+
+32 tester i tre lager — ren logik, HTTP-felvägar och controller-lagret (MockMvc, tjänsterna mockas):
+
+| Testklass | Täcker |
+|-----------|--------|
+| `TrainModelServiceTest` (9) | Prislogiken (MiniPris slutar på 9, klassordning, determinism), operatörsmappning, platser kvar, restid |
+| `GroqChatServiceTest` (5) | Meddelandelistan: systemprompt, avgångskontext, historiktrimning till 8, konfigurationskoll |
+| `GroqChatServiceHttpTest` (5) | HTTP-felvägar mot lokal stubbserver: 429/401/5xx ger begripliga fel, svar utan content ger standardtext |
+| `WebControllerTest` (9) | Autocomplete-sortering (prefix först), valideringsfel 400, auto-imorgon-logiken, chattens rate limit → 429 |
+| `SuggestControllerTest` (4) | Kategorivalidering 400, health, rate limit → 429 |
+
+```bash
+cd backend
+mvn test
+```
+
+GitHub Actions ([maven.yml](.github/workflows/maven.yml)) kör testerna på varje push — badgen överst visar status.
+
 ## Projektstruktur
 
 ```
