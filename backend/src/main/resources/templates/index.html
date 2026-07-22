@@ -935,9 +935,57 @@
     }
     .dep-share-btn:hover { color: #93c5fd; border-color: rgba(147,197,253,.3); }
     .dep-share-btn.copied { color: #86efac; border-color: rgba(134,239,172,.3); }
+
+    /* ── Välkomstsplash: tåg åker in på rälsen, lyfter sedan bort och avslöjar appen ── */
+    .mpt-intro { position: fixed; inset: 0; z-index: 10000; display: flex; align-items: center; justify-content: center; overflow: hidden;
+      background: radial-gradient(ellipse at 50% 40%, #0c1a38, #070d1f 72%);
+      animation: mptOut .6s cubic-bezier(.6,0,.8,1) 2.05s forwards; }
+    @keyframes mptOut { to { transform: translateY(-100%); opacity: 0; visibility: hidden; } }
+    .mpt-intro-inner { text-align: center; position: relative; z-index: 2; width: 100%; padding: 0 18px; }
+    .mpt-welcome { font-size: 13px; letter-spacing: 5px; text-transform: uppercase; color: rgba(147,197,253,.7); animation: mptFade .6s ease both; }
+    .mpt-brand { margin-top: 8px; font-size: clamp(30px, 8vw, 52px); font-weight: 900; letter-spacing: .5px; line-height: 1.1;
+      background: linear-gradient(135deg, #fff 15%, #60a5fa 60%, #818cf8); -webkit-background-clip: text; background-clip: text; color: transparent;
+      filter: drop-shadow(0 0 34px rgba(96,165,250,.45)); animation: mptFade .7s ease .1s both; }
+    @keyframes mptFade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    .mpt-train { margin-top: 22px; font-size: clamp(38px, 11vw, 58px); will-change: transform; animation: mptDrive 2s cubic-bezier(.3,.7,.5,1) both; }
+    @keyframes mptDrive { 0% { transform: translateX(-62vw); opacity: 0; } 22% { opacity: 1; } 82% { transform: translateX(0); } 100% { transform: translateX(7vw); opacity: 1; } }
+    .mpt-rail { margin: 14px auto 0; width: min(320px, 82vw); height: 6px; border-radius: 6px; overflow: hidden;
+      background-image: repeating-linear-gradient(90deg, rgba(96,165,250,.6) 0 5px, transparent 5px 16px); background-size: 16px 6px;
+      animation: mptRail .35s linear infinite; }
+    @keyframes mptRail { to { background-position: -16px 0; } }
+    @media (prefers-reduced-motion: reduce) {
+      .mpt-train, .mpt-rail { animation: none; }
+      .mpt-intro { animation: mptOut .4s ease 1.2s forwards; }
+    }
   </style>
 </head>
 <body>
+
+<!-- ── Välkomstsplash (visas en gång per flik-session) ── -->
+<div id="mpt-intro" class="mpt-intro">
+  <div class="mpt-intro-inner">
+    <div class="mpt-welcome">Välkommen till</div>
+    <div class="mpt-brand">MiniPrisTåget</div>
+    <div class="mpt-train">🚆💨</div>
+    <div class="mpt-rail"></div>
+  </div>
+</div>
+<script>
+  (function () {
+    var intro = document.getElementById('mpt-intro');
+    if (!intro) return;
+    // Redan visad denna flik-session? Ta bort direkt (körs under parsning → ingen blink).
+    try {
+      if (sessionStorage.getItem('mpt_welcomed')) { intro.parentNode.removeChild(intro); return; }
+      sessionStorage.setItem('mpt_welcomed', '1');
+    } catch (e) {}
+    document.documentElement.style.overflow = 'hidden';
+    setTimeout(function () {
+      if (intro.parentNode) intro.parentNode.removeChild(intro);
+      document.documentElement.style.overflow = '';
+    }, 2750);
+  })();
+</script>
 
 <!-- ── Seat map modal ── -->
 <div class="seat-overlay" id="seat-overlay">
