@@ -936,26 +936,35 @@
     .dep-share-btn:hover { color: #93c5fd; border-color: rgba(147,197,253,.3); }
     .dep-share-btn.copied { color: #86efac; border-color: rgba(134,239,172,.3); }
 
-    /* ── Välkomstsplash: tåg åker in på rälsen, lyfter sedan bort och avslöjar appen ── */
-    .mpt-intro { position: fixed; inset: 0; z-index: 10000; display: flex; align-items: center; justify-content: center; overflow: hidden;
-      background: radial-gradient(ellipse at 50% 40%, #0c1a38, #070d1f 72%);
-      animation: mptOut .6s cubic-bezier(.6,0,.8,1) 2.05s forwards; }
+    /* ── Välkomstsplash: tåget rusar över hela skärmen på rälsen, sen lyfter overlayen bort ── */
+    .mpt-intro { position: fixed; inset: 0; z-index: 10000; overflow: hidden;
+      background: radial-gradient(ellipse at 50% 38%, #0c1a38, #070d1f 72%);
+      animation: mptOut .5s cubic-bezier(.6,0,.8,1) 1.7s forwards; }
     @keyframes mptOut { to { transform: translateY(-100%); opacity: 0; visibility: hidden; } }
-    .mpt-intro-inner { text-align: center; position: relative; z-index: 2; width: 100%; padding: 0 18px; }
-    .mpt-welcome { font-size: 13px; letter-spacing: 5px; text-transform: uppercase; color: rgba(147,197,253,.7); animation: mptFade .6s ease both; }
+    .mpt-intro-inner { position: absolute; top: 33%; left: 0; right: 0; transform: translateY(-50%); text-align: center; padding: 0 18px; }
+    .mpt-welcome { font-size: 13px; letter-spacing: 5px; text-transform: uppercase; color: rgba(147,197,253,.7); animation: mptFade .5s ease both; }
     .mpt-brand { margin-top: 8px; font-size: clamp(30px, 8vw, 52px); font-weight: 900; letter-spacing: .5px; line-height: 1.1;
       background: linear-gradient(135deg, #fff 15%, #60a5fa 60%, #818cf8); -webkit-background-clip: text; background-clip: text; color: transparent;
-      filter: drop-shadow(0 0 34px rgba(96,165,250,.45)); animation: mptFade .7s ease .1s both; }
+      filter: drop-shadow(0 0 34px rgba(96,165,250,.45)); animation: mptFade .6s ease .1s both; }
     @keyframes mptFade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-    .mpt-train { margin-top: 22px; font-size: clamp(38px, 11vw, 58px); will-change: transform; animation: mptDrive 2s cubic-bezier(.3,.7,.5,1) both; }
-    @keyframes mptDrive { 0% { transform: translateX(-62vw); opacity: 0; } 22% { opacity: 1; } 82% { transform: translateX(0); } 100% { transform: translateX(7vw); opacity: 1; } }
-    .mpt-rail { margin: 14px auto 0; width: min(320px, 82vw); height: 6px; border-radius: 6px; overflow: hidden;
-      background-image: repeating-linear-gradient(90deg, rgba(96,165,250,.6) 0 5px, transparent 5px 16px); background-size: 16px 6px;
-      animation: mptRail .35s linear infinite; }
-    @keyframes mptRail { to { background-position: -16px 0; } }
+    /* Full-bredds räls */
+    .mpt-track { position: absolute; left: 0; right: 0; bottom: 30%; height: 60px; }
+    .mpt-rail-full { position: absolute; left: 0; right: 0; bottom: 8px; height: 8px;
+      background: repeating-linear-gradient(90deg, rgba(96,165,250,.55) 0 5px, transparent 5px 15px), linear-gradient(rgba(96,165,250,.28), rgba(96,165,250,.28));
+      background-size: 15px 8px, 100% 2px; background-position: 0 0, 0 bottom; background-repeat: repeat-x, no-repeat; }
+    /* Tåget rusar snabbt över hela bredden; röken till vänster (bakom) */
+    .mpt-runner { position: absolute; bottom: 12px; left: 0; white-space: nowrap; font-size: clamp(34px, 9vw, 52px);
+      will-change: transform; animation: mptRun 1.3s cubic-bezier(.45,.05,.55,.95) .12s both; }
+    @keyframes mptRun { 0% { transform: translateX(-26vw); } 100% { transform: translateX(114vw); } }
+    .mpt-loco { display: inline-block; filter: drop-shadow(0 3px 8px rgba(0,0,0,.4)); animation: mptBob .3s ease-in-out infinite; }
+    @keyframes mptBob { 0%,100% { transform: scaleX(-1) translateY(0); } 50% { transform: scaleX(-1) translateY(-3px); } }
+    .mpt-smoke { display: inline-block; margin-right: -4px; opacity: .7; animation: mptPuff .5s ease-in-out infinite; }
+    @keyframes mptPuff { 0%,100% { opacity: .35; transform: translateY(2px) scale(.9); } 50% { opacity: .8; transform: translateY(-4px) scale(1.12); } }
     @media (prefers-reduced-motion: reduce) {
-      .mpt-train, .mpt-rail { animation: none; }
-      .mpt-intro { animation: mptOut .4s ease 1.2s forwards; }
+      .mpt-runner { animation: mptRun .6s linear .1s both; }
+      .mpt-loco, .mpt-smoke { animation: none; }
+      .mpt-loco { transform: scaleX(-1); }
+      .mpt-intro { animation: mptOut .4s ease 1.0s forwards; }
     }
   </style>
 </head>
@@ -966,8 +975,10 @@
   <div class="mpt-intro-inner">
     <div class="mpt-welcome">Välkommen till</div>
     <div class="mpt-brand">MiniPrisTåget</div>
-    <div class="mpt-train">🚆💨</div>
-    <div class="mpt-rail"></div>
+  </div>
+  <div class="mpt-track">
+    <div class="mpt-rail-full"></div>
+    <div class="mpt-runner"><span class="mpt-smoke">💨</span><span class="mpt-loco">🚆</span></div>
   </div>
 </div>
 <script>
@@ -983,7 +994,7 @@
     setTimeout(function () {
       if (intro.parentNode) intro.parentNode.removeChild(intro);
       document.documentElement.style.overflow = '';
-    }, 2750);
+    }, 2300);
   })();
 </script>
 
