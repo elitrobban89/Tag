@@ -97,8 +97,8 @@
       .tc-panel {
         position:fixed;bottom:96px;right:24px;z-index:9998;
         width:380px;max-height:540px;
-        background:linear-gradient(160deg,rgba(18,34,72,0.62),rgba(8,16,36,0.7));
-        backdrop-filter:blur(34px) saturate(155%);-webkit-backdrop-filter:blur(34px) saturate(155%);
+        background:linear-gradient(160deg,rgba(20,38,80,0.4),rgba(8,16,36,0.48));
+        backdrop-filter:blur(40px) saturate(160%);-webkit-backdrop-filter:blur(40px) saturate(160%);
         border:1px solid rgba(125,211,252,0.28);border-radius:20px;
         box-shadow:0 8px 48px rgba(0,0,0,.7),0 0 70px rgba(96,165,250,0.2),0 1px 0 rgba(255,255,255,0.14) inset;
         display:flex;flex-direction:column;overflow:hidden;
@@ -143,19 +143,22 @@
         font-size:13px;line-height:1.6;word-break:break-word;
       }
       .tc-bubble.bot {
-        background:rgba(12,22,50,0.75);
-        backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
-        border:1px solid rgba(96,165,250,0.15);
-        border-radius:4px 14px 14px 14px;align-self:flex-start;color:#dbeafe;
+        background:rgba(12,22,50,0.7);
+        backdrop-filter:blur(10px) saturate(150%);-webkit-backdrop-filter:blur(10px) saturate(150%);
+        border:1px solid rgba(125,211,252,0.28);
+        border-radius:4px 14px 14px 14px;align-self:flex-start;color:#eaf3ff;
+        box-shadow:0 2px 14px rgba(0,0,0,0.28),0 0 28px rgba(96,165,250,0.3),inset 0 1px 0 rgba(255,255,255,0.08);
       }
-      .tc-bubble.bot strong{color:#93c5fd;}
+      .tc-bubble.bot strong{color:#bfdbfe;text-shadow:0 0 10px rgba(96,165,250,0.55);}
       .tc-bubble.bot ul{margin:6px 0 2px 16px;display:flex;flex-direction:column;gap:3px;}
       .tc-bubble.bot li{list-style:disc;}
       .tc-bubble.user {
-        background:linear-gradient(135deg,rgba(29,78,216,0.85),rgba(59,130,246,0.8));
-        backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
-        border:1px solid rgba(96,165,250,0.2);
+        background:linear-gradient(135deg,rgba(37,99,235,0.9),rgba(96,165,250,0.85));
+        backdrop-filter:blur(10px) saturate(150%);-webkit-backdrop-filter:blur(10px) saturate(150%);
+        border:1px solid rgba(147,197,253,0.4);
         color:#fff;border-radius:14px 14px 4px 14px;align-self:flex-end;
+        text-shadow:0 1px 6px rgba(8,19,40,0.5);
+        box-shadow:0 2px 16px rgba(59,130,246,0.55),0 0 34px rgba(96,165,250,0.4),inset 0 1px 0 rgba(255,255,255,0.22);
       }
       .tc-quick {
         padding:10px 12px 4px;display:flex;flex-wrap:wrap;gap:7px;flex-shrink:0;
