@@ -97,17 +97,17 @@
       .tc-panel {
         position:fixed;bottom:96px;right:24px;z-index:9998;
         width:380px;max-height:540px;
-        background:rgba(7,13,31,0.82);
-        backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
-        border:1px solid rgba(96,165,250,0.2);border-radius:20px;
-        box-shadow:0 8px 48px rgba(0,0,0,.7),0 0 0 1px rgba(255,255,255,0.04) inset;
+        background:linear-gradient(160deg,rgba(18,34,72,0.62),rgba(8,16,36,0.7));
+        backdrop-filter:blur(34px) saturate(155%);-webkit-backdrop-filter:blur(34px) saturate(155%);
+        border:1px solid rgba(125,211,252,0.28);border-radius:20px;
+        box-shadow:0 8px 48px rgba(0,0,0,.7),0 0 70px rgba(96,165,250,0.2),0 1px 0 rgba(255,255,255,0.14) inset;
         display:flex;flex-direction:column;overflow:hidden;
         font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
       }
       .tc-header {
-        background:linear-gradient(135deg,rgba(30,58,138,0.9),rgba(29,78,216,0.8));
-        backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
-        border-bottom:1px solid rgba(96,165,250,0.15);
+        background:linear-gradient(135deg,rgba(37,99,235,0.72),rgba(59,130,246,0.6));
+        backdrop-filter:blur(10px) saturate(150%);-webkit-backdrop-filter:blur(10px) saturate(150%);
+        border-bottom:1px solid rgba(125,211,252,0.25);
         color:#fff;padding:13px 16px;
         display:flex;align-items:center;justify-content:space-between;
         font-weight:700;font-size:14px;flex-shrink:0;gap:8px;
