@@ -90,6 +90,34 @@ class TrainModelServiceTest {
     }
 
     @Test
+    void tagnummerserienAnvandsNarOperatorSaknas() {
+        // Serier avlästa ur Trafikverkets data 31 juli 2026
+        assertThat(modelForNumber("62024").name()).isEqualTo("SJ Regional");   // SJ Regional
+        assertThat(modelForNumber("1026").name()).contains("Öresundståg");     // Öresundståg fjärr
+        assertThat(modelForNumber("20150").name()).contains("Öresundståg");    // rusningsförstärkning
+        assertThat(modelForNumber("3040").name()).contains("Västtåg");         // Västtrafik
+        assertThat(modelForNumber("13120").name()).contains("Västtåg");
+        assertThat(modelForNumber("440").name()).isEqualTo("SJ X2000");        // SJ snabbtåg
+
+        // Okänd serie faller tillbaka på default
+        assertThat(modelForNumber("99999").name()).isEqualTo("Regionaltåg");
+    }
+
+    @Test
+    void riktigOperatorVinnerOverTagnummerserien() {
+        TrainDeparture dep = new TrainDeparture();
+        dep.setOperator("VASTTRAF");
+        dep.setTrainId("1026");   // Öresundstågsserie, men operatören säger Västtrafik
+        assertThat(service.resolveModel(dep, "Kungsbacka").name()).isEqualTo("X61 Västtåg");
+    }
+
+    private TrainModelService.TrainModelInfo modelForNumber(String trainId) {
+        TrainDeparture dep = new TrainDeparture();
+        dep.setTrainId(trainId);           // ingen operatör — som i Trafikverkets svar
+        return service.resolveModel(dep, "Göteborg C");
+    }
+
+    @Test
     void destinationPaverkarBaraSj() {
         assertThat(service.getModel("MTRX", "Sundsvall C").name()).isEqualTo("X74");
     }

@@ -97,9 +97,34 @@ public class TrainModelService {
     private static final List<KnownDeparture> KNOWN_DEPARTURES = List.of();
 
     /**
+     * Tågnummerserier per trafiktyp, avlästa ur Trafikverkets egen data 2026-07-31
+     * (Kungsbacka–Göteborg och Göteborg–Stockholm):
+     *   1000–1999   Öresundståg, fjärr (1010, 1018, 1026 … +8 per timme)
+     *   20000–20999 Öresundståg, rusningsförstärkning (20150, 20152 … +2)
+     *   3000–3999   Västtrafiks regionaltåg (3004, 3018, 3020 … +2 per halvtimme)
+     *   13000–13999 Västtrafik, glesare turer (13120, 13128 …)
+     *   60000–69999 SJ Regional (62024, 62028 …)
+     *   400–499     SJ snabbtåg Göteborg–Stockholm (400, 424 … +2 per timme)
+     * Används BARA när Trafikverket saknar operatör — annars vinner alltid det riktiga
+     * operatörsfältet. Serierna är observerade, inte officiellt dokumenterade.
+     */
+    private static TrainModelInfo modelFromTrainNumber(String trainId) {
+        int n;
+        try { n = Integer.parseInt(trainId.trim()); } catch (Exception e) { return null; }
+        if (n >= 1000 && n <= 1999)   return MODELS.get("Ö-TÅG");
+        if (n >= 20000 && n <= 20999) return MODELS.get("Ö-TÅG");
+        if (n >= 3000 && n <= 3999)   return MODELS.get("VASTTRAF");
+        if (n >= 13000 && n <= 13999) return MODELS.get("VASTTRAF");
+        if (n >= 60000 && n <= 69999) return REGIONAL_SJ;
+        if (n >= 400 && n <= 499)     return MODELS.get("SJ");
+        return null;
+    }
+
+    /**
      * Fordonstyp för en avgång. Ordning: bekräftat tågnummer → bekräftad avgång (från/till/tid)
-     * → produktnamn → destination → operatörstabellen. Trafikverket anger aldrig fordonstyp,
-     * så de två första lagren är kurerad kunskap som behöver ses över vid tidtabellsskifte.
+     * → produktnamn → destination → operatörstabellen → tågnummerserie (om operatör saknas).
+     * Trafikverket anger aldrig fordonstyp, så de första lagren är kurerad kunskap som behöver
+     * ses över vid tidtabellsskifte.
      */
     public TrainModelInfo resolveModel(TrainDeparture dep, String fromName) {
         if (dep == null) return DEFAULT;
@@ -115,6 +140,13 @@ public class TrainModelService {
         for (KnownDeparture k : KNOWN_DEPARTURES) {
             if (from.contains(k.fromContains()) && to.contains(k.toContains()) && k.times().contains(time))
                 return MODELS.get(k.modelKey());
+        }
+
+        // Saknas operatör i datan (händer t.ex. för SJ Regional 62xxx) — läs trafiktypen
+        // ur tågnummerserien i stället för att falla tillbaka på "Regionaltåg" för allt.
+        if ((dep.getOperator() == null || dep.getOperator().isBlank()) && dep.getTrainId() != null) {
+            TrainModelInfo bySeries = modelFromTrainNumber(dep.getTrainId());
+            if (bySeries != null) return bySeries;
         }
 
         return getModel(dep.getOperator(), dep.getDestination(), dep.getProductInformation());

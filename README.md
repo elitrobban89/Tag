@@ -84,11 +84,11 @@ Tågsökningsapp med MiniPris-deals inbyggd via iframe på [elitrobban.se/minipr
 
 ## Tester & CI
 
-53 tester i tre lager — ren logik, HTTP-felvägar och controller-lagret (MockMvc, tjänsterna mockas):
+55 tester i tre lager — ren logik, HTTP-felvägar och controller-lagret (MockMvc, tjänsterna mockas):
 
 | Testklass | Täcker |
 |-----------|--------|
-| `TrainModelServiceTest` (16) | Prislogiken (MiniPris slutar på 9, klassordning, determinism), operatörsmappning, SJ 3000-valet på tågnummer, bekräftad avgång, produktnamn och destination, platser kvar, restid |
+| `TrainModelServiceTest` (18) | Prislogiken (MiniPris slutar på 9, klassordning, determinism), operatörsmappning, SJ 3000-valet på tågnummer, bekräftad avgång, produktnamn och destination, tågnummerserier när operatör saknas, platser kvar, restid |
 | `TrainLayoutServiceTest` (11) | Vagnsskisserna: alla layouter har vagnar/toalett/bistro, SJ 3000:s fyra vagnar, avstånd till bistro och närmaste toalett över vagnsgräns, platsfakta och promptbeskrivningen, fönster-/gångplatser och bordsgrupper |
 | `GroqChatServiceTest` (5) | Meddelandelistan: systemprompt, avgångskontext, historiktrimning till 8, konfigurationskoll |
 | `GroqChatServiceHttpTest` (5) | HTTP-felvägar mot lokal stubbserver: 429/401/5xx ger begripliga fel, svar utan content ger standardtext |
