@@ -65,7 +65,9 @@ public class TrainModelService {
      * som behöver ses över vid tidtabellsskifte, inte en evig sanning.
      */
     private static final Map<String, String> TRAIN_NUMBER_MODELS = Map.of(
-        "442", "SJ3000"
+        // Göteborg C → Stockholm C: tåg 442 och 452 körs med SJ 3000, övriga direkttåg med X2000
+        "442", "SJ3000",
+        "452", "SJ3000"
     );
 
     /** Som {@link #getModel(String)}, men väljer SJ 3000 på de sträckor X55 trafikerar. */
@@ -90,10 +92,9 @@ public class TrainModelService {
     private record KnownDeparture(String fromContains, String toContains, List<String> times,
                                   String modelKey) {}
 
-    private static final List<KnownDeparture> KNOWN_DEPARTURES = List.of(
-        // SJ:s egen tidtabell: Göteborg C 15:19 och 20:19 mot Stockholm C körs med SJ 3000
-        new KnownDeparture("göteborg", "stockholm", List.of("15:19", "20:19"), "SJ3000")
-    );
+    // Tom just nu: Göteborg–Stockholm täcks av tågnumren 442/452 ovan, vilket är stabilare
+    // än avgångstider. Lägg till entries här bara när tågnumret INTE är känt.
+    private static final List<KnownDeparture> KNOWN_DEPARTURES = List.of();
 
     /**
      * Fordonstyp för en avgång. Ordning: bekräftat tågnummer → bekräftad avgång (från/till/tid)

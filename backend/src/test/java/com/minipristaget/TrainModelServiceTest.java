@@ -59,20 +59,24 @@ class TrainModelServiceTest {
     }
 
     @Test
-    void bekraftadAvgangUtanTagnummerBlirOcksaSj3000() {
-        TrainDeparture dep = new TrainDeparture();
-        dep.setOperator("SJ");
-        dep.setDestination("Stockholm C");
-        dep.setDepartureTime("20:19");
-        assertThat(service.resolveModel(dep, "Göteborg C").name()).isEqualTo("SJ 3000");
-
-        // Annan tid på samma sträcka faller tillbaka på X2000
-        dep.setDepartureTime("18:19");
-        assertThat(service.resolveModel(dep, "Göteborg C").name()).isEqualTo("SJ X2000");
-
-        // Samma tid men annan startstation ska inte matcha
-        dep.setDepartureTime("20:19");
-        assertThat(service.resolveModel(dep, "Malmö C").name()).isEqualTo("SJ X2000");
+    void badeSj3000TagenPaGoteborgStockholmKannsIgen() {
+        // Fredag 31 juli: 442 och 452 är SJ 3000, alla andra direkttåg X2000
+        for (String nr : new String[]{"442", "452"}) {
+            TrainDeparture dep = new TrainDeparture();
+            dep.setOperator("SJ");
+            dep.setDestination("Stockholm C");
+            dep.setTrainId(nr);
+            assertThat(service.resolveModel(dep, "Göteborg C").name())
+                    .as("tåg %s", nr).isEqualTo("SJ 3000");
+        }
+        for (String nr : new String[]{"440", "444", "450", "454"}) {
+            TrainDeparture dep = new TrainDeparture();
+            dep.setOperator("SJ");
+            dep.setDestination("Stockholm C");
+            dep.setTrainId(nr);
+            assertThat(service.resolveModel(dep, "Göteborg C").name())
+                    .as("tåg %s", nr).isEqualTo("SJ X2000");
+        }
     }
 
     @Test
