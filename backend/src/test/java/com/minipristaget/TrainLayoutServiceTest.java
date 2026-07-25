@@ -87,6 +87,41 @@ class TrainLayoutServiceTest {
     }
 
     @Test
+    void fonsterOchGangplatserFoljerYtterkolumnerna() {
+        TrainLayoutService.Layout l = service.getLayout("sj3000");
+        TrainLayoutService.Wagon w2 = l.wagons().get(1);   // 2 klass: A B | C D
+        assertThat(w2.isWindow("A")).isTrue();
+        assertThat(w2.isWindow("D")).isTrue();
+        assertThat(w2.isWindow("B")).isFalse();
+        assertThat(w2.isWindow("C")).isFalse();
+
+        TrainLayoutService.Wagon w1 = l.wagons().get(0);   // 1 klass: A | B C
+        assertThat(w1.isWindow("A")).isTrue();
+        assertThat(w1.isWindow("C")).isTrue();
+        assertThat(w1.isWindow("B")).isFalse();
+    }
+
+    @Test
+    void bordsplatserTackerBadaRadernaIGruppen() {
+        TrainLayoutService.Wagon w = service.getLayout("sj3000").wagons().get(1);
+        int first = w.tableRows().get(0);
+        assertThat(w.hasTable(first)).isTrue();
+        assertThat(w.hasTable(first + 1)).isTrue();
+        assertThat(w.hasTable(first + 2)).isFalse();
+    }
+
+    @Test
+    void platsfaktaAngerFonsterEllerGangOchBord() {
+        TrainLayoutService.Wagon w = service.getLayout("sj3000").wagons().get(1);
+        int tableRow = w.tableRows().get(0);
+        assertThat(service.seatFacts("sj3000", 2, tableRow, "A"))
+                .contains("fönsterplats").contains("vid bord");
+        int plainRow = tableRow + 2;
+        assertThat(service.seatFacts("sj3000", 2, plainRow, "B"))
+                .contains("gångplats").contains("utan bord");
+    }
+
+    @Test
     void promptbeskrivningenListarVagnarOchFaciliteter() {
         String text = service.describeForPrompt("sj3000");
         assertThat(text)

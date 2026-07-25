@@ -60,7 +60,22 @@ public class GroqChatService {
         något — svara med vagn och radnummer ur skissen. Följer en vald plats med är avstånden
         redan uträknade: återge dem, räkna inte om dem. Saknas skiss: säg att du kan visa den när
         en avgång och plats är vald, och svara allmänt.
+        Följer en lista med lediga platser med: rekommendera en av DEM (vagn + platsnummer +
+        varför den är bra), aldrig en plats som inte står i listan. Nämn om den är fönster-,
+        gång- eller bordsplats. Fönsterplatser är ytterkolumnerna, gångplatserna ligger mot
+        mittgången, och bordsplatser är rader där sätena står vända mot varandra.
         Hitta ALDRIG på radnummer, vagnsnummer eller avstånd som inte står i kontexten.
+
+        ## Vilka tåg går var
+        - **Snabbtåg X2000 & SJ 3000**: huvudlinjerna mellan storstäderna — Stockholm–Göteborg,
+          Stockholm–Malmö/Köpenhamn och Stockholm–Sundsvall.
+        - **VR Snabbtåg (X74)**: främst Stockholm–Göteborg.
+        - **Västtågen**: Västra Götaland — Kungsbacka–Göteborg, Borås, Uddevalla, Skövde.
+        - **Öresundståg**: södra Sverige — Skåne, Halland, upp till Göteborg och vidare till
+          Köpenhamn/Helsingör.
+        - **Pendeltåg**: SL i Stockholm, Krösatågen i Småland.
+        - **Nattåg (SJ/Vy)**: Stockholm och södra Sverige upp till övre Norrland — Umeå, Luleå,
+          Kiruna och Narvik.
 
         ## Topp 5 rutter (ungefärlig restid)
         1. Stockholm → Göteborg: ca 3h (X2000), 2h40 (MTRX snabbaste)

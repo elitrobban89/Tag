@@ -724,7 +724,16 @@
     .plan-seat.taken { background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.10); color:rgba(255,255,255,.22); }
     .plan-seat.selected { background:#34d399; border:1px solid #6ee7b7; color:#06281c; box-shadow:0 0 12px rgba(52,211,153,.6); }
     .plan-aisle { height:11px; }
-    .plan-table { width:27px; height:4px; border-radius:2px; background:rgba(255,255,255,.14); }
+    /* Fönsterplats: markerad kant mot fönstersidan (ytterkolumnerna) */
+    .plan-seat.win-top    { border-top-width:3px;    border-top-color:rgba(147,197,253,.75); }
+    .plan-seat.win-bottom { border-bottom-width:3px; border-bottom-color:rgba(147,197,253,.75); }
+    /* Bordsgrupp: två rader vända mot varandra kring ett bord */
+    .plan-col.table-first .plan-seat { border-right:2px solid rgba(251,191,36,.45); }
+    .plan-col.table-second .plan-seat { border-left:2px solid rgba(251,191,36,.45); }
+    .plan-tablemark {
+      font-size:.5rem; color:rgba(251,191,36,.8); font-weight:800; letter-spacing:.4px;
+      margin-top:2px; height:9px;
+    }
     .plan-facility {
       display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px;
       min-width:38px; padding:6px 4px; border-radius:12px; font-size:.52rem; font-weight:800;
@@ -1881,6 +1890,93 @@ function rowsText(d) {
   return r <= 1 ? '1 rad' : r + ' rader';
 }
 
+/* Platstyper — samma regler som TrainLayoutService.Wagon: ytterkolumnerna är fönster,
+   bordsgrupper anges som första raden i paret. */
+function isWindowSeat(wagonNo, col) {
+  var w = layoutWagon(wagonNo);
+  if (!w) return false;
+  var real = w.cols.filter(function (c) { return c !== null; });
+  return real.length > 0 && (real[0] === col || real[real.length - 1] === col);
+}
+function isTableFirstRow(wagonNo, row) {
+  var w = layoutWagon(wagonNo);
+  return !!(w && w.tableRows && w.tableRows.indexOf(row) !== -1);
+}
+function isTableRow(wagonNo, row) {
+  return isTableFirstRow(wagonNo, row) || isTableFirstRow(wagonNo, row - 1);
+}
+
+/**
+ * Lediga platser sorterade efter avstånd till en facilitet. Tillgängligheten bor bara här
+ * (isTaken-hashen), så chatten får listan skickad med frågan i stället för att servern
+ * gissar — annars hade vi haft två sanningar om vilka platser som är bokade.
+ * filter: {window:true} eller {table:true} för att bara ta fönster- respektive bordsplatser.
+ */
+function freeSeatsNear(type, filter, max) {
+  var ld = _seatState.layoutData;
+  if (!ld) return [];
+  filter = filter || {};
+  var wantClass = (_seatState.selectedClass || '').toLowerCase().trim();
+  var out = [];
+  ld.wagons.forEach(function (w) {
+    if (wantClass && (w.seatClass || '').toLowerCase() !== wantClass) return;
+    var target = nearestFacilityInLayout(type, w.number, w.rowFrom);
+    if (!target) return;
+    for (var row = w.rowFrom; row <= w.rowTo; row++) {
+      if (filter.table && !isTableRow(w.number, row)) continue;
+      w.cols.forEach(function (c) {
+        if (c === null) return;
+        if (filter.window && !isWindowSeat(w.number, c)) return;
+        if (isTaken(_seatState.trainId, w.number, row, c)) return;
+        var best = nearestFacility(type, w.number, row);
+        if (!best) return;
+        out.push({ seat: w.number + '-' + row + c, wagon: w.number, row: row, col: c,
+                   dist: best.dist, window: isWindowSeat(w.number, c), table: isTableRow(w.number, row) });
+      });
+    }
+  });
+  out.sort(function (a, b) { return a.dist - b.dist; });
+  return out.slice(0, max || 6);
+}
+
+function nearestFacilityInLayout(type, wagonNo, row) { return nearestFacility(type, wagonNo, row); }
+
+/** Text till chattkontexten: "2-22A (fönster, vid bord, 4 rader)". */
+function freeSeatsText(type, filter) {
+  return freeSeatsNear(type, filter, 6).map(function (s) {
+    var bits = [s.window ? 'fönster' : 'gång'];
+    if (s.table) bits.push('vid bord');
+    bits.push(rowsText(s.dist));
+    return s.seat + ' (' + bits.join(', ') + ')';
+  }).join('; ');
+}
+
+/** Öppnar platskartan på rätt vagn och väljer platsen — används av chattens förslagsknapp. */
+window.mptSelectSeat = function (seatId) {
+  var m = /^(\d+)-(\d+)([A-Za-z0-9]?)$/.exec(seatId || '');
+  if (!m) return;
+  var wagon = parseInt(m[1], 10), row = m[2], col = m[3];
+  var overlay = document.getElementById('seat-overlay');
+  var isOpen = overlay && overlay.classList.contains('open');
+  if (!isOpen && _seatState.trainId) {
+    openSeatModal(_seatState.trainId, _seatState.layout, _seatState.model, _seatState.depTime,
+                  _seatState.price, _seatState.destination, _seatState.trainImage,
+                  _seatState.travelMins, _seatState.priceOriginal, _seatState.seatsLeft,
+                  _seatState.selectedClass);
+  }
+  setTimeout(function () {
+    _seatState.wagon = wagon;
+    renderWagonTabs();
+    renderSeatMap();
+    selectSeat(seatId, row, col);
+    var el = document.querySelector('.plan-seat[data-seat="' + seatId + '"]');
+    if (el && el.scrollIntoView) el.scrollIntoView({ block: 'nearest', inline: 'center' });
+  }, isOpen ? 0 : 450);
+};
+
+window.mptFreeSeatsText = freeSeatsText;
+window.mptFreeSeatsNear = freeSeatsNear;
+
 /**
  * Tågsilhuett över hela tågsättet, ritad ur serverns skiss: vagnarnas längd är
  * proportionell mot antalet rader, faciliteterna sitter på sin faktiska radposition,
@@ -2170,18 +2266,21 @@ function renderSeatMap() {
                 '</div>';
       });
 
-      html += '<div class="plan-col"><div class="plan-rownum">' + rowNum + '</div>';
+      var tblCls = isTableRow(wagon, rowNum) ? (isTableFirstRow(wagon, rowNum) ? ' table-first' : ' table-second') : '';
+      html += '<div class="plan-col' + tblCls + '"><div class="plan-rownum">' + rowNum + '</div>';
       zone.cols.forEach(function(c, ci) {
         if (c === null) { html += '<div class="plan-aisle"></div>'; return; }
         var seatId  = wagon + '-' + rowNum + c;
         var taken   = isTaken(trainId, wagon, rowNum, c);
         var selCls  = (_seatState.selected === seatId) ? ' selected' : (taken ? ' taken' : ' avail');
+        var winCls  = isWindowSeat(wagon, c) ? (ci === 0 ? ' win-top' : ' win-bottom') : '';
         var onclick = taken ? '' : ' onclick="selectSeat(\'' + seatId + '\',\'' + rowNum + '\',\'' + c + '\')"';
-        var title   = 'Rad ' + rowNum + c + (taken ? ' — bokad' : ' — ledig');
-        html += '<div class="plan-seat' + selCls + '"' + onclick + ' title="' + title + '">' + c + '</div>';
-        // Bordsmarkering mellan sätena i varje sittgrupp om fyra
-        if (ci === 0 || (zone.cols[ci + 1] === null)) html += '';
+        var title   = 'Rad ' + rowNum + c + ' — ' + (isWindowSeat(wagon, c) ? 'fönsterplats' : 'gångplats')
+                    + (isTableRow(wagon, rowNum) ? ', vid bord' : '') + (taken ? ' (bokad)' : ' (ledig)');
+        html += '<div class="plan-seat' + selCls + winCls + '" data-seat="' + seatId + '"' + onclick +
+                ' title="' + title + '">' + c + '</div>';
       });
+      html += '<div class="plan-tablemark">' + (isTableRow(wagon, rowNum) ? '▭ bord' : '') + '</div>';
       html += '</div>';
     });
 

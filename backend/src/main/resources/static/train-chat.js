@@ -224,6 +224,11 @@
         background:rgba(251,191,36,0.16);border:1px solid rgba(251,191,36,0.45);
         color:#fde68a;font-size:9.5px;font-weight:800;}
       .tc-sketch-note{margin-top:6px;font-size:9.5px;color:rgba(255,255,255,.35);line-height:1.4;}
+      .tc-seat-picks{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px;}
+      .tc-seat-picks-lbl{font-size:10px;font-weight:800;color:rgba(147,197,253,.75);letter-spacing:.03em;}
+      .tc-seat-pick{background:rgba(52,211,153,.16);border:1px solid rgba(52,211,153,.5);color:#6ee7b7;font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;cursor:pointer;transition:all .15s;}
+      .tc-seat-pick:hover{background:rgba(52,211,153,.32);color:#ecfdf5;}
+      .tc-sketch-src{opacity:.8;}
       .tc-train-imgs{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
       .tc-train-img{width:100%;max-height:130px;object-fit:cover;border-radius:10px;opacity:.88;transition:opacity .2s;}
       .tc-train-img:hover{opacity:1;}
@@ -571,6 +576,7 @@
     // in dem i prompten, så "var finns toaletten?" besvaras med vagn och rad i stället
     // för allmänt "det finns toaletter ombord".
     var sketchLayout = tcLayoutId();
+    var freeSeats = tcFreeSeatsContext(message);
 
     var resp;
     try {
@@ -578,7 +584,7 @@
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages: limited, context: context,
-                               layout: tcLayoutId(), seat: tcSeatCode() })
+                               layout: tcLayoutId(), seat: tcSeatCode(), freeSeats: freeSeats })
       });
     } catch(e) {
       typingDiv.remove();
@@ -609,7 +615,7 @@
         var fbResp = await fetch(TRAIN_CHAT_API + "/api/chat", {
           method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ messages: limited, context: context,
-                               layout: tcLayoutId(), seat: tcSeatCode() })
+                               layout: tcLayoutId(), seat: tcSeatCode(), freeSeats: freeSeats })
         });
         var fbData = await fbResp.json();
         var fbReply = fbData.reply || fbData.error || "Inget svar.";
@@ -618,6 +624,7 @@
         var fbOuter = tcAppendBot(fbReply, true);
         tcInjectTrainImages(fbReply, fbOuter);
         tcMaybeAppendSketch(message, sketchLayout, fbOuter);
+        tcMaybeAppendSeatButtons(message, fbOuter);
         tcAddFollowupChips(fbReply, fbOuter);
       } catch(_) { tcAppendBot("Kunde inte nå assistenten.", false); }
       return;
@@ -675,6 +682,7 @@
     tcInjectTrainImages(fullText, outer);
     tcHighlightDepartures(fullText);
     tcMaybeAppendSketch(message, sketchLayout, outer);
+    tcMaybeAppendSeatButtons(message, outer);
     tcAddFeedback(outer);
     tcAddFollowupChips(fullText, outer);
     msgsEl.scrollTop = msgsEl.scrollHeight;
@@ -743,6 +751,48 @@
             ' — samma skiss som platskartan och AI-svaret bygger på</span></div>';
     wrap.innerHTML = html;
     return wrap;
+  }
+
+  var TC_SEAT_RE = /(ledig|föreslå|foresla|boka|välj|valj|plats närmast|plats narmast|närmast bistron|narmast bistron|fönsterplats|fonsterplats|gångplats|gangplats|bordsplats|vid bord)/i;
+
+  /** Lediga platser (från platskartans egen tillgänglighet) att skicka med frågan. */
+  function tcFreeSeatsContext(question) {
+    if (!TC_SEAT_RE.test(question || '') || typeof window.mptFreeSeatsText !== 'function') return '';
+    var wantWindow = /(fönster|fonster)/i.test(question);
+    var wantTable  = /(bord)/i.test(question);
+    var type = /(toalett|toa\b|wc)/i.test(question) ? 'TOALETT' : 'BISTRO';
+    try {
+      var txt = window.mptFreeSeatsText(type, { window: wantWindow, table: wantTable });
+      if (!txt) return '';
+      return 'Lediga platser närmast ' + (type === 'TOALETT' ? 'toaletten' : 'bistron') +
+             (wantWindow ? ' (endast fönsterplatser)' : '') + (wantTable ? ' (endast bordsplatser)' : '') +
+             ': ' + txt;
+    } catch (e) { return ''; }
+  }
+
+  /** Klickbara förslag under svaret — väljer platsen direkt i platskartan. */
+  function tcMaybeAppendSeatButtons(question, container) {
+    if (!container || !TC_SEAT_RE.test(question || '') || typeof window.mptFreeSeatsNear !== 'function') return;
+    var wantWindow = /(fönster|fonster)/i.test(question);
+    var wantTable  = /(bord)/i.test(question);
+    var type = /(toalett|toa\b|wc)/i.test(question) ? 'TOALETT' : 'BISTRO';
+    var seats;
+    try { seats = window.mptFreeSeatsNear(type, { window: wantWindow, table: wantTable }, 3); }
+    catch (e) { return; }
+    if (!seats || !seats.length) return;
+
+    var wrap = document.createElement('div');
+    wrap.className = 'tc-seat-picks';
+    wrap.innerHTML = '<div class="tc-seat-picks-lbl">Välj direkt:</div>';
+    seats.forEach(function (s) {
+      var b = document.createElement('button');
+      b.className = 'tc-seat-pick';
+      b.textContent = 'Vagn ' + s.wagon + ' · ' + s.row + s.col +
+                      ' (' + (s.window ? 'fönster' : 'gång') + (s.table ? ', bord' : '') + ')';
+      b.onclick = function () { window.mptSelectSeat(s.seat); };
+      wrap.appendChild(b);
+    });
+    container.appendChild(wrap);
   }
 
   function tcMaybeAppendSketch(question, layoutId, container) {

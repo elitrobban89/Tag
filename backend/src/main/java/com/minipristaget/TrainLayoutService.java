@@ -31,13 +31,31 @@ public class TrainLayoutService {
 
     public record Facility(String type, String label, int wagon, double row, String note) {}
 
+    /**
+     * @param cols       kolumner i sittriktningen, null = mittgång ("A","B",null,"C","D")
+     * @param tableRows  rader där sätena står vända mot varandra kring ett bord. Anges som
+     *                   den FÖRSTA raden i varje bordsgrupp; nästa rad ingår i samma bord.
+     */
     public record Wagon(int number, String label, String seatClass, int rowFrom, int rowTo,
-                        List<String> cols) {
+                        List<String> cols, List<Integer> tableRows) {
         public int rowCount() { return rowTo - rowFrom + 1; }
-        public int seats() {
-            long realCols = cols.stream().filter(java.util.Objects::nonNull).count();
-            return (int) (rowCount() * realCols);
+
+        /** Fönsterplatser = ytterkolumnerna, gångplatser = de som gränsar till mittgången. */
+        public boolean isWindow(String col) {
+            List<String> real = cols.stream().filter(java.util.Objects::nonNull).toList();
+            return !real.isEmpty() && (real.get(0).equals(col) || real.get(real.size() - 1).equals(col));
         }
+
+        public boolean hasTable(int row) {
+            return tableRows.contains(row) || tableRows.contains(row - 1);
+        }
+    }
+
+    /** Bordsgrupper var fjärde rad från och med startraden. */
+    private static List<Integer> tablesEveryFourth(int from, int to) {
+        List<Integer> rows = new ArrayList<>();
+        for (int r = from + 1; r < to; r += 4) rows.add(r);
+        return List.copyOf(rows);
     }
 
     public record Layout(String id, String trainName, String note,
@@ -52,9 +70,12 @@ public class TrainLayoutService {
         LAYOUTS.put("x2000", new Layout("x2000", "SJ X2000",
             "Bistron ligger mitt i tåget, mellan vagn 2 och vagn 3.",
             List.of(
-                new Wagon(1, "Vagn 1 · 2 klass",      "2 klass",      11, 34, cols("A","B",null,"C","D")),
-                new Wagon(2, "Vagn 2 · 2 klass Lugn", "2 klass Lugn", 11, 30, cols("A","B",null,"C","D")),
-                new Wagon(3, "Vagn 3 · 1 klass",      "1 klass",       1, 14, cols("A",null,"B","C"))
+                new Wagon(1, "Vagn 1 · 2 klass",      "2 klass",      11, 34, cols("A","B",null,"C","D"),
+                          tablesEveryFourth(11, 34)),
+                new Wagon(2, "Vagn 2 · 2 klass Lugn", "2 klass Lugn", 11, 30, cols("A","B",null,"C","D"),
+                          tablesEveryFourth(11, 30)),
+                new Wagon(3, "Vagn 3 · 1 klass",      "1 klass",       1, 14, cols("A",null,"B","C"),
+                          tablesEveryFourth(1, 14))
             ),
             List.of(
                 new Facility("TOALETT", "Toalett", 1, 11, "vid vagnens främre ände"),
@@ -71,10 +92,14 @@ public class TrainLayoutService {
         LAYOUTS.put("sj3000", new Layout("sj3000", "SJ 3000 (X55)",
             "Fyra vagnar. Bistron ligger i vagn 3, i änden mot vagn 2.",
             List.of(
-                new Wagon(1, "Vagn 1 · 1 klass",        "1 klass",       1, 20, cols("A",null,"B","C")),
-                new Wagon(2, "Vagn 2 · 2 klass",        "2 klass",       1, 22, cols("A","B",null,"C","D")),
-                new Wagon(3, "Vagn 3 · 2 klass + bistro","2 klass",      1,  7, cols("A","B",null,"C","D")),
-                new Wagon(4, "Vagn 4 · 2 klass Lugn",   "2 klass Lugn",  1, 17, cols("A","B",null,"C","D"))
+                new Wagon(1, "Vagn 1 · 1 klass",        "1 klass",       1, 20, cols("A",null,"B","C"),
+                          tablesEveryFourth(1, 20)),
+                new Wagon(2, "Vagn 2 · 2 klass",        "2 klass",       1, 22, cols("A","B",null,"C","D"),
+                          tablesEveryFourth(1, 22)),
+                new Wagon(3, "Vagn 3 · 2 klass + bistro","2 klass",      1,  7, cols("A","B",null,"C","D"),
+                          tablesEveryFourth(1, 7)),
+                new Wagon(4, "Vagn 4 · 2 klass Lugn",   "2 klass Lugn",  1, 17, cols("A","B",null,"C","D"),
+                          tablesEveryFourth(1, 17))
             ),
             List.of(
                 new Facility("TOALETT",  "Toalett",     1,  1, "rullstolsanpassad, låginsteg"),
@@ -91,8 +116,10 @@ public class TrainLayoutService {
         LAYOUTS.put("x74", new Layout("x74", "X74",
             "Serveringen ligger i vagn 1, i änden mot vagn 2.",
             List.of(
-                new Wagon(1, "Vagn 1 · 2 klass",      "2 klass",      1, 26, cols("1","2",null,"3","4")),
-                new Wagon(2, "Vagn 2 · 2 klass Lugn", "2 klass Lugn", 1, 22, cols("1","2",null,"3","4"))
+                new Wagon(1, "Vagn 1 · 2 klass",      "2 klass",      1, 26, cols("1","2",null,"3","4"),
+                          tablesEveryFourth(1, 26)),
+                new Wagon(2, "Vagn 2 · 2 klass Lugn", "2 klass Lugn", 1, 22, cols("1","2",null,"3","4"),
+                          tablesEveryFourth(1, 22))
             ),
             List.of(
                 new Facility("TOALETT", "Toalett",  1,  1, "vid vagnens främre ände"),
@@ -107,8 +134,10 @@ public class TrainLayoutService {
         LAYOUTS.put("snalltaget", new Layout("snalltaget", "Snälltåget",
             "Restaurangvagnen ligger mellan vagn 1 och vagn 2.",
             List.of(
-                new Wagon(1, "Vagn 1 · 2 klass", "2 klass", 1, 24, cols("A","B",null,"C","D")),
-                new Wagon(2, "Vagn 2 · 2 klass", "2 klass", 1, 24, cols("A","B",null,"C","D"))
+                new Wagon(1, "Vagn 1 · 2 klass", "2 klass", 1, 24, cols("A","B",null,"C","D"),
+                          tablesEveryFourth(1, 24)),
+                new Wagon(2, "Vagn 2 · 2 klass", "2 klass", 1, 24, cols("A","B",null,"C","D"),
+                          tablesEveryFourth(1, 24))
             ),
             List.of(
                 new Facility("TOALETT", "Toalett",       1,  1, "vid vagnens ände"),
@@ -123,8 +152,10 @@ public class TrainLayoutService {
         LAYOUTS.put("mtr", new Layout("mtr", "MTR Express",
             "Serveringen ligger mellan vagn 1 och vagn 2.",
             List.of(
-                new Wagon(1, "Vagn 1 · 2 klass", "2 klass", 1, 28, cols("A","B",null,"C","D")),
-                new Wagon(2, "Vagn 2 · 1 klass", "1 klass", 1, 12, cols("A",null,"B","C"))
+                new Wagon(1, "Vagn 1 · 2 klass", "2 klass", 1, 28, cols("A","B",null,"C","D"),
+                          tablesEveryFourth(1, 28)),
+                new Wagon(2, "Vagn 2 · 1 klass", "1 klass", 1, 12, cols("A",null,"B","C"),
+                          tablesEveryFourth(1, 12))
             ),
             List.of(
                 new Facility("TOALETT", "Toalett",   1,  1, "vid vagnens främre ände"),
@@ -195,6 +226,13 @@ public class TrainLayoutService {
         sb.append("Vald plats: vagn ").append(wagon).append(", rad ").append(row)
           .append(col == null ? "" : col).append(".\n");
 
+        Wagon w = layout.wagons().stream().filter(x -> x.number() == wagon).findFirst().orElse(null);
+        if (w != null && col != null) {
+            sb.append("- Platstyp: ").append(w.isWindow(col) ? "fönsterplats" : "gångplats")
+              .append(w.hasTable(row) ? ", vid bord (fyrsits mot varandra)" : ", utan bord")
+              .append(".\n");
+        }
+
         Facility wc = nearest(layout, "TOALETT", wagon, row);
         if (wc != null)
             sb.append("- Närmaste toalett: vagn ").append(wc.wagon())
@@ -231,6 +269,23 @@ public class TrainLayoutService {
         }
         sb.append(String.join(" – ", strip)).append("\n");
         sb.append(layout.note()).append("\n");
+
+        // Platstyper — vanligaste följdfrågan efter "var sitter jag?"
+        for (Wagon w : layout.wagons()) {
+            List<String> real = w.cols().stream().filter(java.util.Objects::nonNull).toList();
+            if (real.isEmpty()) continue;
+            List<String> windows = real.stream().filter(w::isWindow).toList();
+            List<String> aisles  = real.stream().filter(c -> !w.isWindow(c)).toList();
+            sb.append("- Vagn ").append(w.number()).append(": fönsterplatser ")
+              .append(String.join("/", windows)).append(", gångplatser ")
+              .append(String.join("/", aisles));
+            if (!w.tableRows().isEmpty()) {
+                List<String> pairs = w.tableRows().stream()
+                        .map(r -> r + "–" + (r + 1)).toList();
+                sb.append(", bordsplatser på rad ").append(String.join(", ", pairs));
+            }
+            sb.append("\n");
+        }
 
         for (Facility f : layout.facilities()) {
             if (f.type().equals("ENTRE")) continue;

@@ -322,6 +322,15 @@ public class WebController {
         sb.append(trainLayoutService.describeForPrompt(layoutId));
         String seatFacts = trainLayoutService.seatFactsFromCode(layoutId, seat);
         if (!seatFacts.isBlank()) sb.append("\n").append(seatFacts);
+
+        // Tillgängligheten bor i platskartan (klienten), inte här — listan skickas därför med
+        // frågan. Prompten får bara rekommendera platser ur den listan.
+        String freeSeats = req.get("freeSeats") instanceof String s ? s.trim() : "";
+        if (!freeSeats.isBlank()) {
+            if (freeSeats.length() > 600) freeSeats = freeSeats.substring(0, 600);
+            sb.append("\n").append(freeSeats)
+              .append("\nFöreslå BARA platser ur den listan, och nämn vagn + platsnummer.\n");
+        }
         return sb.toString();
     }
 
