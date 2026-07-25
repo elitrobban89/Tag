@@ -78,14 +78,15 @@ Tågsökningsapp med MiniPris-deals inbyggd via iframe på [elitrobban.se/minipr
 
 ## Tester & CI
 
-32 tester i tre lager — ren logik, HTTP-felvägar och controller-lagret (MockMvc, tjänsterna mockas):
+47 tester i tre lager — ren logik, HTTP-felvägar och controller-lagret (MockMvc, tjänsterna mockas):
 
 | Testklass | Täcker |
 |-----------|--------|
-| `TrainModelServiceTest` (9) | Prislogiken (MiniPris slutar på 9, klassordning, determinism), operatörsmappning, platser kvar, restid |
+| `TrainModelServiceTest` (13) | Prislogiken (MiniPris slutar på 9, klassordning, determinism), operatörsmappning, SJ 3000-valet på destination + produktnamn, platser kvar, restid |
+| `TrainLayoutServiceTest` (8) | Vagnsskisserna: alla layouter har vagnar/toalett/bistro, SJ 3000:s fyra vagnar, avstånd till bistro och närmaste toalett över vagnsgräns, platsfakta och promptbeskrivningen |
 | `GroqChatServiceTest` (5) | Meddelandelistan: systemprompt, avgångskontext, historiktrimning till 8, konfigurationskoll |
 | `GroqChatServiceHttpTest` (5) | HTTP-felvägar mot lokal stubbserver: 429/401/5xx ger begripliga fel, svar utan content ger standardtext |
-| `WebControllerTest` (9) | Autocomplete-sortering (prefix först), valideringsfel 400, auto-imorgon-logiken, chattens rate limit → 429 |
+| `WebControllerTest` (12) | Autocomplete-sortering (prefix först), valideringsfel 400, auto-imorgon-logiken, chattens rate limit → 429, `/api/train-layout` (JSON + 404) och att skiss + platsfakta hamnar i chattkontexten |
 | `SuggestControllerTest` (4) | Kategorivalidering 400, health, rate limit → 429 |
 
 ```bash

@@ -207,6 +207,23 @@
       .tc-thumb.voted{border-color:rgba(96,165,250,0.65);color:#93c5fd;background:rgba(96,165,250,0.08);}
       .tc-retry{background:none;border:1px solid rgba(239,68,68,0.3);color:rgba(239,68,68,0.65);font-size:11px;font-weight:600;padding:4px 11px;border-radius:20px;cursor:pointer;margin-top:7px;display:inline-block;transition:all .15s;}
       .tc-retry:hover{border-color:rgba(239,68,68,0.6);color:#ef4444;}
+      /* Vagnsskiss under svaret när frågan gäller toalett/bistro/närmaste plats */
+      .tc-sketch{margin-top:9px;padding:9px 10px;border-radius:12px;
+        background:rgba(96,165,250,0.08);border:1px solid rgba(96,165,250,0.22);}
+      .tc-sketch-title{font-size:11px;font-weight:800;letter-spacing:.02em;color:#bfdbfe;margin-bottom:7px;}
+      .tc-sketch-row{display:flex;align-items:stretch;gap:4px;overflow-x:auto;padding-bottom:2px;}
+      .tc-sk-wagon{flex:1 0 78px;display:flex;flex-direction:column;gap:1px;text-align:center;
+        padding:6px 5px;border-radius:9px;background:rgba(255,255,255,0.05);
+        border:1px solid rgba(255,255,255,0.14);font-size:9.5px;color:rgba(255,255,255,.55);line-height:1.3;}
+      .tc-sk-wagon b{font-size:10.5px;color:rgba(255,255,255,.9);}
+      .tc-sk-wagon.mine{background:rgba(52,211,153,0.14);border-color:rgba(52,211,153,0.5);}
+      .tc-sk-rows{opacity:.65;}
+      .tc-sk-icons{font-size:12px;letter-spacing:1px;margin-top:2px;}
+      .tc-sk-you{margin-top:2px;font-weight:800;color:#6ee7b7;font-size:9px;}
+      .tc-sk-bistro{flex:0 0 auto;align-self:center;padding:5px 7px;border-radius:9px;white-space:nowrap;
+        background:rgba(251,191,36,0.16);border:1px solid rgba(251,191,36,0.45);
+        color:#fde68a;font-size:9.5px;font-weight:800;}
+      .tc-sketch-note{margin-top:6px;font-size:9.5px;color:rgba(255,255,255,.35);line-height:1.4;}
       .tc-train-imgs{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
       .tc-train-img{width:100%;max-height:130px;object-fit:cover;border-radius:10px;opacity:.88;transition:opacity .2s;}
       .tc-train-img:hover{opacity:1;}
@@ -550,12 +567,18 @@
     var context = _focusedDepContext || buildDepartureContext(window._trainSearchData);
     var limited = trainChatHistory.slice(-10);
 
+    // Skiss + ev. vald plats följer med varje fråga: servern räknar avstånden och lägger
+    // in dem i prompten, så "var finns toaletten?" besvaras med vagn och rad i stället
+    // för allmänt "det finns toaletter ombord".
+    var sketchLayout = tcLayoutId();
+
     var resp;
     try {
       resp = await fetch(TRAIN_CHAT_API + "/api/chat/stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: limited, context: context })
+        body: JSON.stringify({ messages: limited, context: context,
+                               layout: tcLayoutId(), seat: tcSeatCode() })
       });
     } catch(e) {
       typingDiv.remove();
@@ -585,7 +608,8 @@
       try {
         var fbResp = await fetch(TRAIN_CHAT_API + "/api/chat", {
           method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ messages: limited, context: context })
+          body: JSON.stringify({ messages: limited, context: context,
+                               layout: tcLayoutId(), seat: tcSeatCode() })
         });
         var fbData = await fbResp.json();
         var fbReply = fbData.reply || fbData.error || "Inget svar.";
@@ -593,6 +617,7 @@
         tcSaveChatHistory();
         var fbOuter = tcAppendBot(fbReply, true);
         tcInjectTrainImages(fbReply, fbOuter);
+        tcMaybeAppendSketch(message, sketchLayout, fbOuter);
         tcAddFollowupChips(fbReply, fbOuter);
       } catch(_) { tcAppendBot("Kunde inte nå assistenten.", false); }
       return;
@@ -649,6 +674,7 @@
     bubble.innerHTML = tcMarkdown(fullText);
     tcInjectTrainImages(fullText, outer);
     tcHighlightDepartures(fullText);
+    tcMaybeAppendSketch(message, sketchLayout, outer);
     tcAddFeedback(outer);
     tcAddFollowupChips(fullText, outer);
     msgsEl.scrollTop = msgsEl.scrollHeight;
@@ -657,7 +683,77 @@
     tcSaveChatHistory();
   }
 
+  /* ── Vagnsskiss i chatten ────────────────────────────────────────────────────
+     Layout-id kommer från den avgång användaren fokuserat, annars från platskartan
+     om den är öppen. Skissen ritas ur serverns /api/train-layout — samma källa som
+     platskartan och AI:ns prompt, så bild och svar kan inte säga olika saker. */
+  var _focusedLayout = '';
+  var _tcLayoutCache = {};
+
+  function tcLayoutId() {
+    if (window._seatState && window._seatState.layout) return window._seatState.layout;
+    return _focusedLayout || '';
+  }
+
+  function tcSeatCode() {
+    return (window._seatState && window._seatState.selected) || '';
+  }
+
+  var TC_SKETCH_RE = /(toalett|toa\b|wc|handikapp|rullstol|bistro|bistron|café|cafe|kiosk|servering|restaurang|matvagn|närmast|narmast|vilken plats|var sitter|vagnsskiss|skiss)/i;
+
+  function tcFetchLayout(id, cb) {
+    if (!id) { cb(null); return; }
+    if (_tcLayoutCache[id]) { cb(_tcLayoutCache[id]); return; }
+    fetch(TRAIN_CHAT_API + '/api/train-layout?layout=' + encodeURIComponent(id))
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (j) { if (j && j.wagons) { _tcLayoutCache[id] = j; cb(j); } else cb(null); })
+      .catch(function () { cb(null); });
+  }
+
+  /** Ritar tåget som en rad vagnar med toalett/bistro utmärkta. */
+  function tcBuildSketch(ld, seatCode) {
+    var seatWagon = 0, seatRow = 0;
+    var m = /^(\d+)-(\d+)([A-Za-z0-9]?)$/.exec(seatCode || '');
+    if (m) { seatWagon = parseInt(m[1], 10); seatRow = parseInt(m[2], 10); }
+
+    var wrap = document.createElement('div');
+    wrap.className = 'tc-sketch';
+    var html = '<div class="tc-sketch-title">🚆 ' + ld.trainName + ' — vagnsskiss</div><div class="tc-sketch-row">';
+    ld.wagons.forEach(function (w) {
+      var icons = '', bistroAfter = null;
+      ld.facilities.forEach(function (f) {
+        if (f.wagon !== w.number) return;
+        if (f.type === 'TOALETT') icons += '🚻';
+        else if (f.type === 'RULLSTOL') icons += '♿';
+        else if (f.type === 'BISTRO') { if (f.row > w.rowTo) bistroAfter = f; else icons += '☕'; }
+      });
+      var isSeatWagon = w.number === seatWagon;
+      html += '<div class="tc-sk-wagon' + (isSeatWagon ? ' mine' : '') + '">' +
+                '<b>Vagn ' + w.number + '</b>' +
+                '<span>' + w.seatClass + '</span>' +
+                '<span class="tc-sk-rows">rad ' + w.rowFrom + '–' + w.rowTo + '</span>' +
+                '<span class="tc-sk-icons">' + (icons || '&nbsp;') + '</span>' +
+                (isSeatWagon ? '<span class="tc-sk-you">din plats rad ' + seatRow + '</span>' : '') +
+              '</div>';
+      if (bistroAfter) html += '<div class="tc-sk-bistro">☕ ' + bistroAfter.label + '</div>';
+    });
+    html += '</div><div class="tc-sketch-note">' + (ld.note || '') +
+            ' · Förenklad skiss — ordning och ände stämmer, inte exakta mått.' +
+            '<br><span class="tc-sketch-src">Källa: <code>vagnskiss://' + ld.id + '</code>' +
+            ' — samma skiss som platskartan och AI-svaret bygger på</span></div>';
+    wrap.innerHTML = html;
+    return wrap;
+  }
+
+  function tcMaybeAppendSketch(question, layoutId, container) {
+    if (!container || !TC_SKETCH_RE.test(question || '')) return;
+    tcFetchLayout(layoutId, function (ld) {
+      if (ld) container.appendChild(tcBuildSketch(ld, tcSeatCode()));
+    });
+  }
+
   window.tcFocusDeparture = function(btn) {
+    _focusedLayout = btn.getAttribute('data-layout') || _focusedLayout;
     var depTime    = btn.getAttribute('data-dep-time')    || '';
     var arrTime    = btn.getAttribute('data-arr-time')    || '';
     var trainId    = btn.getAttribute('data-train-id')    || '';

@@ -28,6 +28,12 @@ public class TrainDeparture {
     @JsonIgnore
     private String destinationSignature;
 
+    /** Trafikverkets produktnamn ("SJ Snabbtåg", "SJ Regional"…) — inte fordonstyp. */
+    private String productInformation;
+
+    public String getProductInformation()         { return productInformation; }
+    public void   setProductInformation(String v) { this.productInformation = v; }
+
     public String getTrainId()        { return trainId; }
     public void setTrainId(String v)  { this.trainId = v; }
 

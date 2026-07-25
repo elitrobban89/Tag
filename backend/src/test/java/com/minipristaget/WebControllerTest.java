@@ -10,6 +10,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.List;
 import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -23,6 +24,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * felformat och chattens rate limit. Tjänsterna mockas — inga externa anrop.
  */
 @WebMvcTest(WebController.class)
+// Vagnsskissen är ren logik utan externa anrop — kör den skarpt i stället för mockad,
+// så att /api/train-layout och skisstexten i chattkontexten testas på riktigt.
+@org.springframework.context.annotation.Import(TrainLayoutService.class)
 class WebControllerTest {
 
     @Autowired
@@ -168,5 +172,48 @@ class WebControllerTest {
                 .content(body))
            .andExpect(status().isTooManyRequests())
            .andExpect(jsonPath("$.error").exists());
+    }
+
+    // --- vagnsskissen ---
+
+    @Test
+    void vagnsskissenGerVagnarOchFaciliteter() throws Exception {
+        mvc.perform(get("/api/train-layout").param("layout", "sj3000"))
+           .andExpect(status().isOk())
+           .andExpect(jsonPath("$.trainName").value("SJ 3000 (X55)"))
+           .andExpect(jsonPath("$.wagons.length()").value(4))
+           .andExpect(jsonPath("$.facilities[?(@.type=='BISTRO')].wagon").value(3));
+    }
+
+    @Test
+    void okandVagnsskissGer404OchListningUtanParameter() throws Exception {
+        mvc.perform(get("/api/train-layout").param("layout", "finns-inte"))
+           .andExpect(status().isNotFound())
+           .andExpect(jsonPath("$.error").exists());
+
+        mvc.perform(get("/api/train-layout"))
+           .andExpect(status().isOk())
+           .andExpect(jsonPath("$.layouts").isArray());
+    }
+
+    @Test
+    void chattenFarSkissOchPlatsfaktaIKontexten() throws Exception {
+        when(groqChatService.isConfigured()).thenReturn(true);
+        when(groqChatService.chat(any(), anyString())).thenReturn("svar");
+
+        mvc.perform(post("/api/chat")
+                .header("X-Forwarded-For", "10.3.3.3")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"messages\":[{\"role\":\"user\",\"content\":\"var finns toaletten?\"}],"
+                       + "\"context\":\"Avgång 15:19\",\"layout\":\"sj3000\",\"seat\":\"3-2C\"}"))
+           .andExpect(status().isOk());
+
+        org.mockito.ArgumentCaptor<String> ctx = org.mockito.ArgumentCaptor.forClass(String.class);
+        org.mockito.Mockito.verify(groqChatService).chat(any(), ctx.capture());
+        assertThat(ctx.getValue())
+                .contains("Avgång 15:19")        // ursprungskontexten är kvar
+                .contains("Vagnsskiss SJ 3000")  // skissen tillagd
+                .contains("Vald plats: vagn 3, rad 2C")
+                .contains("Närmaste toalett");
     }
 }

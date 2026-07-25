@@ -686,6 +686,69 @@
     .leg-taken  { background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.12); }
     .leg-sel    { background:rgba(34,197,94,.4);   border:1px solid rgba(74,222,128,.6); }
 
+    /* Tågsilhuett över hela sättet, ritad ur serverns vagnsskiss */
+    .train-strip { padding:8px 16px 0; }
+    .train-svg { width:100%; height:auto; display:block; }
+    .ts-wagon {
+      flex:1 1 auto; min-width:96px; border-radius:9px; padding:7px 8px 6px;
+      background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.14);
+      font-size:.62rem; line-height:1.35; color:rgba(255,255,255,.6); text-align:center;
+    }
+    .ts-wagon.current { background:rgba(96,165,250,.16); border-color:rgba(96,165,250,.5); color:#fff; }
+    .ts-wagon-name { font-weight:800; font-size:.66rem; color:rgba(255,255,255,.85); }
+    .ts-wagon.current .ts-wagon-name { color:#dbeafe; }
+    .ts-rows { opacity:.7; }
+    .ts-icons { margin-top:3px; font-size:.74rem; letter-spacing:2px; }
+    .ts-bistro {
+      flex:0 0 auto; align-self:center; padding:6px 9px; border-radius:9px;
+      background:rgba(251,191,36,.16); border:1px solid rgba(251,191,36,.45);
+      color:#fde68a; font-size:.62rem; font-weight:800; white-space:nowrap;
+    }
+    .ts-note { padding:5px 20px 0; font-size:.6rem; color:rgba(255,255,255,.35); }
+    /* ── Planskiss av vagnen ovanifrån: tåget går vänster→höger, sätena i 2+2 kring gången ── */
+    .plan-wrap { padding:14px 20px 6px; overflow-x:auto; }
+    .plan-car {
+      display:flex; align-items:stretch; gap:5px; min-width:min-content;
+      padding:12px 10px; border:2px solid rgba(255,255,255,.20); border-radius:22px;
+      background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.015));
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.12);
+    }
+    .plan-col { display:flex; flex-direction:column; align-items:center; gap:3px; }
+    .plan-rownum { font-size:.52rem; color:rgba(255,255,255,.32); font-weight:700; margin-bottom:1px; }
+    .plan-seat {
+      width:27px; height:23px; border-radius:6px; font-size:.55rem; font-weight:700;
+      display:flex; align-items:center; justify-content:center; transition:transform .12s, background .12s;
+    }
+    .plan-seat.avail { background:rgba(96,165,250,.20); border:1px solid rgba(96,165,250,.45); color:#bfdbfe; cursor:pointer; }
+    .plan-seat.avail:hover { transform:scale(1.14); background:rgba(96,165,250,.4); color:#fff; }
+    .plan-seat.taken { background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.10); color:rgba(255,255,255,.22); }
+    .plan-seat.selected { background:#34d399; border:1px solid #6ee7b7; color:#06281c; box-shadow:0 0 12px rgba(52,211,153,.6); }
+    .plan-aisle { height:11px; }
+    .plan-table { width:27px; height:4px; border-radius:2px; background:rgba(255,255,255,.14); }
+    .plan-facility {
+      display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px;
+      min-width:38px; padding:6px 4px; border-radius:12px; font-size:.52rem; font-weight:800;
+      text-align:center; line-height:1.2;
+      background:rgba(255,255,255,.07); border:1px dashed rgba(255,255,255,.25); color:rgba(255,255,255,.6);
+    }
+    .plan-facility.bistro { background:rgba(251,191,36,.16); border-color:rgba(251,191,36,.5); color:#fde68a; }
+    .plan-facility .pf-ic { font-size:.95rem; }
+    .plan-door {
+      display:flex; align-items:center; justify-content:center; min-width:20px;
+      border-radius:10px; background:rgba(255,255,255,.05);
+      border:1px solid rgba(255,255,255,.14); color:rgba(255,255,255,.4); font-size:.8rem;
+    }
+    .plan-dir { font-size:.55rem; color:rgba(255,255,255,.3); padding:4px 20px 0; }
+    @media (max-width:520px) { .plan-seat { width:24px; height:21px; } }
+    /* Facilitetsrad inne i platskartan, på samma höjd som raden den ligger vid */
+    .seat-facility {
+      display:flex; align-items:center; gap:7px; margin:5px 0;
+      padding:4px 9px; border-radius:8px; font-size:.64rem; font-weight:700;
+      background:rgba(255,255,255,.06); border:1px dashed rgba(255,255,255,.22);
+      color:rgba(255,255,255,.62);
+    }
+    .seat-facility.bistro { background:rgba(251,191,36,.14); border-color:rgba(251,191,36,.4); color:#fde68a; }
+    .seat-facts { font-size:.66rem; color:rgba(255,255,255,.5); margin-top:3px; }
     .seat-map-wrap { padding:16px 20px; overflow-x:auto; }
     .seat-train-body {
       background:rgba(255,255,255,.03);
@@ -1166,14 +1229,19 @@
     </div>
     <div id="seat-journey-card" style="padding:12px 14px 0"></div>
     <div class="wagon-tabs" id="wagon-tabs" style="margin-top:12px"></div>
+    <div class="train-strip" id="train-strip"></div>
+    <div class="ts-note" id="train-strip-note"></div>
     <div class="seat-legend">
       <span><span class="leg-box leg-avail"></span> Ledig</span>
       <span><span class="leg-box leg-taken"></span> Bokad</span>
       <span><span class="leg-box leg-sel"></span>   Vald</span>
+      <span>🚻 Toalett</span>
+      <span>☕ Bistro</span>
     </div>
     <div class="seat-map-wrap" id="seat-map-wrap"></div>
     <div class="seat-footer">
       <div class="seat-selected-lbl">Vald plats: <span class="seat-selected-val" id="seat-selected-val">—</span></div>
+      <div class="seat-facts" id="seat-facts"></div>
       <div class="seat-footer-btns">
         <button class="seat-return-btn"  id="seat-return-btn"  disabled onclick="addReturnTrip()">↩ Lägg till återresa</button>
         <button class="seat-confirm-btn" id="seat-confirm-btn" disabled onclick="confirmSeat()">💳 Betala med Swish</button>
@@ -1761,6 +1829,162 @@ function rowRange(from, to) {
   return r;
 }
 
+/* ── Vagnsskiss från servern ──────────────────────────────────────────────────
+   LAYOUTS ovan är fallback om anropet failar. Servern (TrainLayoutService) är
+   källan för både platskartan, skissen och det AI:n får veta — så toalett- och
+   bistropositioner kan aldrig glida isär mellan karta och chattsvar.
+   WAGON_GAP måste hållas i synk med serverns konstant (3 rader per vagnsövergång). */
+var WAGON_GAP = 3;
+var _layoutCache = {};
+
+function fetchLayout(id, cb) {
+  if (!id) { cb(null); return; }
+  if (_layoutCache[id]) { cb(_layoutCache[id]); return; }
+  fetch('/api/train-layout?layout=' + encodeURIComponent(id))
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (j) { if (j && j.wagons) { _layoutCache[id] = j; cb(j); } else cb(null); })
+    .catch(function () { cb(null); });
+}
+
+function layoutWagon(n) {
+  var ld = _seatState.layoutData;
+  return ld && ld.wagons ? ld.wagons[n - 1] : null;
+}
+
+/** Global radkoordinat — samma formel som TrainLayoutService.position(). */
+function layoutPosition(wagonNo, row) {
+  var ld = _seatState.layoutData;
+  if (!ld) return 0;
+  var pos = 0;
+  for (var i = 0; i < ld.wagons.length; i++) {
+    var w = ld.wagons[i];
+    if (w.number === wagonNo) return pos + (row - w.rowFrom);
+    pos += (w.rowTo - w.rowFrom + 1) + WAGON_GAP;
+  }
+  return pos;
+}
+
+function nearestFacility(type, wagonNo, row) {
+  var ld = _seatState.layoutData;
+  if (!ld) return null;
+  var best = null, bestD = Infinity;
+  ld.facilities.forEach(function (f) {
+    if (f.type !== type) return;
+    var d = Math.abs(layoutPosition(wagonNo, row) - layoutPosition(f.wagon, f.row));
+    if (d < bestD) { bestD = d; best = { f: f, dist: d }; }
+  });
+  return best;
+}
+
+function rowsText(d) {
+  var r = Math.round(d);
+  return r <= 1 ? '1 rad' : r + ' rader';
+}
+
+/**
+ * Tågsilhuett över hela tågsättet, ritad ur serverns skiss: vagnarnas längd är
+ * proportionell mot antalet rader, faciliteterna sitter på sin faktiska radposition,
+ * vald vagn lyser och den valda platsen får en markör på rätt ställe i tåget.
+ */
+function renderTrainStrip() {
+  var el = document.getElementById('train-strip');
+  var note = document.getElementById('train-strip-note');
+  if (!el) return;
+  var ld = _seatState.layoutData;
+  if (!ld) { el.innerHTML = ''; if (note) note.textContent = ''; return; }
+
+  var W = 680, H = 118, BODY_Y = 34, BODY_H = 46, NOSE = 26, PAD = 6;
+  var total = 0;
+  ld.wagons.forEach(function (w) { total += (w.rowTo - w.rowFrom + 1) + WAGON_GAP; });
+  var usable = W - PAD * 2;
+  var xFor = function (globalPos) { return PAD + (globalPos / total) * usable; };
+
+  var svg = '<svg class="train-svg" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Vagnsskiss">';
+  svg += '<defs>' +
+           '<linearGradient id="tsBody" x1="0" y1="0" x2="0" y2="1">' +
+             '<stop offset="0" stop-color="rgba(255,255,255,.16)"/>' +
+             '<stop offset="1" stop-color="rgba(255,255,255,.04)"/>' +
+           '</linearGradient>' +
+         '</defs>';
+
+  // Kaross med nos i båda ändar (tåget kan vändas — vi ritar symmetriskt)
+  var bx = PAD, bw = usable, by = BODY_Y, bh = BODY_H;
+  svg += '<path d="M' + (bx + NOSE) + ' ' + by +
+         ' H' + (bx + bw - NOSE) +
+         ' Q' + (bx + bw) + ' ' + by + ' ' + (bx + bw) + ' ' + (by + bh / 2) +
+         ' Q' + (bx + bw) + ' ' + (by + bh) + ' ' + (bx + bw - NOSE) + ' ' + (by + bh) +
+         ' H' + (bx + NOSE) +
+         ' Q' + bx + ' ' + (by + bh) + ' ' + bx + ' ' + (by + bh / 2) +
+         ' Q' + bx + ' ' + by + ' ' + (bx + NOSE) + ' ' + by + ' Z" ' +
+         'fill="url(#tsBody)" stroke="rgba(255,255,255,.28)" stroke-width="1.5"/>';
+
+  var pos = 0;
+  ld.wagons.forEach(function (w, i) {
+    var len = (w.rowTo - w.rowFrom + 1) + WAGON_GAP;
+    var x0 = xFor(pos), x1 = xFor(pos + len);
+    var isCur = w.number === _seatState.wagon;
+
+    if (isCur) {
+      svg += '<rect x="' + (x0 + 2) + '" y="' + (by + 3) + '" width="' + (x1 - x0 - 4) + '" height="' + (bh - 6) +
+             '" rx="9" fill="rgba(96,165,250,.22)" stroke="rgba(96,165,250,.75)" stroke-width="1.5"/>';
+    }
+    // Fönsterband
+    var winW = 9, winGap = 6, wx = x0 + 10;
+    while (wx + winW < x1 - 10) {
+      svg += '<rect x="' + wx + '" y="' + (by + 13) + '" width="' + winW + '" height="11" rx="2.5" ' +
+             'fill="rgba(190,220,255,' + (isCur ? '.45' : '.22') + ')"/>';
+      wx += winW + winGap;
+    }
+    // Vagnsgräns
+    if (i > 0) svg += '<line x1="' + x0 + '" y1="' + (by + 2) + '" x2="' + x0 + '" y2="' + (by + bh - 2) +
+                      '" stroke="rgba(255,255,255,.30)" stroke-width="1.5"/>';
+    // Boggier
+    svg += '<rect x="' + (x0 + 12) + '" y="' + (by + bh) + '" width="16" height="6" rx="3" fill="rgba(255,255,255,.22)"/>' +
+           '<rect x="' + (x1 - 28) + '" y="' + (by + bh) + '" width="16" height="6" rx="3" fill="rgba(255,255,255,.22)"/>';
+    // Etikett under vagnen
+    svg += '<text x="' + ((x0 + x1) / 2) + '" y="' + (by + bh + 20) + '" text-anchor="middle" ' +
+           'font-size="9.5" font-weight="700" fill="' + (isCur ? '#dbeafe' : 'rgba(255,255,255,.55)') + '">Vagn ' + w.number + '</text>' +
+           '<text x="' + ((x0 + x1) / 2) + '" y="' + (by + bh + 31) + '" text-anchor="middle" ' +
+           'font-size="8" fill="rgba(255,255,255,.35)">' + esc(w.seatClass) + ' · ' + w.rowFrom + '–' + w.rowTo + '</text>';
+    pos += len;
+  });
+
+  // Faciliteter på sin radposition
+  ld.facilities.forEach(function (f) {
+    if (f.type === 'ENTRE') return;
+    var icon = f.type === 'BISTRO' ? '☕' : f.type === 'RULLSTOL' ? '♿' : '🚻';
+    var fx = xFor(layoutPosition(f.wagon, f.row));
+    svg += '<text x="' + fx + '" y="' + (by - 6) + '" text-anchor="middle" font-size="13">' + icon + '</text>';
+    if (f.type === 'BISTRO')
+      svg += '<rect x="' + (fx - 12) + '" y="' + (by + 3) + '" width="24" height="' + (bh - 6) +
+             '" rx="7" fill="rgba(251,191,36,.22)" stroke="rgba(251,191,36,.6)" stroke-width="1.2"/>';
+  });
+
+  // Vald plats
+  var m = /^(\d+)-(\d+)([A-Za-z0-9]?)$/.exec(_seatState.selected || '');
+  if (m) {
+    var sx = xFor(layoutPosition(parseInt(m[1], 10), parseInt(m[2], 10)));
+    svg += '<circle cx="' + sx + '" cy="' + (by + bh / 2) + '" r="5.5" fill="#34d399" stroke="#065f46" stroke-width="1.2"/>' +
+           '<text x="' + sx + '" y="' + (by + bh + 44) + '" text-anchor="middle" font-size="8.5" font-weight="800" ' +
+           'fill="#6ee7b7">din plats</text>';
+  }
+
+  svg += '</svg>';
+  el.innerHTML = svg;
+  if (note) note.textContent = (ld.note || '') + ' · Källa: vagnskiss://' + ld.id;
+}
+
+/** Facilitetsmarkörer för aktuell vagn, grupperade på den rad de ligger vid. */
+function facilitiesAtRow(wagonNo, row, isLastRow) {
+  var ld = _seatState.layoutData;
+  if (!ld) return [];
+  return ld.facilities.filter(function (f) {
+    if (f.wagon !== wagonNo || f.type === 'ENTRE') return false;
+    var r = Math.round(f.row);
+    return r === row || (isLastRow && r > row);
+  });
+}
+
 function seatHash(trainId, wagon, row, col) {
   var s = trainId + '|' + wagon + '|' + row + '|' + col;
   var h = 5381;
@@ -1847,8 +2071,19 @@ function openSeatModal(trainId, layout, model, depTime, price, destination, trai
     document.getElementById('seat-return-btn').style.display  = '';
     document.getElementById('seat-confirm-btn').textContent   = '💳 Betala med Swish';
   }
+  document.getElementById('seat-facts').textContent = '';
   renderWagonTabs();
   renderSeatMap();
+  fetchLayout(layout, function (ld) {
+    _seatState.layoutData = ld;
+    // Vagnen valdes ur den lokala fallback-tabellen innan skissen hann hem — för layouter
+    // som bara finns på servern (t.ex. sj3000) blev det alltid vagn 1. Räkna om nu.
+    var w = wagonForClassFromLayout(ld, _seatState.selectedClass);
+    if (w) _seatState.wagon = w;
+    renderWagonTabs();
+    renderTrainStrip();
+    renderSeatMap();   // ritas om med toalett-/bistromarkörer när skissen kommit
+  });
   document.getElementById('seat-overlay').classList.add('open');
   document.body.style.overflow = 'hidden';
 }
@@ -1872,12 +2107,31 @@ function wagonForClass(layout, cls) {
   return 1;
 }
 
+/** Vilken vagn i serverskissen som matchar vald klass. Exakt klassnamn vinner över delsträng
+    så att "2 klass" inte råkar landa i "2 klass Lugn". */
+function wagonForClassFromLayout(ld, cls) {
+  if (!ld || !ld.wagons || !cls) return 0;
+  var want = cls.toLowerCase().trim();
+  for (var i = 0; i < ld.wagons.length; i++) {
+    if ((ld.wagons[i].seatClass || '').toLowerCase() === want) return ld.wagons[i].number;
+  }
+  for (var j = 0; j < ld.wagons.length; j++) {
+    if ((ld.wagons[j].label || '').toLowerCase().indexOf(want) !== -1) return ld.wagons[j].number;
+  }
+  return 0;
+}
+
 function renderWagonTabs() {
-  var cfg = LAYOUTS[_seatState.layout];
-  if (!cfg) return;
+  var label = null;
+  var lw = layoutWagon(_seatState.wagon);
+  if (lw) label = lw.label;
+  if (!label) {
+    var cfg = LAYOUTS[_seatState.layout];
+    if (!cfg) return;
+    label = cfg.wagonLabel[_seatState.wagon - 1];
+  }
   // Only show the wagon matching the selected class — no switching between classes
-  var html = '<button class="wagon-tab active">' + cfg.wagonLabel[_seatState.wagon - 1] + '</button>';
-  document.getElementById('wagon-tabs').innerHTML = html;
+  document.getElementById('wagon-tabs').innerHTML = '<button class="wagon-tab active">' + esc(label) + '</button>';
 }
 
 function switchWagon(n) {
@@ -1887,44 +2141,79 @@ function switchWagon(n) {
 }
 
 function renderSeatMap() {
-  var cfg = LAYOUTS[_seatState.layout];
-  if (!cfg) { document.getElementById('seat-map-wrap').innerHTML = '<p style="color:rgba(255,255,255,.3);padding:20px">Ingen platskarta tillgänglig.</p>'; return; }
-  var wCfg   = cfg.configs[_seatState.wagon - 1];
+  var wCfg = null;
+  var lw = layoutWagon(_seatState.wagon);
+  if (lw) {
+    // Serverns skiss vann — bygg zonen ur den
+    wCfg = { zones: [{ label: lw.seatClass, rows: rowRange(lw.rowFrom, lw.rowTo), cols: lw.cols }] };
+  } else {
+    var cfg = LAYOUTS[_seatState.layout];
+    if (cfg) wCfg = cfg.configs[_seatState.wagon - 1];
+  }
+  if (!wCfg) { document.getElementById('seat-map-wrap').innerHTML = '<p style="color:rgba(255,255,255,.3);padding:20px">Ingen platskarta tillgänglig.</p>'; return; }
   var trainId = _seatState.trainId;
   var wagon   = _seatState.wagon;
 
-  var html = '<div class="seat-train-body">';
+  // Planskiss ovanifrån: vagnen ligger på tvären, en kolumn per rad, gången mitt i.
+  // Toaletter/bistro/dörrar ritas in på sin faktiska radposition ur serverns skiss.
+  var html = '';
   wCfg.zones.forEach(function(zone) {
     html += '<div class="seat-class-zone">' + zone.label + '</div>';
-    // Column headers
-    html += '<div class="seat-col-header"><div style="width:18px"></div>';
-    zone.cols.forEach(function(c) {
-      if (c === null) html += '<div class="seat-col-lbl aisle-lbl"></div>';
-      else            html += '<div class="seat-col-lbl">' + c + '</div>';
-    });
-    html += '</div>';
-    // Rows
-    zone.rows.forEach(function(rowNum) {
-      html += '<div class="seat-row"><div class="seat-row-num">' + rowNum + '</div>';
-      zone.cols.forEach(function(c) {
-        if (c === null) { html += '<div class="seat-aisle"></div>'; return; }
+    html += '<div class="plan-wrap"><div class="plan-car">';
+    html += '<div class="plan-door" title="Dörr">🚪</div>';
+
+    zone.rows.forEach(function(rowNum, rowIdx) {
+      facilitiesAtRow(wagon, rowNum, rowIdx === zone.rows.length - 1).forEach(function (f) {
+        var icon = f.type === 'BISTRO' ? '☕' : f.type === 'RULLSTOL' ? '♿' : '🚻';
+        html += '<div class="plan-facility' + (f.type === 'BISTRO' ? ' bistro' : '') + '" title="' + esc(f.note) + '">' +
+                  '<span class="pf-ic">' + icon + '</span><span>' + esc(f.label) + '</span>' +
+                '</div>';
+      });
+
+      html += '<div class="plan-col"><div class="plan-rownum">' + rowNum + '</div>';
+      zone.cols.forEach(function(c, ci) {
+        if (c === null) { html += '<div class="plan-aisle"></div>'; return; }
         var seatId  = wagon + '-' + rowNum + c;
         var taken   = isTaken(trainId, wagon, rowNum, c);
         var selCls  = (_seatState.selected === seatId) ? ' selected' : (taken ? ' taken' : ' avail');
         var onclick = taken ? '' : ' onclick="selectSeat(\'' + seatId + '\',\'' + rowNum + '\',\'' + c + '\')"';
-        html += '<div class="seat' + selCls + '"' + onclick + '>' + c + '</div>';
+        var title   = 'Rad ' + rowNum + c + (taken ? ' — bokad' : ' — ledig');
+        html += '<div class="plan-seat' + selCls + '"' + onclick + ' title="' + title + '">' + c + '</div>';
+        // Bordsmarkering mellan sätena i varje sittgrupp om fyra
+        if (ci === 0 || (zone.cols[ci + 1] === null)) html += '';
       });
       html += '</div>';
     });
+
+    html += '<div class="plan-door" title="Dörr">🚪</div>';
+    html += '</div></div>';
+    html += '<div class="plan-dir">← Tågets färdriktning · låga radnummer först</div>';
   });
-  html += '</div>';
+  // Behåll sidoscrollen — annars hoppar planskissen tillbaka till vagnens början
+  // varje gång man klickar på en plats och den valda platsen försvinner ur bild.
+  var prevWrap = document.querySelector('.plan-wrap');
+  var prevScroll = prevWrap ? prevWrap.scrollLeft : 0;
   document.getElementById('seat-map-wrap').innerHTML = html;
+  var newWrap = document.querySelector('.plan-wrap');
+  if (newWrap && prevScroll) newWrap.scrollLeft = prevScroll;
 }
 
 function selectSeat(seatId, row, col) {
   _seatState.selected  = seatId;
   _seatState.seatLabel = 'Vagn ' + _seatState.wagon + ', plats ' + row + col;
   document.getElementById('seat-selected-val').textContent = _seatState.seatLabel;
+  renderTrainStrip();   // markören i silhuetten följer vald plats
+
+  // Avstånd till toalett och bistro — samma siffror som chatten svarar med
+  var factsEl = document.getElementById('seat-facts');
+  if (factsEl) {
+    var bits = [];
+    var wc = nearestFacility('TOALETT', _seatState.wagon, parseInt(row, 10));
+    if (wc) bits.push('🚻 ' + rowsText(wc.dist) + ' till närmaste toalett');
+    var bi = nearestFacility('BISTRO', _seatState.wagon, parseInt(row, 10));
+    if (bi) bits.push('☕ ' + rowsText(bi.dist) + ' till ' + bi.f.label.toLowerCase());
+    factsEl.textContent = bits.join('  ·  ');
+  }
   document.getElementById('seat-confirm-btn').disabled = false;
   document.getElementById('seat-return-btn').disabled  = false;
   renderSeatMap();

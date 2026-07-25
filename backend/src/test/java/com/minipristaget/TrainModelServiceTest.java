@@ -28,6 +28,36 @@ class TrainModelServiceTest {
         assertThat(service.getModel("").name()).isEqualTo("Regionaltåg");
     }
 
+    // --- SJ 3000 (X55): Trafikverket anger aldrig fordonstyp, så destination + produktnamn styr ---
+
+    @Test
+    void sjTillNorrOchOsloBlirSj3000() {
+        assertThat(service.getModel("SJ", "Sundsvall C").name()).isEqualTo("SJ 3000");
+        assertThat(service.getModel("SJ", "Östersund C").name()).isEqualTo("SJ 3000");
+        assertThat(service.getModel("SJ", "Oslo S").name()).isEqualTo("SJ 3000");
+        assertThat(service.getModel("SJ", "Sundsvall C").seatLayout()).isEqualTo("sj3000");
+    }
+
+    @Test
+    void ovrigaSjStrackorFortsatterVaraX2000() {
+        assertThat(service.getModel("SJ", "Göteborg C").name()).isEqualTo("SJ X2000");
+        assertThat(service.getModel("SJ", null).name()).isEqualTo("SJ X2000");
+    }
+
+    @Test
+    void destinationPaverkarBaraSj() {
+        assertThat(service.getModel("MTRX", "Sundsvall C").name()).isEqualTo("X74");
+    }
+
+    @Test
+    void produktnamnetSkiljerRegionaltagFranSnabbtag() {
+        assertThat(service.getModel("SJ", "Uppsala C", "SJ Regional").name()).isEqualTo("SJ Regional");
+        assertThat(service.getModel("SJ", "Uppsala C", "SJ Regional").hasSeatMap()).isFalse();
+        assertThat(service.getModel("SJ", "Göteborg C", "SJ Snabbtåg").name()).isEqualTo("SJ X2000");
+        // Regionalt vinner även på en SJ 3000-sträcka — produktnamnet är mer specifikt
+        assertThat(service.getModel("SJ", "Sundsvall C", "SJ Regional").name()).isEqualTo("SJ Regional");
+    }
+
     // --- prisberäkning ---
 
     @Test

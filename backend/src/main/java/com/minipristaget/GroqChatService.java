@@ -32,6 +32,11 @@ public class GroqChatService {
 
         ## Tågtyper i Sverige
         - **SJ X2000** — snabbtåg, max 200 km/h, WiFi, bra 5G-täckning, tyst- och 1:a klass, bistro
+        - **SJ 3000 (X55)** — snabbtåg i trafik sedan 2012, 200 km/h, byggt av Bombardier.
+          Fyra vagnar, bistro, plant insteg och rullstolslift i ändvagnen, 2+2-stolar i BÅDA
+          klasserna, dubbla eluttag vid varje plats, nedfällbara bord med mugghållare.
+          Ca 62 platser i 1 klass och 183 i 2 klass. Kör bl.a. Göteborg–Stockholm,
+          Göteborg–Malmö, Stockholm–Sundsvall/Östersund och Stockholm–Oslo.
         - **MTRX / X74** — höghastighetståg, WiFi, 1:a och 2:a klass, modern inredning
         - **SJ Intercity / Regional** — WiFi på nyare vagnar, 2:a klass standard
         - **Öresundståg X31** — regionaltåg Malmö–Köpenhamn och södra Sverige, öppen placering, WiFi
@@ -39,11 +44,23 @@ public class GroqChatService {
         - **MTR Express** — Stockholm–Göteborg, modern, WiFi, konkurrenskraftiga priser
 
         ## Faciliteter ombord (generellt SJ/MTRX)
-        - **WiFi**: ingår kostnadsfritt på X2000, MTRX och de flesta Intercity-tåg
+        - **WiFi**: ingår kostnadsfritt på X2000, SJ 3000, MTRX och de flesta Intercity-tåg
         - **5G**: god täckning längs stambanorna Stockholm–Göteborg och Stockholm–Malmö
-        - **Bistro/café**: X2000 och MTRX på längre sträckor
-        - **Tyst-kupé**: finns på X2000 (2:a klass Lugn och 1:a klass)
+        - **Satellituppkoppling**: SJ utrustar SJ 3000-flottan (20 tåg) med satellitinternet
+          för att täcka de vita fläckarna där mobilnätet inte räcker, särskilt Stockholm–Oslo.
+          Installationen startar 2026 och hela flottan ska vara klar under 2027.
+        - **Bistro/café**: X2000, SJ 3000 och MTRX på längre sträckor
+        - **Tyst-kupé**: finns på X2000 och SJ 3000 (2:a klass Lugn) samt i 1:a klass
         - **Cykel**: kan medtas på de flesta tåg mot avgift (boka plats)
+        - **Toalett**: finns i varje vagn på fjärrtågen; minst en är rullstolsanpassad
+
+        ## Vagnsskiss och platser
+        Följer en vagnsskiss med i kontexten är den appens karta över just det tåget. Använd DEN
+        när någon frågar var toaletten eller bistron finns, eller vilken plats som ligger närmast
+        något — svara med vagn och radnummer ur skissen. Följer en vald plats med är avstånden
+        redan uträknade: återge dem, räkna inte om dem. Saknas skiss: säg att du kan visa den när
+        en avgång och plats är vald, och svara allmänt.
+        Hitta ALDRIG på radnummer, vagnsnummer eller avstånd som inte står i kontexten.
 
         ## Topp 5 rutter (ungefärlig restid)
         1. Stockholm → Göteborg: ca 3h (X2000), 2h40 (MTRX snabbaste)

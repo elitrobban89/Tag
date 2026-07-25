@@ -135,6 +135,10 @@ public class TrafikverketService {
                 <INCLUDE>ToLocation</INCLUDE>
                 <INCLUDE>TrainOwner</INCLUDE>
                 <INCLUDE>Canceled</INCLUDE>
+                <!-- Produktnamnet ("SJ Snabbtåg", "SJ Regional"…). Trafikverket anger ALDRIG
+                     fordonstyp, så X2000/SJ 3000 går inte att läsa ut — men produktnamnet
+                     skiljer i alla fall snabbtåg från regionaltåg. -->
+                <INCLUDE>ProductInformation</INCLUDE>
               </QUERY>
             </REQUEST>
             """.formatted(apiKey, limit, fromSignature, date, fromTime, date);
@@ -155,7 +159,8 @@ public class TrafikverketService {
         TrainStation fromSt = stationIndex != null ? stationIndex.get(fromSignature.toUpperCase()) : null;
 
         for (TrainDeparture dep : departures) {
-            TrainModelService.TrainModelInfo model = trainModelService.getModel(dep.getOperator());
+            TrainModelService.TrainModelInfo model = trainModelService.getModel(
+                    dep.getOperator(), dep.getDestination(), dep.getProductInformation());
             dep.setTrainModel(model.name());
             dep.setTrainColor(model.color());
             dep.setTrainImage(model.imageUrl());
@@ -217,6 +222,7 @@ public class TrafikverketService {
 
         dep.setOperator(ann.path("TrainOwner").asText());
         dep.setCanceled(ann.path("Canceled").asBoolean(false));
+        dep.setProductInformation(readProductInformation(ann));
 
         JsonNode locs = ann.path("ToLocation");
         if (locs.isArray() && locs.size() > 0) {
@@ -230,6 +236,20 @@ public class TrafikverketService {
             dep.setDestination(friendlyName);
         }
         return dep;
+    }
+
+    /** ProductInformation kommer som array av objekt eller strängar beroende på schemaversion. */
+    private String readProductInformation(JsonNode ann) {
+        JsonNode pi = ann.path("ProductInformation");
+        if (pi.isMissingNode() || pi.isNull()) return "";
+        if (pi.isTextual()) return pi.asText();
+        if (pi.isArray() && pi.size() > 0) {
+            JsonNode first = pi.get(0);
+            if (first.isTextual()) return first.asText();
+            String desc = first.path("Description").asText("");
+            return desc.isBlank() ? first.path("Code").asText("") : desc;
+        }
+        return "";
     }
 
     private String formatTime(String iso) {

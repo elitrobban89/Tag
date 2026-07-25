@@ -37,6 +37,9 @@ public class WebController {
     @Autowired
     private GroqChatService groqChatService;
 
+    @Autowired
+    private TrainLayoutService trainLayoutService;
+
     private final ObjectMapper mapper = new ObjectMapper();
 
     private static final int CHAT_RATE_LIMIT = 10;
@@ -220,7 +223,7 @@ public class WebController {
         try {
             @SuppressWarnings("unchecked")
             List<Map<String, String>> messages = (List<Map<String, String>>) req.get("messages");
-            String context = (String) req.get("context");
+            String context = withLayoutContext(req);
             if (messages == null || messages.isEmpty())
                 return ResponseEntity.ok(Map.of("reply", "Inga meddelanden."));
             return ResponseEntity.ok(Map.of("reply", groqChatService.chat(messages, context)));
@@ -246,7 +249,7 @@ public class WebController {
         }
         @SuppressWarnings("unchecked")
         List<Map<String, String>> messages = (List<Map<String, String>>) req.get("messages");
-        String context = (String) req.get("context");
+        String context = withLayoutContext(req);
 
         StreamingResponseBody body = outputStream -> {
             try (InputStream is = groqChatService.chatStream(messages, context);
@@ -280,6 +283,46 @@ public class WebController {
                 .header("Cache-Control", "no-cache")
                 .header("X-Accel-Buffering", "no")
                 .body(body);
+    }
+
+    /** Vagnsskissen som JSON — platskartan och skissen i chatten läser samma källa. */
+    @CrossOrigin
+    @GetMapping("/api/train-layout")
+    @ResponseBody
+    public ResponseEntity<?> trainLayout(@RequestParam(required = false) String layout,
+                                         @RequestParam(required = false) String format) {
+        if (layout == null || layout.isBlank())
+            return ResponseEntity.ok(Map.of("layouts", trainLayoutService.allIds()));
+        TrainLayoutService.Layout l = trainLayoutService.getLayout(layout);
+        if (l == null)
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", "Okänd vagnsskiss: " + layout));
+        // ?format=text ger exakt den text AI:n får se — gör det möjligt att granska källan
+        // bakom ett svar utan att gissa vad som låg i prompten.
+        if ("text".equalsIgnoreCase(format))
+            return ResponseEntity.ok()
+                    .header("Content-Type", "text/plain; charset=UTF-8")
+                    .body(trainLayoutService.describeForPrompt(layout));
+        return ResponseEntity.ok(l);
+    }
+
+    /**
+     * Lägger vagnsskissen och ev. vald plats till chattkontexten, så att AI:n svarar på
+     * "var finns toaletten?" och "ligger min plats nära bistron?" med räknade siffror ur
+     * skissen i stället för allmänt tal om att det finns toaletter ombord.
+     */
+    private String withLayoutContext(Map<String, Object> req) {
+        String context = req.get("context") instanceof String s ? s : "";
+        String layoutId = req.get("layout") instanceof String s ? s : null;
+        String seat = req.get("seat") instanceof String s ? s : null;
+        if (layoutId == null || !trainLayoutService.hasLayout(layoutId)) return context;
+
+        StringBuilder sb = new StringBuilder(context == null ? "" : context);
+        if (sb.length() > 0) sb.append("\n\n");
+        sb.append(trainLayoutService.describeForPrompt(layoutId));
+        String seatFacts = trainLayoutService.seatFactsFromCode(layoutId, seat);
+        if (!seatFacts.isBlank()) sb.append("\n").append(seatFacts);
+        return sb.toString();
     }
 
     private LocalDate parseDate(String dateStr) {
