@@ -159,8 +159,8 @@ public class TrafikverketService {
         TrainStation fromSt = stationIndex != null ? stationIndex.get(fromSignature.toUpperCase()) : null;
 
         for (TrainDeparture dep : departures) {
-            TrainModelService.TrainModelInfo model = trainModelService.getModel(
-                    dep.getOperator(), dep.getDestination(), dep.getProductInformation());
+            TrainModelService.TrainModelInfo model = trainModelService.resolveModel(
+                    dep, fromSt != null ? fromSt.getName() : null);
             dep.setTrainModel(model.name());
             dep.setTrainColor(model.color());
             dep.setTrainImage(model.imageUrl());

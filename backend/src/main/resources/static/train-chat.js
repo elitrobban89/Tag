@@ -387,6 +387,9 @@
   }
 
   var TC_TRAIN_IMAGES = [
+    // SJ 3000 före x2000 i listan: "SJ 3000 (X55)" innehåller inte "x2000", men båda
+    // nämns ofta i samma svar och då ska den specifika träffen komma först.
+    { keys: ['sj 3000', 'sj3000', 'x55'],   src: '/images/train-sj-3000.jpg',     alt: 'SJ 3000 (X55) · Foto: SJ AB, CC BY 3.0' },
     { keys: ['x2000'],                      src: '/images/train-sj-x2000.jpg',    alt: 'SJ X2000' },
     { keys: ['x74', 'mtrx'],               src: '/images/train-vy.jpg',           alt: 'MTRX X74' },
     { keys: ['öresundståg', 'x31'],        src: '/images/train-oresundstag.jpg',  alt: 'Öresundståg X31' },

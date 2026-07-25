@@ -45,6 +45,47 @@ class TrainModelServiceTest {
     }
 
     @Test
+    void bekraftatTagnummerVinnerOverDestinationen() {
+        // Tåg 442 Göteborg → Stockholm är SJ 3000 trots att destinationen annars ger X2000
+        assertThat(service.getModel("SJ", "Stockholm C", "SJ Snabbtåg", "442").name())
+                .isEqualTo("SJ 3000");
+        assertThat(service.getModel("SJ", "Stockholm C", "SJ Snabbtåg", "442").seatLayout())
+                .isEqualTo("sj3000");
+        // Okänt nummer faller tillbaka på destinationsregeln
+        assertThat(service.getModel("SJ", "Stockholm C", "SJ Snabbtåg", "416").name())
+                .isEqualTo("SJ X2000");
+        assertThat(service.getModel("SJ", "Stockholm C", "SJ Snabbtåg", null).name())
+                .isEqualTo("SJ X2000");
+    }
+
+    @Test
+    void bekraftadAvgangUtanTagnummerBlirOcksaSj3000() {
+        TrainDeparture dep = new TrainDeparture();
+        dep.setOperator("SJ");
+        dep.setDestination("Stockholm C");
+        dep.setDepartureTime("20:19");
+        assertThat(service.resolveModel(dep, "Göteborg C").name()).isEqualTo("SJ 3000");
+
+        // Annan tid på samma sträcka faller tillbaka på X2000
+        dep.setDepartureTime("18:19");
+        assertThat(service.resolveModel(dep, "Göteborg C").name()).isEqualTo("SJ X2000");
+
+        // Samma tid men annan startstation ska inte matcha
+        dep.setDepartureTime("20:19");
+        assertThat(service.resolveModel(dep, "Malmö C").name()).isEqualTo("SJ X2000");
+    }
+
+    @Test
+    void resolveModelLaterTagnumretVinna() {
+        TrainDeparture dep = new TrainDeparture();
+        dep.setOperator("SJ");
+        dep.setDestination("Stockholm C");
+        dep.setDepartureTime("07:00");   // ingen känd avgång
+        dep.setTrainId("442");
+        assertThat(service.resolveModel(dep, "Göteborg C").name()).isEqualTo("SJ 3000");
+    }
+
+    @Test
     void destinationPaverkarBaraSj() {
         assertThat(service.getModel("MTRX", "Sundsvall C").name()).isEqualTo("X74");
     }

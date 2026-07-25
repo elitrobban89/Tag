@@ -1,6 +1,7 @@
 package com.minipristaget;
 
 import org.springframework.stereotype.Service;
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -33,11 +34,10 @@ public class TrainModelService {
                                     "Fjärrtåg & nattåg",            "/images/train-sj-fast.png",   true,  "snalltaget")),
         Map.entry("MTR",        new TrainModelInfo("MTR Express",     "#e85d00", 155,
                                     "Stockholm–Göteborg",           "/images/train-sj-fast.png",   true,  "mtr")),
-        // Bild: ingen egen SJ 3000-bild finns i repot — kör den generiska snabbtågsbilden
-        // tills en licensierad X55-bild läggs i /images/train-sj-3000.jpg.
+        // Bild: SJ:s egen pressbild av X55 från Wikimedia Commons (CC BY 3.0, foto SJ AB)
         Map.entry("SJ3000",     new TrainModelInfo("SJ 3000",         "#CC0000", 165,
                                     "X55 · 200 km/h, bistro & plant insteg",
-                                    "/images/train-sj-fast.png",   true,  "sj3000"))
+                                    "/images/train-sj-3000.jpg",   true,  "sj3000"))
     );
 
     /**
@@ -55,9 +55,68 @@ public class TrainModelService {
         return MODELS.getOrDefault(operator.trim().toUpperCase(), DEFAULT);
     }
 
+    /**
+     * Kända tågnummer → fordonstyp. Trafikverket säger aldrig vilken tågtyp som går, och
+     * destinationen räcker inte: Göteborg–Stockholm körs med BÅDE X2000 och SJ 3000. Det enda
+     * som identifierar en enskild avgång är tågnumret, så bekräftade nummer läggs in här.
+     *
+     * Källa: SJ:s egen tidtabell (tåg 442 Göteborg C 15:19 → Stockholm C 19:46 = SJ 3000).
+     * OBS: tågnummer byter fordonstyp mellan tidtabellsperioder — det här är en kurerad lista
+     * som behöver ses över vid tidtabellsskifte, inte en evig sanning.
+     */
+    private static final Map<String, String> TRAIN_NUMBER_MODELS = Map.of(
+        "442", "SJ3000"
+    );
+
     /** Som {@link #getModel(String)}, men väljer SJ 3000 på de sträckor X55 trafikerar. */
     public TrainModelInfo getModel(String operator, String destination) {
         return getModel(operator, destination, null);
+    }
+
+    /** Full upplösning: bekräftat tågnummer vinner över produktnamn som vinner över destination. */
+    public TrainModelInfo getModel(String operator, String destination, String productInformation,
+                                   String trainId) {
+        if (trainId != null) {
+            String known = TRAIN_NUMBER_MODELS.get(trainId.trim());
+            if (known != null) return MODELS.get(known);
+        }
+        return getModel(operator, destination, productInformation);
+    }
+
+    /**
+     * Bekräftade avgångar där tågnumret inte är känt men användaren sett vilken tågtyp som går.
+     * Matchar på från-station + destination + avgångstid.
+     */
+    private record KnownDeparture(String fromContains, String toContains, List<String> times,
+                                  String modelKey) {}
+
+    private static final List<KnownDeparture> KNOWN_DEPARTURES = List.of(
+        // SJ:s egen tidtabell: Göteborg C 15:19 och 20:19 mot Stockholm C körs med SJ 3000
+        new KnownDeparture("göteborg", "stockholm", List.of("15:19", "20:19"), "SJ3000")
+    );
+
+    /**
+     * Fordonstyp för en avgång. Ordning: bekräftat tågnummer → bekräftad avgång (från/till/tid)
+     * → produktnamn → destination → operatörstabellen. Trafikverket anger aldrig fordonstyp,
+     * så de två första lagren är kurerad kunskap som behöver ses över vid tidtabellsskifte.
+     */
+    public TrainModelInfo resolveModel(TrainDeparture dep, String fromName) {
+        if (dep == null) return DEFAULT;
+
+        if (dep.getTrainId() != null) {
+            String known = TRAIN_NUMBER_MODELS.get(dep.getTrainId().trim());
+            if (known != null) return MODELS.get(known);
+        }
+
+        String from = fromName == null ? "" : fromName.toLowerCase(java.util.Locale.ROOT);
+        String to   = dep.getDestination() == null ? "" : dep.getDestination().toLowerCase(java.util.Locale.ROOT);
+        String time = dep.getDepartureTime() == null ? "" : dep.getDepartureTime().trim();
+        for (KnownDeparture k : KNOWN_DEPARTURES) {
+            if (from.contains(k.fromContains()) && to.contains(k.toContains()) && k.times().contains(time))
+                return MODELS.get(k.modelKey());
+        }
+
+        return getModel(dep.getOperator(), dep.getDestination(), dep.getProductInformation());
     }
 
     /**
