@@ -18,13 +18,30 @@ Tågsökningsapp med MiniPris-deals inbyggd via iframe på [elitrobban.se/minipr
 - **Reseklasser** – expanderbart val av 2 klass, 2 klass Lugn eller 1 klass med SJ:s förmåner och prislogik
 - **Klasslåsning** – vald klass låses när man går vidare till platskarta, kan inte ändras i efterhand
 
-### Platskarta & bokning
-- **Interaktiv platskarta** – realistisk vagnskarta per tågtyp (X2000 3 vagnar, X74 2 vagnar)
+### Vagnsskisser & platsval
+- **Planskiss ovanifrån** – platsvalet är en ritning av vagnen: sätena i 2+2 kring mittgången, radnummer, dörrar i ändarna och klickbara platser
+- **Toalett & bistro inritade** – faciliteterna sitter på sin faktiska radposition i skissen, inte som en fotnot
+- **Fönster, gång och bord** – ytterkolumnerna markeras som fönsterplatser, kolumnerna mot gången som gångplatser, och bordsgrupper (fyrsits mot varandra) ritas ut; tooltipen säger vilken typ platsen är
+- **Tågsilhuett** – hela tågsättet ovanför platskartan, ritat ur samma skiss: vagnslängderna är proportionella mot antalet rader, vald vagn lyser och en prick visar var i tåget din plats sitter
+- **Avstånd som siffror** – när du valt plats står det "1 rad till närmaste toalett · 4 rader till bistron"; avståndet räknas i en global radkoordinat som korsar vagnsgränser
+- **En källa** – `TrainLayoutService` är enda stället vagnsuppsättningen bor. Platskartan, silhuetten, chattens skiss och AI:ns systemprompt läser samma data, så de kan inte säga emot varandra. Hämtas som JSON via `GET /api/train-layout?layout=<id>`, och `&format=text` ger exakt den skisstext AI:n får se (`vagnskiss://<id>`)
+- **Fem tågtyper** – X2000 (3 vagnar), SJ 3000 / X55 (4 vagnar med bistrovagn), X74, Snälltåget och MTR Express
 - **Klassbaserad vagn** – automatiskt rätt vagn baserat på vald klass (1 klass → Vagn 3 på X2000)
 - **Regionaltåg** – visar "Öppen placering" istället för platskarta för lokaltåg
-- **Platsbeläggnig** – deterministisk men realistisk: färre platser kvar = mer fullsatt karta
+- **Platsbeläggning** – deterministisk men realistisk: färre platser kvar = mer fullsatt karta
 - **Swish-betalning** – demo-flöde med `swish://` deep link, spinner och bokningsbekräftelse
 - **Platser räknas ned** – efter betalning minskar antalet platser kvar i realtid
+
+### Vilken tågtyp går egentligen?
+Trafikverkets öppna API anger **aldrig** fordonstyp — bara tågnummer, tider, destination och (ibland) operatör. `resolveModel` avgör därför i fem lager:
+
+1. **Bekräftat tågnummer** – t.ex. 442 och 452 Göteborg C → Stockholm C körs med SJ 3000, övriga direkttåg med X2000
+2. **Bekräftad avgång** – från/till/avgångstid, för tåg där numret inte är känt
+3. **Produktnamn** – `ProductInformation` skiljer "SJ Snabbtåg" från "SJ Regional"
+4. **Destination** – SJ mot Sundsvall/Östersund/Oslo/Umeå = SJ 3000
+5. **Tågnummerserie** – när operatörsfältet saknas helt: 1xxx och 20xxx Öresundståg, 3xxx och 13xxx Västtrafik, 6xxxx SJ Regional, 4xx SJ snabbtåg
+
+Lager 1–2 och 5 är kurerad kunskap avläst ur verklig data, **inte officiella regler** — de behöver ses över vid tidtabellsskifte.
 
 ### Återresa & kombinerad bokning
 - **Spara utresa** – väljer man "Lägg till återresa" istället för att betala direkt sparas utresans vagn och platsnummer automatiskt
@@ -46,8 +63,10 @@ Tågsökningsapp med MiniPris-deals inbyggd via iframe på [elitrobban.se/minipr
 - **Kontext-bar** – visar aktuell rutt + antal avgångar vid sökning, eller specifik avgångstid vid fokuserat kort
 - **Markdown** – svarar med **fetstil** och `- listor` som renderas till HTML
 - **Rensa** – knapp för att starta ett nytt samtal och återställa avgångsfokus
-- **Tåginformation** – AI:n känner till tågtyper (X2000, MTRX, Öresundståg m.fl.), WiFi/5G ombord och restider för topp 5-rutter
-- **Tågbilder** – när AI:n nämner en tågtyp (X2000, MTRX X74, Öresundståg, Snälltåget, MTR Express, Västtåg X61) visas motsvarande tågfoto automatiskt under svaret
+- **Tåginformation** – AI:n känner till tågtyper (X2000, SJ 3000/X55, MTRX, Öresundståg m.fl.), WiFi/5G och satellituppkoppling ombord, vilka tåg som går var, och restider för topp 5-rutter
+- **Tågbilder** – när AI:n nämner en tågtyp (X2000, SJ 3000, MTRX X74, Öresundståg, Snälltåget, MTR Express, Västtåg X61) visas motsvarande tågfoto automatiskt under svaret
+- **Var finns toaletten?** – frågor om toalett, bistro eller närmaste plats besvaras med vagn och radnummer ur vagnsskissen, och skissen ritas upp under svaret med källhänvisning (`vagnskiss://<id>`). Har du valt plats är avstånden redan uträknade: "närmaste toalett i vagn 2, ≈1 rad bort; bistron i vagn 3, ≈4 rader"
+- **Föreslår ledig plats** – "föreslå en ledig fönsterplats närmast bistron" ger ett konkret förslag plus klickbara knappar som öppnar platskartan och väljer platsen direkt. Filter finns för fönster-, gång- och bordsplats. Beläggningen bor i platskartan och skickas med frågan, så servern aldrig gissar vilka platser som är bokade — och prompten får bara rekommendera ur den listan
 - **Streaming-svar** – svaret strömmar direkt token för token från Groq till chatbubblan utan att vänta på hela svaret, via `/api/chat/stream` (SSE); automatisk fallback till `/api/chat` om webbläsaren saknar ReadableStream-stöd
 - **Dynamiska follow-up chips** – efter varje svar visas 2–3 kontextuella snabbknappar baserade på vad AI:n svarade (tågtyp, pris, WiFi, restid)
 - **Avgångshighlighting** – om AI:n nämner en avgångstid (t.ex. "07:45") scrollas och highlightas det avgångskortet automatiskt i listan
