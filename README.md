@@ -63,6 +63,8 @@ Lager 1–2 och 5 är kurerad kunskap avläst ur verklig data, **inte officiella
 - **Kontext-bar** – visar aktuell rutt + antal avgångar vid sökning, eller specifik avgångstid vid fokuserat kort
 - **Markdown** – svarar med **fetstil** och `- listor` som renderas till HTML
 - **Rensa** – knapp för att starta ett nytt samtal och återställa avgångsfokus
+- **Expandera-läge** – chevron-knapp i chattens header växlar mellan normalt bottenkort och stort läge: helskärmsark på mobil (FAB:en döljs), 560 px bred panel med full höjd på desktop. Bra för långa svar, vagnsskisser och tågbilder. Läget sparas i `localStorage` och överlever omladdning. Panelen räknas som maximerad bara när den också är öppen, annars skulle FAB:en förbli dold och chatten bli oåtkomlig
+- **Mobilanpassad panel** – chatten är ett bottenkort som lämnar sidan bakom synlig, inte en fullskärmsöverlagring: höjdtaket är `min(440px, 58dvh)` (`dvh` så att mobilens adressfält inte spräcker höjden) och panelen spänner `left/right: 10px` i stället för fast bredd. Medvetet val — chatten highlightar avgångskort och väljer platser i sidan bakom sig, och fullskärm hade dolt exakt det. I liggande läge sänks taket till `min(300px, 70dvh)` och snabbknapparna döljs
 - **Tåginformation** – AI:n känner till tågtyper (X2000, SJ 3000/X55, MTRX, Öresundståg m.fl.), WiFi/5G och satellituppkoppling ombord, vilka tåg som går var, och restider för topp 5-rutter
 - **Tågbilder** – när AI:n nämner en tågtyp (X2000, SJ 3000, MTRX X74, Öresundståg, Snälltåget, MTR Express, Västtåg X61) visas motsvarande tågfoto automatiskt under svaret
 - **Var finns toaletten?** – frågor om toalett, bistro eller närmaste plats besvaras med vagn och radnummer ur vagnsskissen, och skissen ritas upp under svaret med källhänvisning (`vagnskiss://<id>`). Har du valt plats är avstånden redan uträknade: "närmaste toalett i vagn 2, ≈1 rad bort; bistron i vagn 3, ≈4 rader"
@@ -80,7 +82,7 @@ Lager 1–2 och 5 är kurerad kunskap avläst ur verklig data, **inte officiella
 - **Dela avgång** – 🔗-knapp på varje avgångskort genererar en delbar länk med från/till/datum som URL-parametrar; `navigator.share` på mobil, kopierar till urklipp på desktop; sidan auto-söker direkt om URL-parametrar finns vid sidladdning
 - **AI-förslag** – tre kategoriknappar (Storstad / Natur / Strand) via Groq AI
 - **CO2-besparing** – visar kg CO2 sparat jämfört med bilresa
-- **Mobilanpassad** – responsiv layout med media queries för smala skärmar
+- **Mobilanpassad** – responsiv layout med media queries för smala skärmar; chattpanelens brytpunkt ligger på 640 px så att även bredare telefoner (Pixel 412 px, iPhone Pro Max 430 px) träffas, plus en egen regel för liggande läge (`max-height: 480px`)
 - **UptimeRobot** – pingar `/health` var 5:e minut, håller Render-instansen varm
 - **PWA-stöd** – `manifest.json` gör appen installerbar på Android/iOS via "Lägg till på startskärm"
 

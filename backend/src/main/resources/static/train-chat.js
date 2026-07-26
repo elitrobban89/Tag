@@ -3,6 +3,7 @@
   var trainChatHistory = (function(){ try{ return JSON.parse(localStorage.getItem('tc-chat')||'[]'); }catch(e){ return []; } })();
   var _focusedDepContext = null;
   var _focusedDep = null;
+  var tcExpanded = (function(){ try{ return localStorage.getItem('tc-chat-max') === '1'; }catch(e){ return false; } })();
 
   // Intercept _trainSearchData to enable live context update + auto-chip
   var _searchDataVal = null;
@@ -25,7 +26,7 @@
     chip.id = 'tc-search-chip';
     chip.style.cssText = 'position:fixed;bottom:100px;right:24px;z-index:9997;background:linear-gradient(135deg,rgba(29,78,216,0.92),rgba(59,130,246,0.88));backdrop-filter:blur(12px);border:1px solid rgba(147,197,253,0.35);border-radius:22px;padding:8px 14px 8px 10px;display:flex;align-items:center;gap:8px;cursor:pointer;box-shadow:0 4px 20px rgba(0,0,0,0.5);font-family:-apple-system,BlinkMacSystemFont,sans-serif;font-size:12px;font-weight:600;color:#dbeafe;animation:tc-chip-in .3s ease-out;';
     chip.innerHTML = '<span style="font-size:16px">🚂</span><span>' + data.fromName + ' → ' + data.toName + '<br><span style="font-weight:400;font-size:11px;opacity:.8">' + data.departures.length + ' avgångar — fråga AI</span></span>';
-    chip.addEventListener('click', function() { chip.remove(); var panel = document.getElementById('tc-panel'); if (panel && panel.style.display === 'none') { panel.style.display = 'flex'; updateContextBar(); var inp = document.getElementById('tc-input'); if (inp) inp.focus(); } });
+    chip.addEventListener('click', function() { chip.remove(); var panel = document.getElementById('tc-panel'); if (panel && panel.style.display === 'none') { panel.style.display = 'flex'; tcSyncExpanded(); updateContextBar(); var inp = document.getElementById('tc-input'); if (inp) inp.focus(); } });
     setTimeout(function() { if (chip.parentNode) chip.remove(); }, 8000);
     document.body.appendChild(chip);
   }
@@ -126,6 +127,14 @@
         cursor:pointer;padding:0 2px;line-height:1;transition:color .12s;
       }
       .tc-header-close:hover{color:#fff;}
+      .tc-header-expand {
+        background:none;border:none;color:rgba(255,255,255,0.7);
+        cursor:pointer;padding:0 2px;line-height:0;transition:color .12s;
+        display:flex;align-items:center;
+      }
+      .tc-header-expand:hover{color:#fff;}
+      .tc-header-expand svg{display:block;transition:transform .18s;}
+      body.tc-chat-max .tc-header-expand svg{transform:rotate(180deg);}
       .tc-context-bar {
         padding:7px 14px;font-size:11px;font-weight:600;
         color:rgba(147,197,253,0.8);letter-spacing:0.02em;
@@ -272,6 +281,22 @@
         .tc-fab{width:44px;height:44px;}
         .tc-fab svg{width:36px;height:20px;}
       }
+      /* Expanderat lage. Klassen sitter pa body sa att aven .tc-fab-wrap gar att na,
+         och sa att specificiteten (0,2,1) slar bade bas- och mediaregler ovan. */
+      body.tc-chat-max .tc-panel{
+        width:min(560px, calc(100vw - 48px));
+        max-height:calc(100vh - 120px);
+        max-height:calc(100dvh - 120px);
+      }
+      /* Smal eller lag skarm: expanderat = helskarmsark, FAB:en i vagen doljs */
+      @media(max-width:640px),(max-height:480px){
+        body.tc-chat-max .tc-panel{
+          left:8px;right:8px;top:8px;bottom:8px;
+          width:auto;max-height:none;border-radius:14px;
+        }
+        body.tc-chat-max .tc-fab-wrap{display:none;}
+        body.tc-chat-max .tc-quick{display:flex;}
+      }
     `;
     document.head.appendChild(style);
 
@@ -348,6 +373,9 @@
           <span>🚂 Tågassistenten</span>
           <div class="tc-header-actions">
             <button class="tc-header-clear" id="tc-clear">Rensa</button>
+            <button class="tc-header-expand" id="tc-expand" title="Expandera chatten" aria-label="Expandera chatten" aria-expanded="false">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg>
+            </button>
             <button class="tc-header-close" id="tc-close">✕</button>
           </div>
         </div>
@@ -379,6 +407,7 @@
 
     document.getElementById("tc-fab").addEventListener("click", tcToggle);
     document.getElementById("tc-close").addEventListener("click", tcToggle);
+    document.getElementById("tc-expand").addEventListener("click", tcToggleExpanded);
     document.getElementById("tc-send").addEventListener("click", tcSend);
     document.getElementById("tc-clear").addEventListener("click", tcClear);
     document.getElementById("tc-input").addEventListener("keydown", function(e) { if (e.key === "Enter") tcSend(); });
@@ -386,16 +415,42 @@
       var btn = e.target.closest(".tc-quick-btn");
       if (btn) tcSendMessage(btn.dataset.q);
     });
+
+    tcSyncExpanded();
   }
 
   function tcToggle() {
     var panel = document.getElementById("tc-panel");
     var open = panel.style.display === "none";
     panel.style.display = open ? "flex" : "none";
+    tcSyncExpanded();
     if (open) {
       updateContextBar();
       document.getElementById("tc-input").focus();
     }
+  }
+
+  // Panelen raknas som maximerad bara nar den ocksa ar oppen — annars skulle
+  // .tc-fab-wrap forbli dold pa mobil och chatten bli oatkomlig efter stangning.
+  function tcSyncExpanded() {
+    var panel = document.getElementById("tc-panel");
+    var open = panel && panel.style.display !== "none";
+    document.body.classList.toggle("tc-chat-max", !!(open && tcExpanded));
+    var btn = document.getElementById("tc-expand");
+    if (btn) {
+      var lbl = tcExpanded ? "Minska chatten" : "Expandera chatten";
+      btn.title = lbl;
+      btn.setAttribute("aria-label", lbl);
+      btn.setAttribute("aria-expanded", tcExpanded ? "true" : "false");
+    }
+  }
+
+  function tcToggleExpanded() {
+    tcExpanded = !tcExpanded;
+    try { localStorage.setItem("tc-chat-max", tcExpanded ? "1" : "0"); } catch(e) {}
+    tcSyncExpanded();
+    var msgs = document.getElementById("tc-messages");
+    if (msgs) msgs.scrollTop = msgs.scrollHeight;
   }
 
   function updateContextBar() {
@@ -888,7 +943,7 @@
     }
 
     var panel = document.getElementById('tc-panel');
-    if (panel && panel.style.display === 'none') panel.style.display = 'flex';
+    if (panel && panel.style.display === 'none') { panel.style.display = 'flex'; tcSyncExpanded(); }
 
     var seatsMsg = seatsLeft > 0
       ? ' Det finns **' + seatsLeft + ' MiniPris-platser kvar**.'
