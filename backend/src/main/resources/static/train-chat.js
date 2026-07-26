@@ -26,7 +26,7 @@
     chip.id = 'tc-search-chip';
     chip.className = 'tc-search-chip';
     chip.innerHTML = '<span class="tc-search-chip-icon">🚂</span><span>' + data.fromName + ' → ' + data.toName + '<br><span class="tc-search-chip-sub">' + data.departures.length + ' avgångar — fråga AI</span></span>';
-    chip.addEventListener('click', function() { chip.remove(); var panel = document.getElementById('tc-panel'); if (panel && panel.style.display === 'none') { panel.style.display = 'flex'; tcSyncExpanded(); updateContextBar(); var inp = document.getElementById('tc-input'); if (inp) inp.focus(); } });
+    chip.addEventListener('click', function() { chip.remove(); if (!tcIsOpen()) tcSetOpen(true); });
     setTimeout(function() { if (chip.parentNode) chip.remove(); }, 8000);
     document.body.appendChild(chip);
   }
@@ -104,9 +104,13 @@
         backdrop-filter:blur(40px) saturate(160%);-webkit-backdrop-filter:blur(40px) saturate(160%);
         border:1px solid rgba(125,211,252,0.28);border-radius:20px;
         box-shadow:0 8px 48px rgba(0,0,0,.7),0 0 70px rgba(96,165,250,0.2),0 1px 0 rgba(255,255,255,0.14) inset;
-        display:flex;flex-direction:column;overflow:hidden;
+        display:none;flex-direction:column;overflow:hidden;
         font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
       }
+      /* Oppet/stangt bor i en klass pa body, inte i panelens inline style.
+         Da kan FAB-regeln nedan uttrycka "expanderad OCH oppen" i ren CSS
+         i stallet for att JS ska spegla tillstandet at den. */
+      body.tc-chat-open .tc-panel{display:flex;}
       .tc-header {
         background:linear-gradient(135deg,rgba(37,99,235,0.72),rgba(59,130,246,0.6));
         backdrop-filter:blur(10px) saturate(150%);-webkit-backdrop-filter:blur(10px) saturate(150%);
@@ -311,7 +315,7 @@
           left:8px;right:8px;top:8px;bottom:8px;
           width:auto;max-height:none;border-radius:14px;
         }
-        body.tc-chat-max .tc-fab-wrap{display:none;}
+        body.tc-chat-open.tc-chat-max .tc-fab-wrap{display:none;}
         body.tc-chat-max .tc-quick:not(.tc-quick-off){display:flex;}
       }
     `;
@@ -385,7 +389,7 @@
           </button>
         </div>
       </div>
-      <div class="tc-panel" id="tc-panel" style="display:none;">
+      <div class="tc-panel" id="tc-panel">
         <div class="tc-header">
           <span>🚂 Tågassistenten</span>
           <div class="tc-header-actions">
@@ -433,39 +437,40 @@
       if (btn) tcSendMessage(btn.dataset.q);
     });
 
-    tcSyncExpanded();
+    document.body.classList.toggle("tc-chat-max", tcExpanded);
+    tcUpdateExpandBtn();
   }
 
-  function tcToggle() {
-    var panel = document.getElementById("tc-panel");
-    var open = panel.style.display === "none";
-    panel.style.display = open ? "flex" : "none";
-    tcSyncExpanded();
+  function tcIsOpen() {
+    return document.body.classList.contains("tc-chat-open");
+  }
+
+  function tcSetOpen(open) {
+    document.body.classList.toggle("tc-chat-open", open);
     if (open) {
       updateContextBar();
       document.getElementById("tc-input").focus();
     }
   }
 
-  // Panelen raknas som maximerad bara nar den ocksa ar oppen — annars skulle
-  // .tc-fab-wrap forbli dold pa mobil och chatten bli oatkomlig efter stangning.
-  function tcSyncExpanded() {
-    var panel = document.getElementById("tc-panel");
-    var open = panel && panel.style.display !== "none";
-    document.body.classList.toggle("tc-chat-max", !!(open && tcExpanded));
+  function tcToggle() {
+    tcSetOpen(!tcIsOpen());
+  }
+
+  function tcUpdateExpandBtn() {
     var btn = document.getElementById("tc-expand");
-    if (btn) {
-      var lbl = tcExpanded ? "Minska chatten" : "Expandera chatten";
-      btn.title = lbl;
-      btn.setAttribute("aria-label", lbl);
-      btn.setAttribute("aria-expanded", tcExpanded ? "true" : "false");
-    }
+    if (!btn) return;
+    var lbl = tcExpanded ? "Minska chatten" : "Expandera chatten";
+    btn.title = lbl;
+    btn.setAttribute("aria-label", lbl);
+    btn.setAttribute("aria-expanded", tcExpanded ? "true" : "false");
   }
 
   function tcToggleExpanded() {
     tcExpanded = !tcExpanded;
     try { localStorage.setItem("tc-chat-max", tcExpanded ? "1" : "0"); } catch(e) {}
-    tcSyncExpanded();
+    document.body.classList.toggle("tc-chat-max", tcExpanded);
+    tcUpdateExpandBtn();
     var msgs = document.getElementById("tc-messages");
     if (msgs) msgs.scrollTop = msgs.scrollHeight;
   }
@@ -959,8 +964,7 @@
       quick.classList.remove('tc-quick-off');
     }
 
-    var panel = document.getElementById('tc-panel');
-    if (panel && panel.style.display === 'none') { panel.style.display = 'flex'; tcSyncExpanded(); }
+    if (!tcIsOpen()) tcSetOpen(true);
 
     var seatsMsg = seatsLeft > 0
       ? ' Det finns **' + seatsLeft + ' MiniPris-platser kvar**.'
