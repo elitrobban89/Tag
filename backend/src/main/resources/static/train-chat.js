@@ -96,7 +96,9 @@
       .tc-fab:hover{transform:scale(1.08);box-shadow:0 6px 28px rgba(29,78,216,.8);}
       .tc-panel {
         position:fixed;bottom:96px;right:24px;z-index:9998;
-        width:380px;max-height:540px;
+        width:380px;
+        max-height:min(540px, calc(100vh - 130px));
+        max-height:min(540px, calc(100dvh - 130px));
         background:linear-gradient(160deg,rgba(20,38,80,0.4),rgba(8,16,36,0.48));
         backdrop-filter:blur(40px) saturate(160%);-webkit-backdrop-filter:blur(40px) saturate(160%);
         border:1px solid rgba(125,211,252,0.28);border-radius:20px;
@@ -238,9 +240,37 @@
       @keyframes tc-dep-flash{0%,100%{box-shadow:none}30%,70%{box-shadow:0 0 0 3px rgba(96,165,250,.6),0 0 20px rgba(96,165,250,.2)}}
       .tc-dep-highlight{animation:tc-dep-flash 2s ease;}
       @keyframes tc-chip-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-      @media(max-width:400px){
-        .tc-panel{width:calc(100vw - 16px);right:8px;bottom:92px;}
-        .tc-fab-wrap{right:12px;bottom:12px;}
+      @media(max-width:640px){
+        /* Panelen ska vara ett kort i underkanten — inte ta över hela skarmen */
+        .tc-panel{
+          width:auto;left:10px;right:10px;bottom:88px;border-radius:16px;
+          max-height:min(440px, 58vh);
+          max-height:min(440px, 58dvh);
+        }
+        .tc-fab-wrap{right:12px;bottom:12px;gap:4px;}
+        .tc-fab{width:48px;height:48px;border-radius:15px;}
+        .tc-fab svg{width:40px;height:22px;}
+        .tc-fab-label{font-size:10px;padding:2px 8px;}
+        .tc-spark{font-size:11px;}
+        .tc-spark:nth-child(2){top:14px;left:-14px;}
+        .tc-spark:nth-child(3){top:14px;right:-14px;}
+        .tc-header{padding:10px 12px;font-size:13px;}
+        .tc-context-bar{padding:6px 12px;}
+        .tc-messages{padding:11px 10px;gap:8px;}
+        .tc-bubble{max-width:90%;padding:9px 11px;}
+        .tc-quick{padding:8px 10px 3px;gap:6px;}
+        .tc-quick-btn{font-size:11px;padding:4px 10px;}
+        .tc-input-row{padding:8px 10px;}
+        .tc-train-img{max-height:100px;}
+        #tc-search-chip{right:10px !important;left:10px !important;bottom:70px !important;}
+      }
+      /* Liggande mobil: nastan ingen hojd kvar — hall panelen riktigt lag */
+      @media(max-width:900px) and (max-height:480px){
+        .tc-panel{bottom:72px;max-height:min(300px, 70vh);max-height:min(300px, 70dvh);}
+        .tc-quick{display:none;}
+        .tc-fab-label{display:none;}
+        .tc-fab{width:44px;height:44px;}
+        .tc-fab svg{width:36px;height:20px;}
       }
     `;
     document.head.appendChild(style);
