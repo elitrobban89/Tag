@@ -24,8 +24,8 @@
     if (existing) existing.remove();
     var chip = document.createElement('div');
     chip.id = 'tc-search-chip';
-    chip.style.cssText = 'position:fixed;bottom:100px;right:24px;z-index:9997;background:linear-gradient(135deg,rgba(29,78,216,0.92),rgba(59,130,246,0.88));backdrop-filter:blur(12px);border:1px solid rgba(147,197,253,0.35);border-radius:22px;padding:8px 14px 8px 10px;display:flex;align-items:center;gap:8px;cursor:pointer;box-shadow:0 4px 20px rgba(0,0,0,0.5);font-family:-apple-system,BlinkMacSystemFont,sans-serif;font-size:12px;font-weight:600;color:#dbeafe;animation:tc-chip-in .3s ease-out;';
-    chip.innerHTML = '<span style="font-size:16px">🚂</span><span>' + data.fromName + ' → ' + data.toName + '<br><span style="font-weight:400;font-size:11px;opacity:.8">' + data.departures.length + ' avgångar — fråga AI</span></span>';
+    chip.className = 'tc-search-chip';
+    chip.innerHTML = '<span class="tc-search-chip-icon">🚂</span><span>' + data.fromName + ' → ' + data.toName + '<br><span class="tc-search-chip-sub">' + data.departures.length + ' avgångar — fråga AI</span></span>';
     chip.addEventListener('click', function() { chip.remove(); var panel = document.getElementById('tc-panel'); if (panel && panel.style.display === 'none') { panel.style.display = 'flex'; tcSyncExpanded(); updateContextBar(); var inp = document.getElementById('tc-input'); if (inp) inp.focus(); } });
     setTimeout(function() { if (chip.parentNode) chip.remove(); }, 8000);
     document.body.appendChild(chip);
@@ -253,6 +253,19 @@
       @keyframes tc-dep-flash{0%,100%{box-shadow:none}30%,70%{box-shadow:0 0 0 3px rgba(96,165,250,.6),0 0 20px rgba(96,165,250,.2)}}
       .tc-dep-highlight{animation:tc-dep-flash 2s ease;}
       @keyframes tc-chip-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+      .tc-search-chip {
+        position:fixed;bottom:100px;right:24px;z-index:9997;
+        background:linear-gradient(135deg,rgba(29,78,216,0.92),rgba(59,130,246,0.88));
+        backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+        border:1px solid rgba(147,197,253,0.35);border-radius:22px;
+        padding:8px 14px 8px 10px;display:flex;align-items:center;gap:8px;cursor:pointer;
+        box-shadow:0 4px 20px rgba(0,0,0,0.5);
+        font-family:-apple-system,BlinkMacSystemFont,sans-serif;
+        font-size:12px;font-weight:600;color:#dbeafe;
+        animation:tc-chip-in .3s ease-out;
+      }
+      .tc-search-chip-icon{font-size:16px;}
+      .tc-search-chip-sub{font-weight:400;font-size:11px;opacity:.8;}
       @media(max-width:640px){
         /* Panelen ska vara ett kort i underkanten — inte ta över hela skarmen */
         .tc-panel{
@@ -275,7 +288,7 @@
         .tc-quick-btn{font-size:11px;padding:4px 10px;}
         .tc-input-row{padding:8px 10px;}
         .tc-train-img{max-height:100px;}
-        #tc-search-chip{right:10px !important;left:10px !important;bottom:70px !important;}
+        .tc-search-chip{right:10px;left:10px;bottom:70px;}
       }
       /* Liggande mobil: nastan ingen hojd kvar — hall panelen riktigt lag */
       @media(max-width:900px) and (max-height:480px){
