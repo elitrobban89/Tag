@@ -175,6 +175,10 @@
         padding:10px 12px 4px;display:flex;flex-wrap:wrap;gap:7px;flex-shrink:0;
         background:rgba(7,13,31,0.5);border-top:1px solid rgba(96,165,250,0.1);
       }
+      /* JS-styrt lage: satts nar samtalet borjat sa att snabbknapparna forsvinner.
+         Egen klass i stallet for inline display, annars kan CSS-reglerna nedan
+         (platsbrist i liggande lage, expanderat lage) aldrig ta over. */
+      .tc-quick.tc-quick-off{display:none;}
       .tc-quick-btn {
         background:rgba(59,130,246,0.1);border:1px solid rgba(96,165,250,0.25);color:#93c5fd;
         border-radius:20px;padding:5px 12px;font-size:12px;font-weight:600;
@@ -295,7 +299,7 @@
           width:auto;max-height:none;border-radius:14px;
         }
         body.tc-chat-max .tc-fab-wrap{display:none;}
-        body.tc-chat-max .tc-quick{display:flex;}
+        body.tc-chat-max .tc-quick:not(.tc-quick-off){display:flex;}
       }
     `;
     document.head.appendChild(style);
@@ -398,7 +402,7 @@
     tcAppendBot("Hej! Jag hjälper dig hitta rätt tåg 🚂 Gör en sökning så kan jag svara på frågor om priser, platser och restider!", false);
 
     if (trainChatHistory.length > 0) {
-      document.getElementById("tc-quick").style.display = "none";
+      document.getElementById("tc-quick").classList.add("tc-quick-off");
       trainChatHistory.forEach(function(m) {
         if (m.role === "user") tcAppendUser(m.content);
         else if (m.role === "assistant") tcAppendBot(m.content, false);
@@ -631,7 +635,7 @@
       '<button class="tc-quick-btn" data-q="Vilken avgång är snabbast?">⚡ Snabbast</button>' +
       '<button class="tc-quick-btn" data-q="Vilka avgångar har MiniPris-platser kvar?">🎫 Platser kvar</button>' +
       '<button class="tc-quick-btn" data-q="Ge mig råd om vilken avgång jag ska välja">🤖 Ge råd</button>';
-    quick.style.display = "flex";
+    quick.classList.remove("tc-quick-off");
     updateContextBar();
     tcAppendBot("Hej! Jag hjälper dig hitta rätt tåg 🚂 Gör en sökning så kan jag svara på frågor om priser, platser och restider!", false);
   }
@@ -645,7 +649,7 @@
   }
 
   async function tcSendMessage(message) {
-    document.getElementById("tc-quick").style.display = "none";
+    document.getElementById("tc-quick").classList.add("tc-quick-off");
     tcAppendUser(message);
 
     var msgsEl = document.getElementById("tc-messages");
@@ -939,7 +943,7 @@
         '<button class="tc-quick-btn" data-q="Finns WiFi och 5G på ' + (model || 'detta tåg') + '?">🛜 WiFi & 5G</button>' +
         '<button class="tc-quick-btn" data-q="Vad gäller för bagage på denna avgång?">🧳 Bagage</button>' +
         '<button class="tc-quick-btn" data-q="Hur lång tid tar det från ' + toName + ' centralstation till centrum?">🗺 Till centrum</button>';
-      quick.style.display = 'flex';
+      quick.classList.remove('tc-quick-off');
     }
 
     var panel = document.getElementById('tc-panel');
