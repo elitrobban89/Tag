@@ -122,6 +122,12 @@ public class TrafikverketService {
         // här är inget som HADE slutat fungera — men omdirigeringen är en övergångslösning, och
         // natten 1-2/9 väntas avbrott. Se data.trafikverket.se/news/changes-in-trainannouncement.
         //
+        // schemaversion 2.0 kräver namespace och är därför möjlig först nu. Bytet gjordes efter
+        // att svaren jämförts fält för fält mot 1.8 på skarpt API 2026-08-19: identiska för allt
+        // vi läser, både för tåg i tid och för 25 försenade (EstimatedTimeAtLocation, Canceled,
+        // ProductInformation, ToLocation, TrainOwner). Kommer nya fält i 2.0 rör de inte oss —
+        // INCLUDE-listan nedan avgör vad som hämtas.
+        //
         // orderby är INTE kosmetik och måste följa med i samma ändring: den nya datamängden
         // returnerar träffarna i en annan ordning än den gamla. Uppmätt 2026-08-19 mot skarpt API
         // för Göteborg C, samma filter och limit: utan namespace kom 18:04, 18:05, 18:10, …
@@ -132,7 +138,7 @@ public class TrafikverketService {
         String xml = """
             <REQUEST>
               <LOGIN authenticationkey="%s"/>
-              <QUERY objecttype="TrainAnnouncement" namespace="rail.trafficinfo" schemaversion="1.8" limit="%d" orderby="AdvertisedTimeAtLocation">
+              <QUERY objecttype="TrainAnnouncement" namespace="rail.trafficinfo" schemaversion="2.0" limit="%d" orderby="AdvertisedTimeAtLocation">
                 <FILTER>
                   <AND>
                     <EQ name="LocationSignature" value="%s"/>
