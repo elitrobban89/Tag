@@ -117,10 +117,22 @@ public class TrafikverketService {
         String fromTime = date.equals(LocalDate.now(stockholm))
             ? nowSweden.toLocalTime().format(DateTimeFormatter.ofPattern("HH:mm:ss"))
             : "00:00:00";
+        // namespace krävs från 2026-09-02: Trafikverket flyttar TrainAnnouncement till
+        // "rail.trafficinfo". Frågor upp till schemaversion 1.9 dirigeras om automatiskt, så det
+        // här är inget som HADE slutat fungera — men omdirigeringen är en övergångslösning, och
+        // natten 1-2/9 väntas avbrott. Se data.trafikverket.se/news/changes-in-trainannouncement.
+        //
+        // orderby är INTE kosmetik och måste följa med i samma ändring: den nya datamängden
+        // returnerar träffarna i en annan ordning än den gamla. Uppmätt 2026-08-19 mot skarpt API
+        // för Göteborg C, samma filter och limit: utan namespace kom 18:04, 18:05, 18:10, …
+        // (tidsordning) — med namespace kom 21:00, 22:20, 23:20 först. Eftersom limit kapar
+        // listan på API-sidan och avgångarna aldrig sorteras om här hade kortet visat kvällens
+        // sista tåg i stället för de närmaste. Ett namespace-tillägg utan orderby är alltså
+        // en tyst regression, inte en no-op.
         String xml = """
             <REQUEST>
               <LOGIN authenticationkey="%s"/>
-              <QUERY objecttype="TrainAnnouncement" schemaversion="1.8" limit="%d">
+              <QUERY objecttype="TrainAnnouncement" namespace="rail.trafficinfo" schemaversion="1.8" limit="%d" orderby="AdvertisedTimeAtLocation">
                 <FILTER>
                   <AND>
                     <EQ name="LocationSignature" value="%s"/>
