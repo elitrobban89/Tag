@@ -43,6 +43,25 @@ Trafikverkets öppna API anger **aldrig** fordonstyp — bara tågnummer, tider,
 
 Lager 1–2 och 5 är kurerad kunskap avläst ur verklig data, **inte officiella regler** — de behöver ses över vid tidtabellsskifte.
 
+### Trafikverkets API-omläggning 2026-09-02
+
+Datamängden `TrainAnnouncement` flyttades till namespace **`rail.trafficinfo`**, och frågan är omlagd i förväg (2026-08-19) så att skiftet inte märks i drift. Tjänsten frågar nu med `namespace="rail.trafficinfo"` och **schemaversion 2.0** — den senare kräver namespace och gick alltså inte att använda tidigare.
+
+Frågor upp till schemaversion 1.9 dirigeras om automatiskt av Trafikverket, så den gamla frågan hade fortsatt fungera. Ändringen gjordes ändå: omdirigeringen är en övergångslösning, och natten 1–2 september väntas avbrott under själva skiftet.
+
+**Den nya datamängden sorterar inte som den gamla, och det står inte i Trafikverkets notis.** Uppmätt mot skarpt API för Göteborg C med identiskt filter och limit:
+
+| Fråga | Första träffarna |
+|---|---|
+| utan namespace | 18:04 · 18:05 · 18:10 · 18:11 · 18:15 |
+| med namespace | **21:00 · 22:20 · 23:20** · 18:04 · 18:05 |
+
+Eftersom `limit` kapar listan på API-sidan och avgångarna aldrig sorteras om i Java hade ett ensamt namespace-tillägg tyst visat kvällens sista tåg i stället för de närmaste — inget hade kastat, inget test hade fallit (de kör mot fixturer). Därför bär frågan **`orderby="AdvertisedTimeAtLocation"`**, och de två attributen hör ihop: tas orderby bort återkommer felet utan att något larmar.
+
+Bytet till 2.0 gjordes efter att svaren jämförts fält för fält mot 1.8 på skarpt API, både för tåg i tid och för 25 försenade: `AdvertisedTrainIdent`, `AdvertisedTimeAtLocation`, `EstimatedTimeAtLocation`, `ToLocation`, `TrainOwner`, `Canceled` och `ProductInformation` var identiska. Nya fält i 2.0 påverkar inte tjänsten — `INCLUDE`-listan styr vad som hämtas.
+
+`TrainStation`-frågan (schemaversion 1) berörs inte av omläggningen; det är en annan datamängd.
+
 ### Återresa & kombinerad bokning
 - **Spara utresa** – väljer man "Lägg till återresa" istället för att betala direkt sparas utresans vagn och platsnummer automatiskt
 - **Kombinerad checkout** – när man sedan valt sittplats på återresan visas en gemensam Swish-kassa med båda resorna och ett totalpris
@@ -98,7 +117,7 @@ Lager 1–2 och 5 är kurerad kunskap avläst ur verklig data, **inte officiella
 | Lager | Teknik |
 |---|---|
 | Backend | Java 21, Spring Boot 3.2.5, Thymeleaf |
-| Avgångsdata | Trafikverket Open Data API |
+| Avgångsdata | Trafikverket Open Data API — `TrainAnnouncement` i namespace `rail.trafficinfo`, schemaversion 2.0 |
 | AI-chatbot | Groq API (`openai/gpt-oss-120b`, `reasoning_effort: low`), avgångskontextuell, max 8 meddelanden historik |
 | AI-förslag | Groq API (`openai/gpt-oss-120b`, `reasoning_effort: low`), cache 2 h per (from+kategori) |
 | Deploy | Render (Docker, free tier) |
