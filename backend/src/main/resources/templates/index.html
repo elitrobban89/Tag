@@ -1176,11 +1176,43 @@
 </div>
 <script>
   (function () {
+    // ── Landa i appen, inte i säljtexten ────────────────────────────────────
+    //
+    // På elitrobban.se/minipristaget/ ligger appen i ett <iframe> under sidhuvud,
+    // rubrik och en intro-ruta. Besökaren såg splashen lyfta och satt sedan kvar i
+    // texten ovanför, med appen nedanför vikkanten.
+    //
+    // Rullningen måste alltså göras i FÖRÄLDERSIDAN, och den är korsdomän (elitrobban.se
+    // mot onrender.com) — vi kommer inte åt dess scrollposition. scrollIntoView() på ett
+    // element HÄR INNE gör ändå jobbet: webbläsaren rullar alla omslutande scrollytor,
+    // ramen inräknad, och det fungerar över domängränsen. Uppmätt i Chrome mot två skilda
+    // origins: föräldern rullade till ramens överkant på pricken.
+    //
+    // Valt framför window.parent.postMessage därför att den vägen kräver en lyssnare i
+    // WordPress-sidan — sidan är en manuell kopia utan ett enda eget skript, så den
+    // lösningen hade legat död tills någon klistrat in den för hand.
+    //
+    // Focus() på ett ankare rullar också, men stjäl tangentbordsfokus från föräldern och
+    // rullar bara minsta möjliga sträcka. scrollIntoView gör varken eller.
+    function mptRullaFramAppen() {
+      if (window.top === window.self) return; // står vi själva är vi redan överst
+      var lugnt = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      try {
+        document.body.scrollIntoView({ behavior: lugnt ? 'auto' : 'smooth', block: 'start' });
+      } catch (e) {
+        try { document.body.scrollIntoView(true); } catch (e2) {}
+      }
+    }
+
     var intro = document.getElementById('mpt-intro');
-    if (!intro) return;
+    if (!intro) { setTimeout(mptRullaFramAppen, 400); return; }
     // Redan visad denna flik-session? Ta bort direkt (körs under parsning → ingen blink).
     try {
-      if (sessionStorage.getItem('mpt_welcomed')) { intro.parentNode.removeChild(intro); return; }
+      if (sessionStorage.getItem('mpt_welcomed')) {
+        intro.parentNode.removeChild(intro);
+        setTimeout(mptRullaFramAppen, 400);
+        return;
+      }
       sessionStorage.setItem('mpt_welcomed', '1');
     } catch (e) {}
     // Bygg ett långt SVG-tåg: många färgglada vagnar + lok (fronten/loket till höger).
@@ -1225,6 +1257,7 @@
     setTimeout(function () {
       if (intro.parentNode) intro.parentNode.removeChild(intro);
       document.documentElement.style.overflow = '';
+      mptRullaFramAppen();
     }, mptReduce ? 2700 : 5700);
   })();
 </script>
