@@ -48,17 +48,20 @@
     }
     @keyframes bgShift { 0% { opacity: .18; } 100% { opacity: .58; } }
 
-    /* Glödande Groq-badge (gul/röd) — samma som på splashen, återanvänds i appen */
+    /* Groq-brickan — SAMMA officiella logotyp som bilrådgivningen, elbilsappen och
+       väderappen använder, på exakt samma plats som textbrickan låg. Bilden serveras av
+       CarAdvice: den tjänsten ligger på betald plan och är alltid vaken, medan
+       console.groq.com är en tredjepartsvärd som kan byta sökväg. Glöden ligger kvar så
+       brickan fortfarande hör ihop med appens varma solnedgångston. */
     .groq-badge {
-      display: inline-flex; align-items: center; gap: 6px; margin-top: 12px; padding: 6px 15px; border-radius: 20px;
-      font-size: 10.5px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: #ffe8a8;
+      display: inline-flex; align-items: center; gap: 6px; margin-top: 12px; padding: 5px 13px; border-radius: 20px;
       background: linear-gradient(135deg, rgba(255,90,40,.24), rgba(255,170,50,.18));
       backdrop-filter: blur(8px) saturate(150%); -webkit-backdrop-filter: blur(8px) saturate(150%);
       border: 1px solid rgba(255,150,60,.6);
-      text-shadow: 0 1px 3px rgba(60,15,0,.6), 0 0 12px rgba(255,150,60,.5);
       animation: groqGlow 1.9s ease-in-out infinite alternate;
+      text-decoration: none;
     }
-    .groq-badge svg { width: 12px; height: 12px; fill: #ffc247; filter: drop-shadow(0 1px 2px rgba(50,10,0,.7)) drop-shadow(0 0 6px rgba(255,150,50,1)); }
+    .groq-badge img { display: block; width: 53px; height: 32px; }
     @keyframes groqGlow {
       from { box-shadow: 0 3px 10px rgba(30,8,0,.45), 0 0 16px rgba(255,110,40,.45), inset 0 0 12px rgba(255,80,40,.18); }
       to   { box-shadow: 0 4px 14px rgba(30,8,0,.5), 0 0 34px rgba(255,150,50,.85), inset 0 0 18px rgba(255,90,40,.34); } }
@@ -1076,12 +1079,12 @@
       filter: drop-shadow(0 0 34px rgba(96,165,250,.45)); animation: mptFade .6s ease .1s both; }
     @keyframes mptFade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
     /* Glödande Groq-badge (gul/röd) */
-    .mpt-groq { display: inline-flex; align-items: center; gap: 6px; margin-top: 16px; padding: 5px 14px; border-radius: 20px;
-      font-size: 11px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: #ffe08a;
+    /* Splashens bricka bär samma officiella logotyp som appens, på samma plats. */
+    .mpt-groq { display: inline-flex; align-items: center; gap: 6px; margin-top: 16px; padding: 4px 13px; border-radius: 20px;
       background: linear-gradient(135deg, rgba(255,90,40,.2), rgba(255,170,50,.16));
       border: 1px solid rgba(255,150,60,.55);
       animation: mptFade .6s ease .2s both, mptGroqGlow 1.9s ease-in-out infinite alternate; }
-    .mpt-groq svg { width: 12px; height: 12px; fill: #ffb020; filter: drop-shadow(0 0 4px rgba(255,140,40,.9)); }
+    .mpt-groq img { display: block; width: 53px; height: 32px; }
     @keyframes mptGroqGlow {
       from { box-shadow: 0 0 14px rgba(255,110,40,.4), inset 0 0 10px rgba(255,80,40,.15); }
       to   { box-shadow: 0 0 28px rgba(255,150,50,.75), inset 0 0 16px rgba(255,90,40,.32); } }
@@ -1137,7 +1140,8 @@
   <div class="mpt-intro-inner">
     <div class="mpt-welcome">Välkommen till</div>
     <div class="mpt-brand">MiniPrisTåget</div>
-    <div class="mpt-groq"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M13 2L4.5 13.5H11L10 22L19.5 10.5H13L13 2Z"/></svg>Powered by Groq AI</div>
+    <div class="mpt-groq"><img src="https://caradvice.onrender.com/powered-by-groq-dark.svg"
+         alt="Powered by Groq for fast inference." width="53" height="32"></div>
   </div>
   <div class="mpt-ground"></div>
   <div class="mpt-station" aria-hidden="true">
@@ -1388,7 +1392,10 @@
     <div class="header-icon"><img src="/images/logo.png" alt="MiniPrisTåget"></div>
     <h1>MiniPrisTåget</h1>
     <p>Sök tågresor med riktiga avgångstider</p>
-    <div class="groq-badge"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M13 2L4.5 13.5H11L10 22L19.5 10.5H13L13 2Z"/></svg>Powered by Groq AI</div>
+    <a class="groq-badge" href="https://groq.com" target="_blank" rel="noopener noreferrer">
+      <img src="https://caradvice.onrender.com/powered-by-groq-dark.svg"
+           alt="Powered by Groq for fast inference." width="53" height="32">
+    </a>
   </div>
 
   <!-- ── Search form ── -->
