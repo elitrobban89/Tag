@@ -93,8 +93,76 @@
         box-shadow:0 4px 20px rgba(29,78,216,.6);
         display:flex;align-items:center;justify-content:center;
         transition:transform .15s,box-shadow .15s;
+        /* Ligger OVANFOR halon och ringarna nedan. Utan egen z-index malas de
+           positionerade lagren over knappen och taget bleks bort. */
+        position:relative;z-index:1;
       }
       .tc-fab:hover{transform:scale(1.08);box-shadow:0 6px 28px rgba(29,78,216,.8);}
+
+      /* ── Tagassistenten vaknar nar appen syns ──────────────────────────────
+         Knappen sags inte av den som inte redan visste att den fanns. Sekvensen spelas
+         EN gang, nar sokformularet ar i vy (se tcVackAssistenten), och halon andas sedan
+         vidare tills chatten oppnats. Halon och ringarna ligger SIST i .tc-fab-ring med
+         flit: gnistorna adresseras med :nth-child(1..3) och hade tappat sina platser annars. */
+      .tc-halo {
+        position:absolute;inset:-12px;border-radius:50%;pointer-events:none;z-index:0;
+        background:radial-gradient(circle,rgba(59,130,246,.55) 0%,rgba(52,211,153,.18) 52%,transparent 72%);
+        opacity:0;transition:opacity .4s ease;
+      }
+      .tc-fab-wrap.tc-lockar .tc-halo{opacity:1;animation:tc-halo-andas 3.2s ease-in-out infinite;}
+      @keyframes tc-halo-andas {
+        0%,100%{transform:scale(.9);opacity:.5;}
+        50%{transform:scale(1.14);opacity:1;}
+      }
+      .tc-wave {
+        position:absolute;inset:0;border-radius:18px;pointer-events:none;z-index:0;
+        border:2px solid rgba(147,197,253,.75);opacity:0;
+      }
+      .tc-fab-wrap.tc-vaknar .tc-wave{animation:tc-wave 1.5s cubic-bezier(.2,.7,.3,1);}
+      .tc-fab-wrap.tc-vaknar .tc-wave:nth-of-type(2){animation-delay:.38s;border-color:rgba(52,211,153,.6);}
+      .tc-fab-wrap.tc-vaknar .tc-wave:nth-of-type(3){animation-delay:.76s;border-color:rgba(251,146,60,.55);}
+      @keyframes tc-wave {
+        0%{transform:scale(.72);opacity:.95;}
+        65%{opacity:.25;}
+        100%{transform:scale(2.5);opacity:0;}
+      }
+      /* Taget rullar in fran hoger och bromsar in. */
+      .tc-fab-wrap.tc-vaknar .tc-fab{animation:tc-tag-rullar-in 1.15s cubic-bezier(.22,1,.36,1);}
+      @keyframes tc-tag-rullar-in {
+        0%{transform:translateX(30px) scale(.7);}
+        45%{transform:translateX(-6px) scale(1.15);}
+        70%{transform:translateX(3px) scale(.96);}
+        100%{transform:none;}
+      }
+      /* Stralkastaren blinkar till nar taget stannat. */
+      .tc-fab-wrap.tc-vaknar .tc-lampa{animation:tc-lampa-blink 1.2s ease-out;}
+      @keyframes tc-lampa-blink {
+        0%{fill:#93c5fd;}
+        25%{fill:#fffbe6;}
+        45%{fill:#fef08a;}
+        65%{fill:#fffbe6;}
+        100%{fill:#fef08a;}
+      }
+      /* Pratbubblan. Pekhandelser slacks med flit: den ska aldrig sta i vagen for knappen
+         den pekar pa. width:max-content KRAVS — bubblan ar absolut placerad i .tc-fab-wrap,
+         som ar lika smal som knappen, och utan egen bredd krymper den till en bokstav per rad. */
+      .tc-chat-hej {
+        position:absolute;right:72px;bottom:4px;z-index:1;
+        width:max-content;max-width:min(240px,calc(100vw - 120px));
+        background:linear-gradient(145deg,rgba(17,40,110,.96),rgba(29,78,216,.92));
+        border:1px solid rgba(147,197,253,.4);border-radius:15px 15px 4px 15px;
+        color:#eaf2ff;font-size:12px;font-weight:600;line-height:1.35;
+        padding:9px 12px;box-shadow:0 10px 30px rgba(0,0,0,.5);
+        pointer-events:none;opacity:0;transform:translateX(12px) scale(.9);
+        transform-origin:100% 100%;transition:opacity .32s ease,transform .32s cubic-bezier(.22,1,.36,1);
+      }
+      .tc-fab-wrap.tc-hej .tc-chat-hej{opacity:1;transform:none;}
+      @media (prefers-reduced-motion:reduce){
+        .tc-halo,.tc-wave,.tc-fab-wrap.tc-vaknar .tc-fab,.tc-fab-wrap.tc-vaknar .tc-lampa{
+          animation:none!important;
+        }
+        .tc-fab-wrap.tc-lockar .tc-halo{opacity:.75;}
+      }
       .tc-panel {
         position:fixed;bottom:96px;right:24px;z-index:9998;
         width:380px;
@@ -278,6 +346,11 @@
           max-height:min(440px, 58dvh);
         }
         .tc-fab-wrap{right:12px;bottom:12px;gap:4px;}
+        /* Bredvid knappen finns ingen plats kvar pa en telefon — halsningen far lagga sig
+           ovanfor i stallet, med hela skarmbredden minus marginalerna. */
+        .tc-chat-hej{right:0;bottom:62px;max-width:calc(100vw - 36px);white-space:normal;
+          border-radius:15px 15px 15px 4px;transform:translateY(10px) scale(.92);transform-origin:100% 0;}
+        .tc-wave{border-radius:15px;}
         .tc-fab{width:48px;height:48px;border-radius:15px;}
         .tc-fab svg{width:40px;height:22px;}
         .tc-fab-label{font-size:10px;padding:2px 8px;}
@@ -358,7 +431,7 @@
               <rect x="64" y="11" width="7" height="5" rx="1.5" fill="rgba(255,255,255,0.3)"/>
               <rect x="74" y="11" width="6" height="5" rx="1.5" fill="rgba(255,255,255,0.3)"/>
               <!-- strålkastare -->
-              <ellipse cx="87.5" cy="16.5" rx="1.8" ry="1.3" fill="#fef08a"/>
+              <ellipse class="tc-lampa" cx="87.5" cy="16.5" rx="1.8" ry="1.3" fill="#fef08a"/>
               <ellipse cx="87.5" cy="16.5" rx="0.8" ry="0.6" fill="#fff"/>
               <line x1="60" y1="21" x2="82" y2="21" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"/>
               <!-- hjul (färgade per vagn) -->
@@ -387,7 +460,12 @@
               <line x1="0" y1="37.5" x2="88" y2="37.5" stroke="rgba(147,197,253,0.7)" stroke-width="1.8" stroke-linecap="round"/>
             </svg>
           </button>
+          <span class="tc-halo"></span>
+          <span class="tc-wave"></span>
+          <span class="tc-wave"></span>
+          <span class="tc-wave"></span>
         </div>
+        <div class="tc-chat-hej">👋 Hej! Fråga mig om avgångar, platser och priser.</div>
       </div>
       <div class="tc-panel" id="tc-panel">
         <div class="tc-header">
@@ -448,9 +526,61 @@
   function tcSetOpen(open) {
     document.body.classList.toggle("tc-chat-open", open);
     if (open) {
+      // Lockropet har gjort sitt i samma stund chatten oppnas — en halo som fortsatter
+      // pulsa bakom en oppen panel ar bara brus.
+      tcVackt = true;
+      tcLugnaAssistenten();
       updateContextBar();
       document.getElementById("tc-input").focus();
     }
+  }
+
+  // ── Assistenten vaknar nar besokaren ser appen ────────────────────────────────
+  //
+  // Knappen i hornet sags inte: den som inte redan visste att den fanns rullade forbi.
+  // Uppvakningen ar darfor en sekvens — ringar som slar ut, taget som rullar in och
+  // blinkar med stralkastaren, och en pratbubbla som sager vad den kan.
+  //
+  // Triggern ar att VALKOMSTSPLASHEN slappt, inte att sidan laddat. Appen ligger i ett
+  // iframe pa elitrobban.se/minipristaget/ och rullas fram i foraldersidan just nar
+  // splashen lyfter (mptRullaFramAppen i index.html) — det ar da besokaren faktiskt ser
+  // appen. En uppvakning som spelas bakom splashlagret syns inte alls.
+  var tcVackt = false;
+
+  function tcLugnaAssistenten() {
+    var wrap = document.querySelector(".tc-fab-wrap");
+    if (wrap) wrap.classList.remove("tc-lockar", "tc-hej", "tc-vaknar");
+  }
+
+  function tcVackAssistenten() {
+    if (tcVackt) return;
+    var wrap = document.querySelector(".tc-fab-wrap");
+    if (!wrap) return;
+    if (tcIsOpen()) { tcVackt = true; return; }
+    tcVackt = true;
+
+    var lugnt = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    wrap.classList.add("tc-lockar");
+    if (!lugnt) {
+      wrap.classList.add("tc-vaknar");
+      setTimeout(function () { wrap.classList.remove("tc-vaknar"); }, 1900);
+    }
+    setTimeout(function () { if (!tcIsOpen()) wrap.classList.add("tc-hej"); }, lugnt ? 0 : 700);
+    setTimeout(function () { wrap.classList.remove("tc-hej"); }, 9000);
+  }
+
+  function tcVackNarSplashenSlappt() {
+    var forsok = 0;
+    (function vanta() {
+      if (document.getElementById("mpt-intro")) {
+        if (++forsok > 80) return; // ~20 s: splashen hanger kvar, da avstar vi hellre
+        setTimeout(vanta, 250);
+        return;
+      }
+      // Extra andrum: foraldersidan rullar fram ramen i samma ogonblick splashen lyfter,
+      // och bubblan ska inte komma medan sidan fortfarande ror sig.
+      setTimeout(tcVackAssistenten, 900);
+    })();
   }
 
   function tcToggle() {
@@ -987,4 +1117,5 @@
   };
 
   initTrainChat();
+  tcVackNarSplashenSlappt();
 })();
