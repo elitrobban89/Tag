@@ -179,13 +179,28 @@
          Da kan FAB-regeln nedan uttrycka "expanderad OCH oppen" i ren CSS
          i stallet for att JS ska spegla tillstandet at den. */
       body.tc-chat-open .tc-panel{display:flex;}
+      /* Ribban skiftar farg som bilradgivningens och elbilsappens — samma mekanism i alla tre,
+         men i tagappens egen palett (djupblatt -> blatt -> indigo -> teal). Bandet ar dubbelt
+         sa brett som rutan och panoreras: fargen vandrar, layouten star still. ALLA toner ar
+         morka med flit — rubriken ar vit, och en ljus ton hade atit lasbarheten. */
       .tc-header {
-        background:linear-gradient(135deg,rgba(37,99,235,0.72),rgba(59,130,246,0.6));
+        background:linear-gradient(110deg,
+          rgba(12,26,58,0.94) 0%,rgba(23,49,110,0.92) 22%,rgba(37,99,235,0.86) 44%,
+          rgba(67,56,202,0.84) 64%,rgba(13,110,132,0.86) 82%,rgba(23,49,110,0.92) 100%);
+        background-size:220% 100%;
+        animation:tc-header-skift 16s ease-in-out infinite alternate;
         backdrop-filter:blur(10px) saturate(150%);-webkit-backdrop-filter:blur(10px) saturate(150%);
         border-bottom:1px solid rgba(125,211,252,0.25);
         color:#fff;padding:13px 16px;
         display:flex;align-items:center;justify-content:space-between;
         font-weight:700;font-size:14px;flex-shrink:0;gap:8px;
+      }
+      @keyframes tc-header-skift {
+        0%{background-position:0% 50%;}
+        100%{background-position:100% 50%;}
+      }
+      @media (prefers-reduced-motion:reduce){
+        .tc-header{animation:none;background-position:50% 50%;}
       }
       .tc-header-actions{display:flex;align-items:center;gap:6px;}
       .tc-header-clear {
