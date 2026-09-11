@@ -1179,8 +1179,13 @@
     // ── Landa i appen, inte i säljtexten ────────────────────────────────────
     //
     // På elitrobban.se/minipristaget/ ligger appen i ett <iframe> under sidhuvud,
-    // rubrik och en intro-ruta. Besökaren såg splashen lyfta och satt sedan kvar i
-    // texten ovanför, med appen nedanför vikkanten.
+    // rubrik och en intro-ruta. Besökaren satt kvar i texten ovanför med appen nedanför
+    // vikkanten.
+    //
+    // RULLNINGEN SKER DIREKT, inte när välkomstsplashen lyft. Första versionen väntade ut
+    // splashen — och då hade den redan spelat klart för en skärm ingen tittade på: man kom
+    // ned till appen precis när tåget försvunnit. Nu rullas sidan fram medan splashen
+    // fortfarande går, så den syns.
     //
     // Rullningen måste alltså göras i FÖRÄLDERSIDAN, och den är korsdomän (elitrobban.se
     // mot onrender.com) — vi kommer inte åt dess scrollposition. scrollIntoView() på ett
@@ -1204,13 +1209,16 @@
       }
     }
 
+    // Rulla fram appen med en gång — före splashen, inte efter. 250 ms är bara till för att
+    // föräldersidans layout ska ha satt sig (bilder och sidhuvud flyttar ramen annars).
+    setTimeout(mptRullaFramAppen, 250);
+
     var intro = document.getElementById('mpt-intro');
-    if (!intro) { setTimeout(mptRullaFramAppen, 400); return; }
+    if (!intro) return;
     // Redan visad denna flik-session? Ta bort direkt (körs under parsning → ingen blink).
     try {
       if (sessionStorage.getItem('mpt_welcomed')) {
         intro.parentNode.removeChild(intro);
-        setTimeout(mptRullaFramAppen, 400);
         return;
       }
       sessionStorage.setItem('mpt_welcomed', '1');
@@ -1257,7 +1265,8 @@
     setTimeout(function () {
       if (intro.parentNode) intro.parentNode.removeChild(intro);
       document.documentElement.style.overflow = '';
-      mptRullaFramAppen();
+      // Ingen rullning här: sidan står redan vid appen sedan 250 ms in, och att rycka i den
+      // en andra gång skulle dessutom slänga tillbaka den som rullat vidare under splashen.
     }, mptReduce ? 2700 : 5700);
   })();
 </script>
