@@ -8,7 +8,7 @@
   <parent>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
-    <version>3.2.5</version>
+    <version>3.5.16</version>
   </parent>
 
   <groupId>com.minipristaget</groupId>
@@ -16,11 +16,10 @@
   <version>1.0.0</version>
 
   <properties>
-    <java.version>17</java.version>
-    <!-- Nyare mockito/byte-buddy än Boot 3.2:s default — krävs för att mocka
-         konkreta klasser när testerna körs på JDK 22+ lokalt -->
+    <java.version>25</java.version>
+    <!-- Boot 3.5 pinnar Mockito 5.17; 5.23 behövs för att mocka klasser på Java 25.
+         Byte Buddy lämnas till Boot (1.17.8), nyare än 1.17.7 som Mockito kräver. -->
     <mockito.version>5.23.0</mockito.version>
-    <byte-buddy.version>1.17.7</byte-buddy.version>
   </properties>
 
   <dependencies>
