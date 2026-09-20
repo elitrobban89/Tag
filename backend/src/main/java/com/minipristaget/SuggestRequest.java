@@ -1,5 +1,6 @@
 package com.minipristaget;
 
+/** @author Robert Andersson Kopler */
 public class SuggestRequest {
     private String category;
     private String from;

@@ -1,5 +1,6 @@
 package com.minipristaget;
 
+/** @author Robert Andersson Kopler */
 public class TrainStation {
     private String signature;
     private String name;

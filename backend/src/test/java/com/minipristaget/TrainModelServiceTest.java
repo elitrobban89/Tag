@@ -7,6 +7,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * Tester för TrainModelServices rena logik: operatörsmappning, prisberäkning
  * (MiniPris/Lugn/1 klass/ordinarie), platser kvar och restidsuppskattning.
+ *
+ * @author Robert Andersson Kopler
  */
 class TrainModelServiceTest {
 

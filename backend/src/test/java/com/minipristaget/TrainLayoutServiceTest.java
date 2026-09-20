@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/** @author Robert Andersson Kopler */
 class TrainLayoutServiceTest {
 
     private final TrainLayoutService service = new TrainLayoutService();

@@ -26,6 +26,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(WebController.class)
 // Vagnsskissen är ren logik utan externa anrop — kör den skarpt i stället för mockad,
 // så att /api/train-layout och skisstexten i chattkontexten testas på riktigt.
+/** @author Robert Andersson Kopler */
 @org.springframework.context.annotation.Import(TrainLayoutService.class)
 class WebControllerTest {
 

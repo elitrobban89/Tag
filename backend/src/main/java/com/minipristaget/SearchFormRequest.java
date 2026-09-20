@@ -2,6 +2,7 @@ package com.minipristaget;
 
 import java.time.LocalDate;
 
+/** @author Robert Andersson Kopler */
 public class SearchFormRequest {
     private String from      = "";
     private String to        = "";

@@ -2,6 +2,7 @@ package com.minipristaget;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
+/** @author Robert Andersson Kopler */
 public class TrainDeparture {
     private String  trainId;
     private String  departureTime;

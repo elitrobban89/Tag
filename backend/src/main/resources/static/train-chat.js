@@ -1,3 +1,4 @@
+/* Tag — (c) 2026 Robert Andersson Kopler. Alla rattigheter forbehallna. */
 (function () {
   var TRAIN_CHAT_API = window.TRAIN_API_URL || "";
   var trainChatHistory = (function(){ try{ return JSON.parse(localStorage.getItem('tc-chat')||'[]'); }catch(e){ return []; } })();

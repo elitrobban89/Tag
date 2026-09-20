@@ -28,6 +28,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
+/** @author Robert Andersson Kopler */
 @Controller
 public class WebController {
 

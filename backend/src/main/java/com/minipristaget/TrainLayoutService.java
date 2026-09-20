@@ -22,6 +22,8 @@ import java.util.Map;
  * vagnars längd + radens plats i vagnen, med {@link #WAGON_GAP} rader som övergång mellan
  * vagnar. Avstånd till en facilitet är skillnaden i den koordinaten — det gör att frågor
  * som "ligger 28C närmare bistron än 12A?" kan besvaras med räkning i stället för gissning.
+ *
+ * @author Robert Andersson Kopler
  */
 @Service
 public class TrainLayoutService {

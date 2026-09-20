@@ -11,6 +11,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * Tester för GroqChatServices rena logik: meddelandelistan (systemprompt,
  * avgångskontext, historiktrimning) och konfigurationskollen. Inga HTTP-anrop.
+ *
+ * @author Robert Andersson Kopler
  */
 class GroqChatServiceTest {
 

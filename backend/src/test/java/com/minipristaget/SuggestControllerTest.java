@@ -14,6 +14,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * HTTP-lagertester för SuggestController: kategorivalidering, health och
  * rate limit. Groq-lyckoflödet testas inte här — det kräver riktigt HTTP-anrop.
+ *
+ * @author Robert Andersson Kopler
  */
 @WebMvcTest(SuggestController.class)
 class SuggestControllerTest {

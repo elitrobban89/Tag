@@ -260,3 +260,25 @@ mvn spring-boot:run
 ```
 
 Appen startar på `http://localhost:3000`. Sätt miljövariabler i `application.properties` eller som systemmiljövariabler.
+## Upphovsrätt och användning
+
+Copyright © 2026 Robert Andersson Kopler. Alla rättigheter förbehållna.
+
+Koden är märkt med upphovsmannens namn i flera lager: som `@author` i varje Java-klass,
+överst i varje serverad JS-, HTML- och PHP-fil, i `NOTICE`, i konstanten
+`Authorship.AUTHOR` och i HTTP-huvudet `X-Author` på varje svar från tjänsten.
+`Authorship` kontrollerar vid uppstart att konstanten inte ändrats och loggar ett fel om
+den har det. Kontrollen stänger **aldrig** av tjänsten — en vakt som fäller en tjänst i
+drift för att en textsträng ändrats gör mer skada än den förhindrar.
+
+**Du får** läsa koden, köra den lokalt, lära av den och låta dig inspireras av den i egna
+studie- och portföljprojekt.
+
+**Du får inte** sprida den vidare som din egen, publicera kopior av den, eller använda den —
+helt eller delvis — i kommersiellt syfte eller i en tjänst som konkurrerar med denna.
+
+Vill du använda något härifrån utanför de ramarna går det ofta bra — fråga först.
+
+Att ta bort märkningen ur källkoden är tekniskt möjligt för den som har koden. Det som
+skyddar upphovet är upphovsrätten och git-historiken; lagren ovan finns för att göra ett
+intrång arbetsamt och synligt, inte omöjligt.

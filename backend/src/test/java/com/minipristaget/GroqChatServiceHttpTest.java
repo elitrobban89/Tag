@@ -18,6 +18,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 /**
  * HTTP-felvägstester för GroqChatService: 429/401/5xx och svar utan content.
  * Tjänsten pekas mot en lokal stubbserver via groq.api.url — inga externa anrop.
+ *
+ * @author Robert Andersson Kopler
  */
 class GroqChatServiceHttpTest {
 
