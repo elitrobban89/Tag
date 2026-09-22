@@ -116,13 +116,16 @@ Bytet till 2.0 gjordes efter att svaren jämförts fält för fält mot 1.8 på 
 
 | Lager | Teknik |
 |---|---|
-| Backend | Java 25, Spring Boot 3.5.16, Thymeleaf |
+| Backend | Java 27, Spring Boot 3.5.16, Thymeleaf |
 | Avgångsdata | Trafikverket Open Data API — `TrainAnnouncement` i namespace `rail.trafficinfo`, schemaversion 2.0 |
 | AI-chatbot | Groq API (`openai/gpt-oss-120b`, `reasoning_effort: low`), avgångskontextuell, max 8 meddelanden historik |
 | AI-förslag | Groq API (`openai/gpt-oss-120b`, `reasoning_effort: low`), cache 2 h per (from+kategori) |
 | Deploy | Render (Docker, free tier) |
 | Frontend | Inbyggd via `<iframe>` i WordPress/Gutenberg |
 
+> **Java 27 sedan 2026-09-22** (GA 15 september). Provat på riktigt innan det byttes: ren ombyggnad på JDK 27+35, klassfilsversion **71** och gröna tester — varken Mockito eller Byte Buddy behövde röras.
+>
+> Bygget kör på **BellSoft Liberica 27**, inte Temurin. Liberica är samma OpenJDK 27, byggd av en annan leverantör; skälet till bytet är att Temurin ännu inte publicerat en enda 27-avbildning (`eclipse-temurin:27-jdk`, `:27-jre` och `maven:3.9-eclipse-temurin-27` svarar alla 404 på Docker Hub, och Adoptium listar `jdk-27+35` utan binärer). Att stanna på Temurin hade alltså betytt att stanna på Java 25. Byggsteget är `liberica-openjdk-debian:27` med **Maven-wrappern i repot** (3.9.16) — det finns ingen `maven`-avbildning med JDK 27 än, och wrappern hämtar Maven själv med wget, curl **eller bara java**, så den ställer inga krav på basavbildningen. Byt tillbaka till Temurin när deras 27 dyker upp: det är ett namnbyte på två rader.
 ## Tester & CI
 
 55 tester i tre lager — ren logik, HTTP-felvägar och controller-lagret (MockMvc, tjänsterna mockas):
