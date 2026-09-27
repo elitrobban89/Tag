@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MiniPrisTåget – Sök tåg</title>
   <link rel="manifest" href="/manifest.json">
+  <link rel="icon" type="image/png" href="/images/logo.png">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -518,6 +519,33 @@
     }
     .card-train-label  { font-size:.80rem; color:rgba(255,255,255,.5); line-height:1.5; }
     .card-train-model  { font-weight:700; color:rgba(147,197,253,.9); }
+
+    /* ── Tät avgångsrad (2026-09-27) ──
+       Märkena står på en rad under tåget i stället för staplade i högerspalten, och
+       "Välj klass ▾" är en tydlig knapp i stället för en blek tipsrad längst ned. */
+    .card-train-row { margin-top:3px; gap:8px; }
+    .card-train-label { font-size:.78rem; line-height:1.35; color:rgba(255,255,255,.6); }
+    .card-badges { display:flex; flex-wrap:wrap; align-items:center; gap:5px; margin-top:8px; }
+    .card-badges .seats-badge, .card-badges .co2-badge, .card-badges .dep-badge { margin:0; }
+    .card-badges .dep-share-btn { padding:2px 8px; font-size:.7rem; }
+    .card-price-amt { display:flex; align-items:baseline; gap:3px; }
+    .card-price-amt .card-price-fr { font-size:.66rem; font-weight:600; letter-spacing:0; margin:0; }
+    .card-price-amt .card-price-original { font-size:.66rem; font-weight:500; letter-spacing:0; margin:0 4px 0 0; }
+    .minipris-badge { margin-bottom:3px; }
+    .card-right .card-expand-hint {
+      margin-top:7px; padding:4px 10px; border-radius:12px; white-space:nowrap;
+      font-size:.68rem; font-weight:700; color:#bfdbfe;
+      background:rgba(59,130,246,.18); border:1px solid rgba(96,165,250,.38);
+    }
+    .dep-card:hover .card-expand-hint { background:rgba(59,130,246,.32); color:#fff; }
+    /* Rutnät: priset spänner över två rader till höger, märkesraden ligger under tåginfon.
+       card-main blir "genomskinlig" (display:contents) så barnen hamnar direkt i rutnätet. */
+    .dep-card { display:grid; grid-template-columns:minmax(0,1fr) auto; column-gap:14px; }
+    .dep-card > .card-main { display:contents; }
+    .card-left { grid-column:1; grid-row:1; }
+    .card-right { grid-column:2; grid-row:1 / span 2; }
+    .dep-card > .card-badges { grid-column:1; grid-row:2; }
+    .dep-card > .class-panel { grid-column:1 / -1; }
 
     .card-right {
       display:flex; flex-direction:column;
@@ -1232,7 +1260,7 @@
       .dep-card { padding:16px 20px 14px; margin-bottom:10px; }
       .card-time-range { font-size:1.5rem; }
       .card-travel-info { margin-bottom:9px; }
-      .card-train-photo { width:128px; height:46px; }
+      .card-train-photo { width:72px; height:30px; }
       .card-price-amt { font-size:1.6rem; }
       .card-price-model { display:none; } /* samma modellnamn står redan bredvid fotot */
     }
@@ -1254,6 +1282,12 @@
        Står SIST i stilblocket med flit. Den förra mobilregeln för avgångskorten stod före
        basreglerna den skulle skriva över, så basreglerna vann och den gjorde ingenting: på
        en telefon var tågfotot 170 px brett och varje kort nästan en hel skärm högt. */
+    @media (max-width: 400px) {
+      .card-train-photo { display:none; }
+      /* Smalt: märkesraden får hela kortets bredd, priset bara första raden */
+      .card-right { grid-row:1; }
+      .dep-card > .card-badges { grid-column:1 / -1; }
+    }
     @media (max-width: 540px) {
       /* Sidhuvudet: EN rad (logga, namn, Groq, bokningar) — från ~250 px till ~64. Det
          står kvar ovanför resultaten också. Bokningsknappen visar bara biljetten här. */
@@ -1289,7 +1323,7 @@
       .card-time-range { font-size:1.35rem; }
       .card-travel-info { font-size:.74rem; margin-bottom:8px; }
       .card-train-row { gap:8px; }
-      .card-train-photo { width:88px; height:40px; }
+      .card-train-photo { width:54px; height:24px; border-radius:5px; }
       .card-train-label { font-size:.72rem; line-height:1.4; }
       .card-right { min-width:0; }
       .card-price-amt { font-size:1.4rem; }
@@ -1297,8 +1331,12 @@
       .card-price-original { font-size:.6rem; margin-bottom:0; }
       .card-price-model { display:none; } /* samma modellnamn står redan under fotot */
       .minipris-badge { font-size:.56rem; padding:2px 7px; margin-bottom:3px; }
-      .seats-badge, .co2-badge { font-size:.6rem; padding:2px 6px; margin:3px 0 0; }
-      .dep-badge { font-size:.58rem; padding:2px 7px; margin-top:3px; }
+      .seats-badge, .co2-badge { font-size:.6rem; padding:2px 6px; }
+      .dep-badge { font-size:.58rem; padding:2px 7px; }
+      /* "I tid" är normalfallet och tog en plats i märkesraden — bara avvikelser visas här */
+      .card-badges .badge-ok { display:none; }
+      .card-badges { margin-top:7px; }
+      .card-price-amt .card-price-original { font-size:.58rem; }
       .dep-share-row { margin-top:6px; }
       .card-expand-hint { font-size:.6rem; }
       /* Luft under sista kortet så chattknappen nere till höger inte ligger över priset */
@@ -1726,14 +1764,18 @@ function clearFormError() {
 }
 
 // ── GPS ──────────────────────────────────────────────────────────
-function fetchGPS() {
+// tyst=true: automatiskt försök vid sidladdning — visar varken "Hämtar…" eller fel.
+// Förut kördes den synliga varianten vid VARJE laddning: i WordPress-ramen nekas platsen
+// alltid, så alla besökare möttes av en röd "GPS nekad"-rad innan de rört något.
+function fetchGPS(tyst) {
+  tyst = tyst === true; // klickhändelsen skickar ett event-objekt, inte true
   if (document.getElementById('from').value.trim()) return;
-  if (!navigator.geolocation) { setHint('GPS stöds inte.', 'error'); return; }
+  if (!navigator.geolocation) { if (!tyst) setHint('GPS stöds inte.', 'error'); return; }
   var btn = document.getElementById('gps-btn');
   var lbl = document.getElementById('gps-label');
   btn.disabled = true; btn.classList.add('fetching');
   lbl.textContent = 'Hämtar...';
-  setHint('📡 Hämtar position...', 'loading');
+  if (!tyst) setHint('📡 Hämtar position...', 'loading');
 
   navigator.geolocation.getCurrentPosition(function(pos) {
     fetch(BACKEND + '/nearest-station?lat=' + pos.coords.latitude + '&lon=' + pos.coords.longitude)
@@ -1744,7 +1786,7 @@ function fetchGPS() {
         btn.disabled = false; btn.classList.remove('fetching'); lbl.textContent = 'GPS';
       })
       .catch(function() {
-        setHint('Kunde inte hämta station.', 'error');
+        if (!tyst) setHint('Kunde inte hämta station.', 'error');
         btn.disabled = false; btn.classList.remove('fetching'); lbl.textContent = 'GPS';
       });
   }, function(err) {
@@ -1753,7 +1795,7 @@ function fetchGPS() {
       2:'📵 Position ej tillgänglig – ange startstation manuellt.',
       3:'⏱ Timeout – ange startstation manuellt.'
     };
-    setHint(msgs[err.code] || 'GPS-fel – ange startstation manuellt.', 'error');
+    if (!tyst) setHint(msgs[err.code] || 'GPS-fel – ange startstation manuellt.', 'error');
     btn.disabled = false; btn.classList.remove('fetching'); lbl.textContent = 'GPS';
   }, {enableHighAccuracy:false, timeout:8000, maximumAge:60000});
 }
@@ -2727,20 +2769,10 @@ function swishOverlayClick(e) {
 
 function initiateSwish() {
   var s = _seatState;
-  var amtNum;
-  if (_pendingOutbound) {
-    var obAmt = parseInt((_pendingOutbound.price || '').replace(/[^0-9]/g, ''), 10) || 0;
-    var rtAmt = parseInt((s.price || '').replace(/[^0-9]/g, ''), 10) || 0;
-    amtNum = String(obAmt + rtAmt);
-  } else {
-    amtNum = (s.price || '').replace(/[^0-9]/g,'') || '0';
-  }
-  var data = JSON.stringify({ version:1,
-    payee:   { value:'1231231230', editable:false },
-    amount:  { value:parseInt(amtNum, 10), editable:false },
-    message: { value:'MiniPrisTåget ' + (s.destination||''), editable:false }
-  });
-  window.location.href = 'swish://payment?data=' + encodeURIComponent(data);
+  // Betalningen är SIMULERAD. Tidigare öppnades swish://payment på riktigt: utan Swish-appen
+  // (dator, eller telefon utan appen) gav det ett felmeddelande — iPhone säger "adressen är
+  // ogiltig" mitt i demon — och MED appen hade man hamnat i en riktig betalning till ett
+  // testnummer. Nu väntar rutan en stund och visar kvittot, precis som förut.
   document.getElementById('swish-state-idle').style.display    = 'none';
   document.getElementById('swish-state-waiting').style.display = '';
   setTimeout(function() {
@@ -2794,8 +2826,8 @@ function toggleClassPanel(cardEl) {
   cardEl.classList.toggle('expanded');
   var hint = cardEl.querySelector('.card-expand-hint');
   if (hint) hint.textContent = cardEl.classList.contains('expanded')
-    ? 'Klicka för att stänga ↑'
-    : 'Klicka för att välja reseklass ↓';
+    ? 'Stäng ▴'
+    : 'Välj klass ▾';
   if (cardEl.classList.contains('expanded') && typeof tcFocusDeparture === 'function') {
     tcFocusDeparture(cardEl);
   }
@@ -2829,7 +2861,9 @@ function buildDepList(deps, title, isReturn) {
   if (!deps || !deps.length) {
     html += '<div class="empty"><div class="empty-icon">🚉</div>';
     html += '<div class="empty-title">Inga avgångar hittades</div>';
-    html += '<div class="empty-sub">Prova ett annat datum eller en annan sträcka.</div></div>';
+    // Bara DIREKTTÅG listas (avgången paras med ankomsten vid målet). En sträcka som kräver
+    // byte blir därför tom — säg det, i stället för att låta som att dagen var slutsåld.
+    html += '<div class="empty-sub">MiniPrisTåget visar bara direkttåg. Kräver sträckan byte, sök till bytesstationen först – eller prova ett annat datum.</div></div>';
   } else {
     for (var i = 0; i < deps.length; i++) {
       var d = deps[i];
@@ -2843,7 +2877,7 @@ function buildDepList(deps, title, isReturn) {
 
       // Restid + byten
       var dur = formatDuration(d.travelMinutes);
-      var travelInfo = (dur ? 'Restid ' + dur + ' · ' : '') + '0 byten';
+      var travelInfo = (dur ? dur + ' · ' : '') + 'direkt';
 
       // Pris: "från 489 kr" → "Fr." + "489:-"
       var priceAmt = '';
@@ -2869,52 +2903,52 @@ function buildDepList(deps, title, isReturn) {
       html +=       '<div class="card-time-range">' + timeRange;
       if (d.delayed) html += '<span class="card-time-delayed">→ ' + esc(d.estimatedTime) + '</span>';
       html +=       '</div>';
-      html +=       '<div class="card-travel-info">' + esc(travelInfo) + '</div>';
+      // Tät rad: allt om tåget till vänster, priset till höger. Förut stod sju märken
+      // staplade i högerspalten och varje kort blev 200+ px högt med tom yta till vänster.
       html +=       '<div class="card-train-row">';
       if (d.trainImage) {
         html += '<img class="card-train-photo" src="' + esc(d.trainImage) + '" alt="' + esc(d.trainModel || '') + '">';
       }
       html +=         '<div class="card-train-label">';
-      html +=           '<div class="card-train-model">' + esc(d.trainModel || '') + '</div>';
-      html +=           esc(d.destination) + ' · tåg ' + esc(d.trainId);
+      html +=           '<span class="card-train-model">' + esc(d.trainModel || '') + '</span>';
+      html +=           ' · tåg ' + esc(d.trainId) + ' · ' + esc(travelInfo);
       html +=         '</div>';
       html +=       '</div>';
-      html +=     '</div>';
 
-      // Höger: pris + badges
-      html +=     '<div class="card-right">';
-      html += '<div class="minipris-badge">🏷 Exklusivt MiniPris</div>';
-      if (priceAmt) {
-        if (d.priceOriginal > 0) {
-          html += '<div class="card-price-original">' + d.priceOriginal + ' kr</div>';
-        }
-        html += '<div class="card-price-fr">Fr.</div>';
-        html += '<div class="card-price-amt">' + esc(priceAmt) + '</div>';
-        html += '<div class="card-price-model">' + esc(d.trainModel || '') + '</div>';
-      }
+      // Märkesraden: platser, CO2, status och dela — skrivs ut under hela kortet (se nedan)
+      var badges = '<div class="card-badges">';
       if (d.seatsLeft > 0) {
         var seatsCls = d.seatsLeft === 1 ? 'seats-1' : d.seatsLeft <= 3 ? 'seats-2-3' : 'seats-4-5';
         var seatsText = d.seatsLeft === 1 ? '🔥 1 plats kvar!' : d.seatsLeft + ' platser kvar';
-        html += '<div class="seats-badge ' + seatsCls + '" data-trainid="' + esc(d.trainId||'') + '" data-seats="' + d.seatsLeft + '">' + seatsText + '</div>';
+        badges += '<span class="seats-badge ' + seatsCls + '" data-trainid="' + esc(d.trainId||'') + '" data-seats="' + d.seatsLeft + '">' + seatsText + '</span>';
       }
       if (d.co2SavedKg > 0) {
         var co2 = d.co2SavedKg >= 1
-          ? d.co2SavedKg.toFixed(1) + ' kg'
+          ? Math.round(d.co2SavedKg) + ' kg'
           : Math.round(d.co2SavedKg * 1000) + ' g';
-        html += '<div class="co2-badge">🌱 ' + co2 + ' CO₂</div>';
+        badges += '<span class="co2-badge">🌱 ' + co2 + ' CO₂</span>';
       }
-      if (d.canceled)     html += '<span class="dep-badge badge-canceled">Inställd</span>';
-      else if (d.delayed) html += '<span class="dep-badge badge-delayed">Försenad</span>';
-      else                html += '<span class="dep-badge badge-ok">I tid</span>';
+      if (d.canceled)     badges += '<span class="dep-badge badge-canceled">Inställd</span>';
+      else if (d.delayed) badges += '<span class="dep-badge badge-delayed">Försenad</span>';
+      else                badges += '<span class="dep-badge badge-ok">I tid</span>';
+      badges += '<button class="dep-share-btn" title="Dela avgång" aria-label="Dela avgång" data-dep="' + esc(d.departureTime || '') + '" onclick="event.stopPropagation();shareDepRef(this)">🔗</button>';
+      badges += '</div>';
+      html +=     '</div>';
+
+      // Höger: pris
+      html +=     '<div class="card-right">';
+      html += '<div class="minipris-badge">🏷 Exklusivt MiniPris</div>';
+      if (priceAmt) {
+        // Ordinariepriset överstruket på SAMMA rad som MiniPris-priset — en rad mindre per kort
+        html += '<div class="card-price-amt">' +
+          (d.priceOriginal > 0 ? '<span class="card-price-original">' + d.priceOriginal + ' kr</span>' : '') +
+          '<span class="card-price-fr">fr.</span>' + esc(priceAmt) + '</div>';
+      }
+      html += '<div class="card-expand-hint">Välj klass ▾</div>';
       html +=     '</div>';
 
       html +=   '</div>'; // card-main
-
-      // Expand-tips + Dela-knapp på SAMMA rad — var för sig åt de en rad var i varje kort
-      html += '<div class="dep-share-row">';
-      html += '<div class="card-expand-hint">Klicka för att välja reseklass ↓</div>';
-      html += '<button class="dep-share-btn" data-dep="' + esc(d.departureTime || '') + '" onclick="event.stopPropagation();shareDepRef(this)">🔗 Dela avgång</button>';
-      html += '</div>';
+      html += badges;
 
       // Class panel
       html += '<div class="class-panel" onclick="event.stopPropagation()">';
@@ -3078,7 +3112,13 @@ renderFavChips();
 
 // ── Starta GPS ───────────────────────────────────────────────────
 document.getElementById('gps-btn').addEventListener('click', fetchGPS);
-fetchGPS();
+// Hämta platsen automatiskt BARA om besökaren redan gett lov — annars ingen fråga som dyker
+// upp innan man ens tittat på sidan, och inget felmeddelande. GPS-knappen frågar som vanligt.
+try {
+  navigator.permissions.query({ name: 'geolocation' }).then(function (p) {
+    if (p.state === 'granted') fetchGPS(true);
+  }, function () {});
+} catch (e) {}
 
 // ── Stations autocomplete ─────────────────────────────────────────
 function setupAutocomplete(inputId, dropdownId) {
