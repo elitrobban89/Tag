@@ -1035,6 +1035,11 @@
       background:#111827; border:none; border-radius:12px;
       color:#fff; font-weight:700; cursor:pointer; font-size:.88rem;
     }
+    .swish-return-btn {
+      width:100%; margin-top:10px; padding:11px; border-radius:12px; cursor:pointer;
+      background:#fff; border:2px solid #00A651; color:#047857; font-weight:800; font-size:.88rem;
+    }
+    .swish-return-btn:hover { background:#ecfdf5; }
 
     /* ── Return trip modal ── */
     .return-overlay {
@@ -1609,6 +1614,7 @@
         <button class="swish-pay-btn" onclick="initiateSwish()">
           <span style="font-size:1.1rem">💳</span> Betala med Swish
         </button>
+        <button class="swish-return-btn" id="swish-add-return" style="display:none" onclick="laggTillAterresaFranSwish()">↩ Lägg till återresa</button>
       </div>
 
       <!-- State: waiting -->
@@ -1627,6 +1633,7 @@
           <div class="swish-success-title">Betalning genomförd!</div>
           <div class="swish-success-sub">Tack för din bokning hos MiniPrisTåget</div>
           <div class="swish-ticket-box" id="swish-ticket-box"></div>
+          <button class="swish-return-btn" id="swish-book-return" style="display:none" onclick="bokaAterresanEfterBetalning()">↩ Boka återresan</button>
           <button class="swish-done-btn" onclick="closeSwishModal()">Stäng</button>
         </div>
       </div>
@@ -2520,6 +2527,21 @@ function openSeatMapForCard(btn) {
     parseInt(btn.getAttribute('data-seats-left'),     10) || 5,
     classLabel
   );
+  if (card) {
+    var fran = resaFran(card);
+    _seatState.fromCity     = fran.stad;
+    _seatState.outboundDate = fran.datum;
+  }
+}
+
+// Varifrån och vilket datum en avgång gäller. Returkorten i resultatlistan står under
+// utresan och delar dess söktillstånd — de fick utresans start som "från", så en returbiljett
+// blev "Lund → Lund". Returen går från utresans MÅL, på returdatumet.
+function resaFran(card) {
+  var d = window._trainSearchData || {};
+  if (card && card.closest('#results-section .return-dep-list'))
+    return { stad: d.toName || _searchToName, datum: d.returnDate || _searchDate };
+  return { stad: _searchFromName, datum: _searchDate };
 }
 
 function openSeatModal(trainId, layout, model, depTime, price, destination, trainImage, travelMinutes, priceOriginal, seatsLeft, classLabel) {
@@ -2744,8 +2766,9 @@ function bokaUtanPlats(btn) {
   _seatState.trainImage    = '';
   _seatState.travelMins    = parseInt(card.dataset.travelMins, 10) || 0;
   _seatState.priceOriginal = '';
-  _seatState.fromCity      = _searchFromName;
-  _seatState.outboundDate  = _searchDate;
+  var fran = resaFran(card);
+  _seatState.fromCity      = fran.stad;
+  _seatState.outboundDate  = fran.datum;
   _seatState.seatLabel     = 'Fri placering' + (byte ? ' · ' + byte.textContent.replace('🔁', '').trim() : '');
   openSwishModal();
 }
@@ -2863,8 +2886,39 @@ function openSwishModal() {
   document.getElementById('swish-state-idle').style.display    = '';
   document.getElementById('swish-state-waiting').style.display = 'none';
   document.getElementById('swish-state-success').style.display = 'none';
+  // Återresan: "Lägg till återresa" fanns bara i platskartan, så med fri placering gick det
+  // inte att boka tur och retur tillsammans. Nu finns den här också — men bara för en
+  // utresa i en tur och retur-sökning, aldrig när återresan redan är med eller när det
+  // HÄR är återresan.
+  document.getElementById('swish-add-return').style.display =
+    arTurOchRetur() && !_pendingOutbound && !arAterresa(s) ? '' : 'none';
+  document.getElementById('swish-book-return').style.display = 'none';
   document.getElementById('swish-overlay').classList.add('open');
   document.body.style.overflow = 'hidden';
+}
+
+function arTurOchRetur() {
+  return document.getElementById('trip-type').value === 'tur';
+}
+// Återresan går FRÅN utresans mål
+function arAterresa(s) {
+  var d = window._trainSearchData;
+  return !!(d && s && s.fromCity && d.toName && s.fromCity === d.toName);
+}
+
+function laggTillAterresaFranSwish() {
+  _pendingOutbound = Object.assign({}, _seatState);
+  // Stäng rutan UTAN closeSwishModal — den nollställer _pendingOutbound
+  document.getElementById('swish-overlay').classList.remove('open');
+  openReturnModal();
+}
+
+function bokaAterresanEfterBetalning() {
+  closeSwishModal();
+  // Returavgångarna står redan under utresan i resultatlistan — visa dem; annars returrutan
+  var retur = document.querySelector('#results-section .return-section');
+  if (retur) retur.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  else openReturnModal();
 }
 
 function closeSwishModal() {
@@ -2901,6 +2955,9 @@ function initiateSwish() {
     } else {
       decrementSeatsDisplay(_seatState.trainId);
       addBooking();
+      // Betalade en ensam utresa i en tur och retur-sökning: erbjud återresan direkt
+      if (arTurOchRetur() && !arAterresa(_seatState))
+        document.getElementById('swish-book-return').style.display = '';
     }
   }, 3000);
 }

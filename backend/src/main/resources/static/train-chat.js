@@ -349,11 +349,33 @@
         backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
       }
       /* Ikonen i en egen bricka - annars drunknar den i texten bredvid. */
+      /* Flytande ikoner: glasbricka med ljusreflex och glöd i knappens egen ton, som svävar
+         i otakt (fördröjning per knapp) och lyfter vid hovring. Bara transform animeras. */
       .tc-quick-ik {
         display:inline-flex;align-items:center;justify-content:center;
-        width:20px;height:20px;border-radius:50%;flex-shrink:0;font-size:11px;
-        background:rgba(var(--ton),0.26);
+        width:22px;height:22px;border-radius:50%;flex-shrink:0;font-size:12px;line-height:1;
+        background:radial-gradient(circle at 32% 28%,rgba(255,255,255,0.55),rgba(255,255,255,0) 42%),
+          linear-gradient(145deg,rgba(var(--ton),0.55),rgba(var(--ton),0.18));
+        border:1px solid rgba(255,255,255,0.28);
+        box-shadow:0 3px 10px -3px rgba(var(--ton),0.95),inset 0 1px 0 rgba(255,255,255,0.35);
+        animation:tc-ik-svav 3.2s ease-in-out infinite;will-change:transform;
       }
+      .tc-quick-btn:nth-child(2) .tc-quick-ik{animation-delay:-.8s;}
+      .tc-quick-btn:nth-child(3) .tc-quick-ik{animation-delay:-1.6s;}
+      .tc-quick-btn:nth-child(4) .tc-quick-ik{animation-delay:-2.4s;}
+      @keyframes tc-ik-svav{
+        0%,100%{transform:translateY(0) rotate(0deg);}
+        30%{transform:translateY(-2.5px) rotate(-6deg);}
+        65%{transform:translateY(1px) rotate(4deg);}
+      }
+      .tc-quick-btn:hover .tc-quick-ik{animation-play-state:paused;transform:translateY(-3px) scale(1.18) rotate(-8deg);
+        transition:transform .2s cubic-bezier(.34,1.56,.64,1);}
+      /* Tåget i rubriken rullar lugnt fram och tillbaka */
+      .tc-head-ik{display:inline-block;animation:tc-head-rull 4s ease-in-out infinite;will-change:transform;
+        filter:drop-shadow(0 2px 6px rgba(96,165,250,0.7));}
+      @keyframes tc-head-rull{0%,100%{transform:translateX(0) rotate(0);}25%{transform:translateX(2px) rotate(-3deg);}
+        50%{transform:translateX(0) translateY(-2px);}75%{transform:translateX(-2px) rotate(3deg);}}
+      @media(prefers-reduced-motion:reduce){.tc-quick-ik,.tc-head-ik{animation:none;}}
       .tc-quick-btn:hover{
         background:linear-gradient(145deg,rgba(var(--ton),0.34),rgba(var(--ton),0.16));
         border-color:rgba(var(--ton),0.75);color:#fff;
@@ -589,7 +611,7 @@
       </div>
       <div class="tc-panel" id="tc-panel">
         <div class="tc-header">
-          <span>🚂 Tågassistenten</span>
+          <span><span class="tc-head-ik">🚂</span> Tågassistenten</span>
           <div class="tc-header-actions">
             <button class="tc-header-clear" id="tc-clear">Rensa</button>
             <button class="tc-header-expand" id="tc-expand" title="Expandera chatten" aria-label="Expandera chatten" aria-expanded="false">
