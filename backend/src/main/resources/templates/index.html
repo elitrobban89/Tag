@@ -3092,6 +3092,7 @@ function buildDepList(deps, title, isReturn) {
         ' data-operator="'    + esc(d.operator      || '') + '"' +
         ' data-op="'          + esc(op.namn) + '"' +
         ' data-period="'      + dygnsdel(d.departureTime) + '"' +
+        ' data-byte="'        + esc(d.transferStation || '') + '"' +
         ' data-pris="'        + prisTal + '"' +
         ' onclick="toggleClassPanel(this)">';
       html +=   '<div class="card-main">';

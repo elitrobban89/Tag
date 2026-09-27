@@ -64,6 +64,23 @@ class WebControllerTest {
         assertThat(html.trim()).endsWith("</html>");
     }
 
+    // --- /api/station-coords (chattens resekarta) ---
+
+    @Test
+    void stationskoordinaterIOrdningOkandaHoppasOver() throws Exception {
+        when(trafikverketService.findStationByName("Stockholm C"))
+            .thenReturn(Optional.of(new TrainStation("Cst", "Stockholm C", 59.33, 18.06)));
+        when(trafikverketService.findStationByName("Kalmar C"))
+            .thenReturn(Optional.of(new TrainStation("Kac", "Kalmar C", 56.66, 16.36)));
+        when(trafikverketService.findStationByName("Finnsinte")).thenReturn(Optional.empty());
+
+        mvc.perform(get("/api/station-coords").param("names", "Stockholm C|Finnsinte|Kalmar C"))
+           .andExpect(status().isOk())
+           .andExpect(jsonPath("$.length()").value(2))
+           .andExpect(jsonPath("$[0].name").value("Stockholm C"))
+           .andExpect(jsonPath("$[1].lat").value(56.66));
+    }
+
     // --- /api/stations ---
 
     @Test

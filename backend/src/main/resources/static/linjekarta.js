@@ -26,7 +26,7 @@
     'Arvika': [59.654, 12.586], 'Södertälje Syd': [59.162, 17.645], 'Katrineholm C': [58.996, 16.206],
     'Norrköping C': [58.596, 16.183], 'Linköping C': [58.417, 15.625], 'Mjölby': [58.325, 15.132],
     'Nässjö C': [57.653, 14.694], 'Jönköping C': [57.784, 14.163], 'Alvesta': [56.899, 14.556],
-    'Växjö': [56.878, 14.806], 'Kalmar C': [56.664, 16.356], 'Västervik': [57.758, 16.637],
+    'Växjö': [56.878, 14.806], 'Kalmar C': [56.664, 16.356], 'Hultsfred': [57.488, 15.844],
     'Karlskrona C': [56.166, 15.586], 'Kristianstad C': [56.031, 14.153], 'Hässleholm C': [56.158, 13.766],
     'Lund C': [55.705, 13.187], 'Malmö C': [55.609, 13.000], 'Helsingborg C': [56.043, 12.695],
     'Halmstad C': [56.669, 12.864], 'Varberg': [57.105, 12.253], 'Göteborg C': [57.709, 11.973],
@@ -70,7 +70,7 @@
     { bolag: 'Västtrafik', namn: 'Göteborg – Karlstad (Vänertåg)',
       via: ['Göteborg C', 'Trollhättan C', 'Karlstad C'] },
     { bolag: 'Regionaltåg', namn: 'Linköping – Kalmar (Kustpilen)',
-      via: ['Linköping C', 'Västervik', 'Kalmar C'] },
+      via: ['Linköping C', 'Hultsfred', 'Kalmar C'] },   // Stångådalsbanan — Västervik är en sidobana
     { bolag: 'Regionaltåg', namn: 'Nässjö – Jönköping',
       via: ['Nässjö C', 'Jönköping C'] },
     { bolag: 'Nattåg', namn: 'Stockholm – Luleå – Kiruna (nattåg)',
@@ -261,6 +261,35 @@
     }
     window.mptOppnaLinjekarta = oppna;
   }
+
+  // ── Delas med chattens resekarta (train-chat.js) ──
+  window.mptLaddaLeaflet = laddaLeaflet;
+  window.mptKartbilder = function (karta) {
+    var ESRI = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/';
+    L.tileLayer(ESRI + 'World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+      maxZoom: 12, minZoom: 3, attribution: '&copy; Esri, OpenStreetMap'
+    }).addTo(karta);
+    karta.createPane('etiketter');
+    karta.getPane('etiketter').style.zIndex = 450;
+    karta.getPane('etiketter').style.pointerEvents = 'none';
+    L.tileLayer(ESRI + 'World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}', {
+      maxZoom: 12, minZoom: 3, pane: 'etiketter'
+    }).addTo(karta);
+  };
+  /**
+   * Spårets mellanstationer mellan två stationer, om någon linje på kartan går genom båda —
+   * så att resan följer järnvägen i stället för ett rakt streck. null om ingen linje passar.
+   */
+  window.mptRuttPunkter = function (fran, till) {
+    var bast = null;
+    LINJER.forEach(function (l) {
+      var a = l.via.indexOf(fran), b = l.via.indexOf(till);
+      if (a < 0 || b < 0) return;
+      var del = a < b ? l.via.slice(a, b + 1) : l.via.slice(b, a + 1).reverse();
+      if (!bast || del.length > bast.length) bast = del;   // fler mellanstationer = närmare spåret
+    });
+    return bast ? bast.map(function (n) { return ST[n]; }) : null;
+  };
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();

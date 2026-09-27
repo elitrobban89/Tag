@@ -427,6 +427,17 @@
       .tc-train-imgs{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
       .tc-train-img{width:100%;max-height:130px;object-fit:cover;border-radius:10px;opacity:.88;transition:opacity .2s;}
       .tc-train-img:hover{opacity:1;}
+      /* Resekartan i chatten */
+      .tc-routemap{margin-top:8px;max-width:92%;border-radius:12px;overflow:hidden;
+        border:1px solid rgba(147,197,253,0.3);background:rgba(8,18,44,0.6);
+        box-shadow:0 6px 20px -8px rgba(0,0,0,0.6);}
+      .tc-routemap-karta{height:170px;background:#1b1d22;}
+      .tc-routemap-cap{padding:6px 10px;font-size:11px;font-weight:700;color:#dbeafe;
+        border-top:1px solid rgba(147,197,253,0.18);}
+      .tc-routemap .leaflet-control-attribution{font-size:8px;}
+      .leaflet-tooltip.tc-rm-tip{background:rgba(8,18,44,0.88);color:#fff;border:1px solid rgba(147,197,253,0.4);
+        border-radius:6px;font-size:10.5px;font-weight:700;padding:1px 6px;box-shadow:none;}
+      .leaflet-tooltip.tc-rm-tip::before{display:none;}
       .tc-followup-chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px;}
       .tc-followup-chip{background:linear-gradient(145deg,rgba(96,165,250,.16),rgba(96,165,250,.06));border:1px solid rgba(147,197,253,.32);color:#dbeafe;font-size:11px;font-weight:600;padding:4px 11px;border-radius:20px;cursor:pointer;transition:all .15s;box-shadow:inset 0 1px 0 rgba(255,255,255,.08);}
       .tc-followup-chip:hover{background:linear-gradient(145deg,rgba(96,165,250,.32),rgba(96,165,250,.14));border-color:rgba(147,197,253,.6);color:#fff;transform:translateY(-1px);}
@@ -636,6 +647,7 @@
       tcLugnaAssistenten();
       updateContextBar();
       document.getElementById("tc-input").focus();
+      tcKartorOmrakna();
     }
   }
 
@@ -707,6 +719,7 @@
     tcUpdateExpandBtn();
     var msgs = document.getElementById("tc-messages");
     if (msgs) msgs.scrollTop = msgs.scrollHeight;
+    tcKartorOmrakna();
   }
 
   function updateContextBar() {
@@ -852,6 +865,73 @@
       if (animate !== false) tcAddFeedback(outer);
     }
     return outer;
+  }
+
+  // ── Resekartan i chatten ──────────────────────────────────────────────────────
+  // Den valda resan ritad på en liten karta under chattens beskrivning av avgången:
+  // start (grön), byte (gul) och mål (röd). Linjen följer spåret via mellanstationerna när
+  // linjekartan känner sträckan, annars ett rakt streck. Koordinaterna hämtas från servern
+  // (/api/station-coords), så kartan fungerar för alla stationer, inte bara linjekartans.
+  var _tcKartor = [];
+
+  function tcAppendRouteMap(outer, stopp) {
+    stopp = stopp.filter(Boolean);
+    if (!outer || stopp.length < 2 || !window.mptLaddaLeaflet) return;
+    var box = document.createElement("div");
+    box.className = "tc-routemap";
+    box.innerHTML = '<div class="tc-routemap-karta"></div>' +
+      '<div class="tc-routemap-cap">🗺 ' + stopp.map(tcEsc).join(' → ') + '</div>';
+    outer.appendChild(box);
+    var el = box.querySelector(".tc-routemap-karta");
+
+    fetch('/api/station-coords?names=' + encodeURIComponent(stopp.join('|')))
+      .then(function (r) { return r.json(); })
+      .then(function (pts) {
+        if (!pts || pts.length < 2) { box.remove(); return; }
+        window.mptLaddaLeaflet(function () { tcRitaRuttkarta(el, pts); });
+      })
+      .catch(function () { box.remove(); });
+  }
+
+  function tcRitaRuttkarta(el, pts) {
+    var karta = L.map(el, { zoomControl: false, scrollWheelZoom: false, attributionControl: true,
+                            zoomSnap: 0.25, doubleClickZoom: false });
+    if (window.mptKartbilder) window.mptKartbilder(karta);
+    // Spåret: följ linjekartans mellanstationer per delsträcka när sådana finns
+    var linje = [];
+    for (var i = 0; i < pts.length - 1; i++) {
+      var del = window.mptRuttPunkter && window.mptRuttPunkter(pts[i].name, pts[i + 1].name);
+      var bit = del || [[pts[i].lat, pts[i].lon], [pts[i + 1].lat, pts[i + 1].lon]];
+      linje = linje.concat(i === 0 ? bit : bit.slice(1));
+    }
+    L.polyline(linje, { color: '#60a5fa', weight: 9, opacity: .25, lineCap: 'round' }).addTo(karta);
+    L.polyline(linje, { color: '#93c5fd', weight: 4, opacity: .95, lineCap: 'round' }).addTo(karta);
+    pts.forEach(function (p, i) {
+      var sist = i === pts.length - 1, forst = i === 0;
+      L.circleMarker([p.lat, p.lon], {
+        radius: forst || sist ? 7 : 6, color: '#fff', weight: 2, fillOpacity: 1,
+        fillColor: forst ? '#34d399' : sist ? '#f87171' : '#fbbf24'
+      }).bindTooltip(p.name, { permanent: true, direction: 'auto',
+                               className: 'tc-rm-tip', offset: [0, 0] }).addTo(karta);
+    });
+    var granser = L.latLngBounds(linje);
+    karta.fitBounds(granser, { paddingTopLeft: [70, 26], paddingBottomRight: [70, 26] });
+    _tcKartor.push({ karta: karta, granser: granser });
+  }
+
+  // Kartan ritas ofta medan panelen är dold (mobil) — då är dess storlek 0. Räkna om när
+  // panelen öppnas eller byter storlek.
+  function tcKartorOmrakna() {
+    setTimeout(function () {
+      _tcKartor.forEach(function (k) {
+        k.karta.invalidateSize();
+        k.karta.fitBounds(k.granser, { paddingTopLeft: [70, 26], paddingBottomRight: [70, 26] });
+      });
+    }, 90);
+  }
+
+  function tcEsc(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
   function tcAddFeedback(outer) {
@@ -1153,6 +1233,7 @@
     var seatsLeft  = parseInt(btn.getAttribute('data-seats-left'),  10) || 0;
     var travelMins = parseInt(btn.getAttribute('data-travel-mins'), 10) || 0;
 
+    var byte       = btn.getAttribute('data-byte') || '';
     var fromName = (window._trainSearchData && window._trainSearchData.fromName) || '';
     var toName   = (window._trainSearchData && window._trainSearchData.toName)   || dest;
     var date     = (window._trainSearchData && window._trainSearchData.date)     || '';
@@ -1170,7 +1251,7 @@
       'Sträcka: ' + fromName + ' → ' + toName + '\n' +
       'Datum: ' + date + '\n' +
       'Avgångstid: ' + depTime + (arrTime ? ', ankomst: ' + arrTime : '') + '\n' +
-      (dur ? 'Restid: ' + dur + ' · 0 byten\n' : '') +
+      (dur ? 'Restid: ' + dur + ' · ' + (byte ? '1 byte i ' + byte : 'direkttåg, 0 byten') + '\n' : '') +
       'Tåg: ' + trainId + (model ? ' (' + model + ')' : '') + '\n' +
       'Pris: ' + price + '\n' +
       (seatsLeft > 0 ? 'MiniPris-platser kvar: ' + seatsLeft + '\n' : 'Inga MiniPris-platser kvar\n') +
@@ -1208,11 +1289,13 @@
       'Du tittar på tåget **' + timeRange + '**' +
       (model ? ' (' + model + ')' : '') +
       (dur ? ' — restid ' + dur : '') +
-      ', från **' + fromName + '** till **' + toName + '**.' +
+      ', från **' + fromName + '** till **' + toName + '**' +
+      (byte ? ' med byte i **' + byte + '**' : '') + '.' +
       (price ? ' Pris från **' + price.replace('från ', '') + '**.' : '') +
       seatsMsg +
       '\n\nVad vill du veta mer om denna resa?';
-    tcAppendBot(introText, false);
+    var introBubbla = tcAppendBot(introText, false);
+    tcAppendRouteMap(introBubbla, byte ? [fromName, byte, toName] : [fromName, toName]);
 
     var inp = document.getElementById('tc-input');
     if (inp) {

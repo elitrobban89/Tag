@@ -82,6 +82,23 @@ public class WebController {
         }
     }
 
+    // ── Koordinater för stationer (chattens resekarta) ────────────
+    // names = "Stockholm C|Linköping C|Kalmar C". Okända namn hoppas över i stället för att
+    // fälla hela svaret — kartan ritar det som finns.
+    @GetMapping("/api/station-coords")
+    @ResponseBody
+    public ResponseEntity<?> stationCoords(@RequestParam(defaultValue = "") String names) {
+        List<Map<String, Object>> ut = new java.util.ArrayList<>();
+        for (String namn : names.split("\\|")) {
+            if (namn.isBlank() || ut.size() >= 6) continue;
+            try {
+                trafikverketService.findStationByName(namn.trim()).ifPresent(s ->
+                    ut.add(Map.of("name", s.getName(), "lat", s.getLat(), "lon", s.getLon())));
+            } catch (Exception e) { /* stationslistan gick inte att hämta — tom karta */ }
+        }
+        return ResponseEntity.ok(ut);
+    }
+
     // ── Närmaste station via GPS-koordinater (AJAX) ───────────────
     @GetMapping("/nearest-station")
     @ResponseBody
