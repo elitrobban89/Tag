@@ -32,6 +32,25 @@ public class TrainDeparture {
     /** Trafikverkets produktnamn ("SJ Snabbtåg", "SJ Regional"…) — inte fordonstyp. */
     private String productInformation;
 
+    // ── Resa med byte (transfers == 1) ──
+    private String transferStation;    // "Alvesta"
+    private String transferArrival;    // HH:mm framme vid bytet
+    private String transferDeparture;  // HH:mm avgång från bytet
+    private String secondTrainId;
+    /** Beräknad ankomst vid målet (HH:mm) — bara satt när tåget ligger efter tidtabellen. */
+    private String estimatedArrival;
+
+    public String getTransferStation()         { return transferStation; }
+    public void   setTransferStation(String v) { this.transferStation = v; }
+    public String getTransferArrival()         { return transferArrival; }
+    public void   setTransferArrival(String v) { this.transferArrival = v; }
+    public String getTransferDeparture()         { return transferDeparture; }
+    public void   setTransferDeparture(String v) { this.transferDeparture = v; }
+    public String getSecondTrainId()         { return secondTrainId; }
+    public void   setSecondTrainId(String v) { this.secondTrainId = v; }
+    public String getEstimatedArrival()         { return estimatedArrival; }
+    public void   setEstimatedArrival(String v) { this.estimatedArrival = v; }
+
     public String getProductInformation()         { return productInformation; }
     public void   setProductInformation(String v) { this.productInformation = v; }
 

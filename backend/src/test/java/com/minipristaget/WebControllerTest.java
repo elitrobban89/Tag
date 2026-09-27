@@ -47,6 +47,23 @@ class WebControllerTest {
         return d;
     }
 
+    // --- startsidan renderas på riktigt ---
+
+    /**
+     * Startsidan är en Thymeleaf-mall med ~3000 rader inbäddad JS. Två öppnande hakparenteser i
+     * rad (en JS-array av arrayer, eller en kommentar) tolkas som ett inline-uttryck, och då
+     * avbryts renderingen mitt i sidan — webbläsaren fick ERR_INCOMPLETE_CHUNKED_ENCODING och
+     * inget skript efter felet laddades (2026-09-27). Provet kräver att HELA sidan kommer ut.
+     */
+    @Test
+    void startsidanRenderasHelaVagen() throws Exception {
+        String html = mvc.perform(get("/"))
+           .andExpect(status().isOk())
+           .andReturn().getResponse().getContentAsString();
+        assertThat(html).contains("function kordemoResa").contains("function buildDepTools");
+        assertThat(html.trim()).endsWith("</html>");
+    }
+
     // --- /api/stations ---
 
     @Test

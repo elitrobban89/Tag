@@ -547,6 +547,48 @@
     .dep-card > .card-badges { grid-column:1; grid-row:2; }
     .dep-card > .class-panel { grid-column:1 / -1; }
 
+    /* Operatörsmärket (SJ/VR/…): bolagets färg bärs av --op */
+    .op-badge {
+      display:inline-block; vertical-align:1px; padding:1px 6px; border-radius:5px;
+      font-size:.62rem; font-weight:900; letter-spacing:.03em; color:#fff;
+      background:var(--op,#64748b); box-shadow:0 1px 6px -2px var(--op,#64748b);
+    }
+    .card-transfer { margin-top:3px; font-size:.72rem; color:#fde68a; }
+    .card-transfer strong { color:#fef3c7; }
+    .card-time-range .card-time-delayed { font-size:.7rem; }
+
+    /* Filterraden över avgångslistan */
+    .dep-tools { display:flex; flex-direction:column; gap:7px; padding:2px 2px 10px; }
+    .dep-chips { display:flex; gap:6px; overflow-x:auto; scrollbar-width:none; }
+    .dep-chips::-webkit-scrollbar { display:none; }
+    .dep-chip {
+      flex-shrink:0; display:inline-flex; align-items:center; gap:5px;
+      padding:5px 11px; border-radius:16px; cursor:pointer; white-space:nowrap;
+      font-size:.74rem; font-weight:700; color:rgba(219,234,254,.8);
+      background:rgba(255,255,255,.06); border:1px solid rgba(147,197,253,.22);
+      backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
+      transition:background .15s, border-color .15s, color .15s;
+    }
+    .dep-chip:hover { background:rgba(59,130,246,.18); color:#fff; }
+    .dep-chip.on { background:rgba(59,130,246,.34); border-color:rgba(147,197,253,.6); color:#fff;
+                   box-shadow:0 2px 12px -4px rgba(59,130,246,.8); }
+    .dep-chip-dot { width:8px; height:8px; border-radius:50%; background:var(--op,#64748b); }
+    .dep-tools-row { display:flex; align-items:center; justify-content:space-between; gap:10px;
+                     font-size:.72rem; color:rgba(191,219,254,.7); }
+    .dep-sort select {
+      margin-left:5px; padding:4px 8px; border-radius:8px; font-size:.74rem; font-weight:700;
+      color:#dbeafe; background:rgba(12,24,58,.7); border:1px solid rgba(147,197,253,.3);
+    }
+    .demo-note { margin-top:8px; font-size:.7rem; color:rgba(255,255,255,.62); }
+
+    /* Demokontot i sidhuvudet — klick loggar ut */
+    .konto-chip {
+      order:3; flex-shrink:0; padding:6px 11px; border-radius:20px; cursor:pointer;
+      font-size:.78rem; font-weight:700; color:#fff;
+      background:rgba(52,211,153,.2); border:1px solid rgba(110,231,183,.45);
+    }
+    .konto-chip:hover { background:rgba(52,211,153,.32); }
+
     .card-right {
       display:flex; flex-direction:column;
       align-items:flex-end; min-width:94px; flex-shrink:0;
@@ -1301,6 +1343,8 @@
       .groq-badge img { width:36px; height:22px; }
       .bookings-btn { order:5; position:static !important; margin:0 !important; padding:6px 10px; font-size:.9rem; flex-shrink:0; }
       .bookings-txt { display:none; }
+      .konto-namn { display:none; }
+      .konto-chip { padding:6px 10px; font-size:.9rem; }
 
       /* Sökformuläret */
       .card { padding:16px 16px 14px; }
@@ -1633,6 +1677,7 @@
       <h1>MiniPrisTåget</h1>
       <p>Sök tågresor med riktiga avgångstider</p>
     </div>
+    <button type="button" id="konto-chip" class="konto-chip" style="display:none" onclick="loggaUtDemo()" aria-label="Demo Resenär, klicka för att logga ut">👤<span class="konto-namn"> Demo Resenär</span></button>
     <a class="groq-badge" href="https://groq.com" target="_blank" rel="noopener noreferrer">
       <img src="https://caradvice.onrender.com/powered-by-groq-dark.svg"
            alt="Powered by Groq for fast inference." width="53" height="32">
@@ -1727,13 +1772,13 @@
     </form>
     <div id="form-error" class="error-box" style="display:none;"></div>
 
-    <!-- Demolapp: en färdig provresa för den som bara vill se appen. Klick fyller i och söker. -->
+    <!-- Demolapp: loggar in ett demokonto (biljetterna "mejlas" dit) och söker en provresa. -->
     <button type="button" class="mpt-postit" id="mpt-postit" onclick="kordemoResa()">
       <span class="mpt-postit-tejp" aria-hidden="true"></span>
-      <span class="mpt-postit-rubrik" style="display:block">Demo-resa</span>
-      <span class="mpt-postit-rad"><span>Från:</span><b>Stockholm C</b></span>
-      <span class="mpt-postit-rad"><span>Till:</span><b>Göteborg C</b></span>
-      <span class="mpt-postit-hint" style="display:block">klicka på lappen så söks resan</span>
+      <span class="mpt-postit-rubrik" style="display:block">Demo-konto</span>
+      <span class="mpt-postit-rad"><span>Konto:</span><b>demo@minipristaget.se</b></span>
+      <span class="mpt-postit-rad"><span>Resa:</span><b>Stockholm → Göteborg</b></span>
+      <span class="mpt-postit-hint" style="display:block">klicka så loggas du in och resan söks</span>
     </button>
   </div>
 
@@ -1812,7 +1857,25 @@ document.getElementById('btn-tur').addEventListener('click', function() {
   document.getElementById('btn-enkel').classList.remove('active');
   document.getElementById('return-wrap').classList.add('show');
   document.getElementById('trip-type').value = 'tur';
+  synkaReturdatum();
 });
+
+// Returdatumet följer avresedatumet: dagen efter, om det saknas eller ligger FÖRE avresan.
+// Förut stod returrutan tom (eller på ett datum före utresan) tills man själv klickade i den.
+function synkaReturdatum() {
+  var dep = document.getElementById('dep-date').value;
+  var ret = document.getElementById('ret-date');
+  if (!dep) return;
+  ret.min = dep;
+  if (!ret.value || ret.value <= dep) ret.value = dagEfter(dep);
+}
+function dagEfter(iso) {
+  var d = new Date(iso + 'T12:00:00');
+  d.setDate(d.getDate() + 1);
+  return d.toISOString().slice(0, 10);
+}
+document.getElementById('dep-date').addEventListener('change', synkaReturdatum);
+document.getElementById('dep-date').addEventListener('input', synkaReturdatum);
 
 // ── AI-kategorier ────────────────────────────────────────────────
 var cats = {storstad:'Storstad', natur:'Natur', strand:'Strand'};
@@ -1908,9 +1971,31 @@ function doSearch() {
 }
 
 // ── Demolappen ────────────────────────────────────────────────────
-// Enkelresa i dag. Sent på kvällen byter servern själv till i morgon (autoTomorrow),
-// så lappen ger avgångar oavsett när den trycks.
+// Loggar in ett demokonto (det finns ingen riktig inloggning — biljetterna "mejlas" till
+// kontots adress) och söker en enkelresa i dag. Sent på kvällen byter servern själv till
+// i morgon (autoTomorrow), så lappen ger avgångar oavsett när den trycks.
+var DEMO_KONTO = { namn: 'Demo Resenär', epost: 'demo@minipristaget.se' };
+function demoInloggad() {
+  try { return sessionStorage.getItem('mpt_demo') === '1'; } catch (e) { return false; }
+}
+function visaInloggad() {
+  var chip = document.getElementById('konto-chip');
+  if (!chip) return;
+  chip.style.display = demoInloggad() ? '' : 'none';
+  chip.title = 'Inloggad som ' + DEMO_KONTO.namn + ' (' + DEMO_KONTO.epost + ')';
+}
+function loggaUtDemo() {
+  try { sessionStorage.removeItem('mpt_demo'); } catch (e) {}
+  visaInloggad();
+}
+function biljettMottagare(vad) {
+  return demoInloggad()
+    ? vad + (vad === 'Biljetterna' ? ' är skickade' : ' är skickad') + ' till <strong>' + DEMO_KONTO.epost + '</strong>'
+    : vad + ' skickas till din e-post';
+}
 function kordemoResa() {
+  try { sessionStorage.setItem('mpt_demo', '1'); } catch (e) {}
+  visaInloggad();
   document.getElementById('from').value = 'Stockholm C';
   document.getElementById('to').value = 'Göteborg C';
   document.getElementById('btn-enkel').click();
@@ -2639,6 +2724,28 @@ function confirmSeat() {
   openSwishModal();
 }
 
+// Bokning utan platskarta: resan fylls i ur avgångskortet och man går direkt till betalningen
+function bokaUtanPlats(btn) {
+  var card = btn.closest('.dep-card');
+  var sel  = card.querySelector('.class-option.selected');
+  var byte = card.querySelector('.card-transfer');
+  _seatState.trainId       = card.dataset.trainId;
+  _seatState.layout        = 'none';
+  _seatState.selected      = '';
+  _seatState.price         = sel ? sel.getAttribute('data-price') : card.dataset.price;
+  _seatState.selectedClass = sel ? sel.getAttribute('data-class-name') : '2 klass';
+  _seatState.destination   = card.dataset.destination || '';
+  _seatState.model         = card.dataset.model || '';
+  _seatState.depTime       = card.dataset.depTime || '';
+  _seatState.trainImage    = '';
+  _seatState.travelMins    = parseInt(card.dataset.travelMins, 10) || 0;
+  _seatState.priceOriginal = '';
+  _seatState.fromCity      = _searchFromName;
+  _seatState.outboundDate  = _searchDate;
+  _seatState.seatLabel     = 'Fri placering' + (byte ? ' · ' + byte.textContent.replace('🔁', '').trim() : '');
+  openSwishModal();
+}
+
 function addReturnTrip() {
   _pendingOutbound = Object.assign({}, _seatState);
   openReturnModal();
@@ -2658,23 +2765,21 @@ function openReturnModal() {
       (s.seatLabel ? ' · ' + esc(s.seatLabel) : '') +
       ' · ' + esc(s.selectedClass || '2 klass') +
     '</div>';
-  // Default return date: day after outbound
-  var defaultDate = '';
-  if (s.outboundDate) {
-    var d = new Date(s.outboundDate + 'T12:00:00');
-    d.setDate(d.getDate() + 1);
-    defaultDate = d.toISOString().split('T')[0];
-  } else {
-    var tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    defaultDate = tomorrow.toISOString().split('T')[0];
-  }
-  document.getElementById('return-modal-date').value = defaultDate;
+  // Returdatum: det man redan valt på första skärmen (Tur & retur) — annars dagen efter
+  // utresan. Förut valdes alltid "dagen efter", och returdatumet från formuläret glömdes.
+  var valtRetur = document.getElementById('trip-type').value === 'tur'
+    ? document.getElementById('ret-date').value : '';
+  var utresa = s.outboundDate || new Date().toISOString().slice(0, 10);
+  var datum = document.getElementById('return-modal-date');
+  datum.min = utresa;
+  datum.value = valtRetur && valtRetur >= utresa ? valtRetur : dagEfter(utresa);
   document.getElementById('return-results-wrap').innerHTML = '';
   // Close seat modal, open return modal
   document.getElementById('seat-overlay').classList.remove('open');
   document.getElementById('return-overlay').classList.add('open');
   document.body.style.overflow = 'hidden';
+  // Datumet var redan valt — visa returavgångarna direkt i stället för att vänta på ett klick
+  if (valtRetur) searchReturnTrip();
 }
 
 function closeReturnModal() {
@@ -2710,6 +2815,7 @@ function searchReturnTrip() {
     }
     html += buildDepList(data.departures, (data.fromName || fromCity) + ' → ' + (data.toName || toCity), true);
     wrap.innerHTML = html;
+    wrap.querySelectorAll('.dep-list').forEach(depApply);
   })
   .catch(function() {
     wrap.innerHTML = '<div class="return-error">Kunde inte hämta avgångar, försök igen.</div>';
@@ -2735,7 +2841,7 @@ function openSwishModal() {
     document.getElementById('swish-ticket-box').innerHTML =
       '🎫 <strong>' + esc(ob.destination||'') + '</strong> · avg ' + esc(ob.depTime||'') + ' · ' + esc(ob.seatLabel||'') + '<br>' +
       '🎫 <strong>' + esc(s.destination||'') + '</strong> · avg ' + esc(s.depTime||'') + ' · ' + esc(s.seatLabel||'') + '<br>' +
-      'Biljetter skickas till din e-post';
+      biljettMottagare('Biljetterna');
   } else {
     document.getElementById('swish-journey-box').innerHTML =
       '<strong>' + esc(s.destination || 'Destination') + '</strong><br>' +
@@ -2746,7 +2852,7 @@ function openSwishModal() {
     document.getElementById('swish-ticket-box').innerHTML =
       '🎫 Bokningsref: <strong>MP-' + Math.floor(Math.random()*900000+100000) + '</strong><br>' +
       esc(s.destination) + ' · avg ' + esc(s.depTime) + '<br>' +
-      esc(s.seatLabel || '') + '<br>Biljett skickas till din e-post';
+      esc(s.seatLabel || '') + '<br>' + biljettMottagare('Biljetten');
   }
 
   // Reset to idle state
@@ -2852,18 +2958,105 @@ function seatBtnSub(className, price) {
   return (className || '') + (arMiniPris(className) ? ' · Exklusivt MiniPris' : '') + (price ? ' · ' + price : '');
 }
 
+// ── Operatör, dygnsdel och filterraden ───────────────────────────
+// Bolaget läses ur Trafikverkets produktnamn ("SJ Snabbtåg", "VR Snabbtåg") och i andra
+// hand ur operatörskoden. MTRX är VR sedan köpet — produktnamnet säger redan "VR".
+var OP_FARGER = { 'SJ':'#dc2626', 'VR':'#16a34a', 'Öresundståg':'#7c3aed', 'Västtrafik':'#0ea5e9',
+                  'Snälltåget':'#f59e0b', 'Mälartåg':'#0d9488', 'Norrtåg':'#2563eb', 'Tåg i Bergslagen':'#ea580c' };
+function opLabel(d) {
+  var p = String(d.productInformation || '');
+  var o = String(d.operator || '').toUpperCase();
+  var namn;
+  if (/^SJ\b/i.test(p) || o === 'SJ') namn = 'SJ';
+  else if (/^VR\b/i.test(p) || o === 'MTRX' || o === 'VR' || o === 'MTRXEX') namn = 'VR';
+  else if (/öresundståg/i.test(p) || o === 'Ö-TÅG' || o === 'SKANE') namn = 'Öresundståg';
+  else if (/västtåg|västtrafik/i.test(p) || o === 'VASTTRAF') namn = 'Västtrafik';
+  else if (/snälltåget/i.test(p) || o === 'SNALLTAGET') namn = 'Snälltåget';
+  else if (/mälartåg/i.test(p)) namn = 'Mälartåg';
+  else if (/norrtåg/i.test(p)) namn = 'Norrtåg';
+  else if (/bergslagen/i.test(p)) namn = 'Tåg i Bergslagen';
+  else namn = p ? p.split(' ')[0] : (d.operator || 'Tåg');
+  return { namn: namn, farg: OP_FARGER[namn] || '#64748b' };
+}
+function dygnsdel(t) {
+  var h = parseInt(String(t || '').slice(0, 2), 10);
+  if (isNaN(h)) return '';
+  return h < 9 ? 'morgon' : h < 12 ? 'formiddag' : h < 17 ? 'eftermiddag' : 'kvall';
+}
+
+// Filterraden: 35 avgångar Stockholm–Göteborg var för mycket att scrolla igenom. Filtret
+// döljer kort (ingen ny sökning), och sorteringen flyttar om korten i samma lista.
+function buildDepTools(deps) {
+  // OBS mellanslaget mellan hakparenteserna: två öppnande hakar i rad läser Thymeleaf som ett
+  // inline-uttryck, och sidan slutade renderas mitt i (ERR_INCOMPLETE_CHUNKED_ENCODING).
+  var perioder = [ ['alla','Alla'], ['morgon','Morgon'], ['formiddag','Förmiddag'],
+                  ['eftermiddag','Eftermiddag'], ['kvall','Kväll'] ];
+  var bolag = [];
+  deps.forEach(function (d) { var n = opLabel(d).namn; if (bolag.indexOf(n) < 0) bolag.push(n); });
+  var h = '<div class="dep-tools" onclick="event.stopPropagation()">';
+  h += '<div class="dep-chips" data-grupp="period">';
+  perioder.forEach(function (p, i) {
+    h += '<button type="button" class="dep-chip' + (i === 0 ? ' on' : '') + '" data-v="' + p[0] + '" onclick="depFilter(this)">' + p[1] + '</button>';
+  });
+  h += '</div>';
+  if (bolag.length > 1) {
+    h += '<div class="dep-chips" data-grupp="op"><button type="button" class="dep-chip on" data-v="alla" onclick="depFilter(this)">Alla bolag</button>';
+    bolag.forEach(function (n) {
+      h += '<button type="button" class="dep-chip" style="--op:' + (OP_FARGER[n] || '#64748b') + '" data-v="' + esc(n) + '" onclick="depFilter(this)"><span class="dep-chip-dot"></span>' + esc(n) + '</button>';
+    });
+    h += '</div>';
+  }
+  h += '<div class="dep-tools-row"><span class="dep-count"></span>' +
+       '<label class="dep-sort">Sortera <select onchange="depSort(this)">' +
+       '<option value="tid">Avgång</option><option value="pris">Pris</option><option value="restid">Restid</option>' +
+       '</select></label></div>';
+  h += '</div>';
+  return h;
+}
+function depFilter(btn) {
+  var grupp = btn.parentNode;
+  grupp.querySelectorAll('.dep-chip').forEach(function (b) { b.classList.remove('on'); });
+  btn.classList.add('on');
+  depApply(btn.closest('.dep-list'));
+}
+function depApply(list) {
+  var val = function (g) { var b = list.querySelector('.dep-chips[data-grupp="' + g + '"] .dep-chip.on'); return b ? b.dataset.v : 'alla'; };
+  var period = val('period'), op = val('op');
+  var kort = list.querySelectorAll('.dep-card'), syns = 0;
+  kort.forEach(function (c) {
+    var ok = (period === 'alla' || c.dataset.period === period) && (op === 'alla' || c.dataset.op === op);
+    c.style.display = ok ? '' : 'none';
+    if (ok) syns++;
+  });
+  var n = list.querySelector('.dep-count');
+  if (n) n.textContent = syns === kort.length ? kort.length + ' avgångar' : 'Visar ' + syns + ' av ' + kort.length;
+}
+function depSort(sel) {
+  var list = sel.closest('.dep-list');
+  var kort = Array.prototype.slice.call(list.querySelectorAll('.dep-card'));
+  var nyckel = {
+    tid:    function (c) { return c.dataset.depTime; },
+    pris:   function (c) { return ('00000' + c.dataset.pris).slice(-5) + c.dataset.depTime; },
+    restid: function (c) { return ('00000' + c.dataset.travelMins).slice(-5) + c.dataset.depTime; }
+  }[sel.value];
+  kort.sort(function (a, b) { return nyckel(a) < nyckel(b) ? -1 : nyckel(a) > nyckel(b) ? 1 : 0; });
+  kort.forEach(function (c) { list.appendChild(c); });
+}
+
 // ── Bygg avgångslista HTML (SJ-stil) ─────────────────────────────
 function buildDepList(deps, title, isReturn) {
   var cls = 'dep-list' + (isReturn ? ' return-dep-list' : '');
   var html = '<div class="' + cls + '">';
   html += '<div class="list-header"><div class="list-dot"></div>' + esc(title) + '</div>';
+  if (deps && deps.length > 4) html += buildDepTools(deps);
 
   if (!deps || !deps.length) {
     html += '<div class="empty"><div class="empty-icon">🚉</div>';
     html += '<div class="empty-title">Inga avgångar hittades</div>';
-    // Bara DIREKTTÅG listas (avgången paras med ankomsten vid målet). En sträcka som kräver
-    // byte blir därför tom — säg det, i stället för att låta som att dagen var slutsåld.
-    html += '<div class="empty-sub">MiniPrisTåget visar bara direkttåg. Kräver sträckan byte, sök till bytesstationen först – eller prova ett annat datum.</div></div>';
+    // Direkttåg och resor med ETT byte listas (avgången paras med ankomsten vid målet).
+    // Kräver sträckan två byten blir listan tom — säg det, i stället för att låta som att
+    // dagen var slutsåld.
+    html += '<div class="empty-sub">MiniPrisTåget visar direkttåg och resor med ett byte. Kräver sträckan fler byten, sök en del av resan i taget – eller prova ett annat datum.</div></div>';
   } else {
     for (var i = 0; i < deps.length; i++) {
       var d = deps[i];
@@ -2877,7 +3070,9 @@ function buildDepList(deps, title, isReturn) {
 
       // Restid + byten
       var dur = formatDuration(d.travelMinutes);
-      var travelInfo = (dur ? dur + ' · ' : '') + 'direkt';
+      var travelInfo = (dur ? dur + ' · ' : '') + (d.transfers > 0 ? '1 byte' : 'direkt');
+      var op = opLabel(d);
+      var prisTal = parseInt(String(d.price || '').replace(/[^0-9]/g, ''), 10) || 0;
 
       // Pris: "från 489 kr" → "Fr." + "489:-"
       var priceAmt = '';
@@ -2895,13 +3090,19 @@ function buildDepList(deps, title, isReturn) {
         ' data-seats-left="'  + String(d.seatsLeft  || 0) + '"' +
         ' data-model="'       + esc(d.trainModel    || '') + '"' +
         ' data-operator="'    + esc(d.operator      || '') + '"' +
+        ' data-op="'          + esc(op.namn) + '"' +
+        ' data-period="'      + dygnsdel(d.departureTime) + '"' +
+        ' data-pris="'        + prisTal + '"' +
         ' onclick="toggleClassPanel(this)">';
       html +=   '<div class="card-main">';
 
       // Vänster: tider + tåg
       html +=     '<div class="card-left">';
       html +=       '<div class="card-time-range">' + timeRange;
-      if (d.delayed) html += '<span class="card-time-delayed">→ ' + esc(d.estimatedTime) + '</span>';
+      if (d.delayed) html += '<span class="card-time-delayed">avg → ' + esc(d.estimatedTime) + '</span>';
+      // Beräknad ankomst vid målet (Trafikverkets prognos) — förut räknades ankomsten alltid
+      // från tidtabellen även när tåget låg efter
+      if (d.estimatedArrival) html += '<span class="card-time-delayed">framme ≈ ' + esc(d.estimatedArrival) + '</span>';
       html +=       '</div>';
       // Tät rad: allt om tåget till vänster, priset till höger. Förut stod sju märken
       // staplade i högerspalten och varje kort blev 200+ px högt med tom yta till vänster.
@@ -2910,8 +3111,14 @@ function buildDepList(deps, title, isReturn) {
         html += '<img class="card-train-photo" src="' + esc(d.trainImage) + '" alt="' + esc(d.trainModel || '') + '">';
       }
       html +=         '<div class="card-train-label">';
+      html +=           '<span class="op-badge" style="--op:' + op.farg + '">' + esc(op.namn) + '</span> ';
       html +=           '<span class="card-train-model">' + esc(d.trainModel || '') + '</span>';
-      html +=           ' · tåg ' + esc(d.trainId) + ' · ' + esc(travelInfo);
+      html +=           ' · tåg ' + esc(d.trainId) + (d.secondTrainId ? '+' + esc(d.secondTrainId) : '') +
+                        ' · ' + esc(travelInfo);
+      if (d.transfers > 0 && d.transferStation) {
+        html += '<div class="card-transfer">🔁 Byte i <strong>' + esc(d.transferStation) + '</strong> ' +
+                esc(d.transferArrival || '') + ' → ' + esc(d.transferDeparture || '') + '</div>';
+      }
       html +=         '</div>';
       html +=       '</div>';
 
@@ -3013,7 +3220,15 @@ function buildDepList(deps, title, isReturn) {
             '<span class="open-seatmap-sub">' + esc(seatBtnSub('2 klass', p2)) + '</span>' +
           '</button>';
       } else {
-        html += '<div class="no-seatmap-note">Öppen placering – välj valfri ledig plats ombord</div>';
+        // Utan platskarta (regionaltåg, resor med byte) gick det förut INTE att boka alls —
+        // bara en notis om öppen placering. Nu samma knapp, men direkt till betalningen.
+        html += '<button class="open-seatmap-btn" onclick="bokaUtanPlats(this)">' +
+                  '<span>🎫 Boka – fri placering →</span>' +
+                  '<span class="open-seatmap-sub">' + esc(seatBtnSub('2 klass', p2)) + '</span>' +
+                '</button>';
+        html += '<div class="no-seatmap-note">' + (d.transfers > 0
+          ? 'Resa med byte – välj valfri ledig plats på båda tågen'
+          : 'Öppen placering – välj valfri ledig plats ombord') + '</div>';
       }
 
       html += '</div>'; // class-panel
@@ -3055,6 +3270,8 @@ function renderResults(data) {
   html +=     '<span>🚂 Tåg</span>';
   if (n > 0) html += '<span class="res-count">' + n + ' avgångar</span>';
   html +=   '</div>';
+  // Ärlig märkning: tiderna är riktiga, priserna och platserna räknas fram ur tågnumret
+  html +=   '<div class="demo-note">ℹ️ Avgångar och tider är riktiga (Trafikverket). Priser och lediga platser är demo.</div>';
   html += '</div>';
 
   // Auto-advance notice when today has no more trains
@@ -3083,6 +3300,7 @@ function renderResults(data) {
 
   var section = document.getElementById('results-section');
   section.innerHTML = html;
+  section.querySelectorAll('.dep-list').forEach(depApply);
   section.style.display = 'block';
   document.getElementById('form-card').style.display = 'none';
   // Remove bottom border radius from app header since results section follows it
@@ -3111,6 +3329,7 @@ renderFavChips();
 })();
 
 // ── Starta GPS ───────────────────────────────────────────────────
+visaInloggad();
 document.getElementById('gps-btn').addEventListener('click', fetchGPS);
 // Hämta platsen automatiskt BARA om besökaren redan gett lov — annars ingen fråga som dyker
 // upp innan man ens tittat på sidan, och inget felmeddelande. GPS-knappen frågar som vanligt.

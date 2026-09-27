@@ -191,7 +191,7 @@ public class TrafikverketService {
         // (~4,5 h till Göteborg) fick snabbtågets restid. Trafikverket har ankomsten vid
         // målstationen — samma tågnummer samma dag — så den hämtas i stället för att gissas.
         TrainStation toSt = harMal ? findStationByName(toName).orElse(null) : null;
-        Map<String, List<String>> ankomster = toSt != null ? getArrivals(toSt.getSignature(), date) : Map.of();
+        Map<String, List<Ankomst>> ankomster = toSt != null ? getArrivals(toSt.getSignature(), date) : Map.of();
 
         List<TrainDeparture> departures = new ArrayList<>();
         Map<TrainDeparture, Integer> riktigRestid = new HashMap<>();
@@ -200,12 +200,13 @@ public class TrafikverketService {
                 if (!harMal) { departures.add(parseAnnouncement(ann)); continue; }
                 if (!ankomster.isEmpty()) {
                     // Ankomsten är känd: tåget ska stanna vid målet EFTER avgången här.
-                    Integer min = firstTravelMinutes(ann.path("AdvertisedTimeAtLocation").asText(),
-                                                     ankomster.get(ann.path("AdvertisedTrainIdent").asText()));
-                    if (min == null) continue;
+                    String depIso = ann.path("AdvertisedTimeAtLocation").asText();
+                    Ankomst a = firstArrivalAfter(depIso, ankomster.get(ann.path("AdvertisedTrainIdent").asText()));
+                    if (a == null) continue;
                     TrainDeparture dep = parseAnnouncement(ann);
+                    setEstimatedArrival(dep, a);
                     departures.add(dep);
-                    riktigRestid.put(dep, min);
+                    riktigRestid.put(dep, travelMinutes(depIso, a.planerad()));
                 } else if (matchesDestination(ann, toName)) {
                     // Ankomsterna gick inte att hämta — gamla slutstationsmatchningen som reserv
                     departures.add(parseAnnouncement(ann));
@@ -250,15 +251,241 @@ public class TrafikverketService {
             }
         }
 
+        // ── Resor med ETT byte, när direkttågen inte räcker ──
+        // Förut listades bara direkttåg, och en sträcka som Stockholm → Kalmar blev tom.
+        if (fromSt != null && toSt != null && !ankomster.isEmpty() && departures.size() < 3
+                && announcements.isArray()) {
+            java.util.Set<String> direkta = new java.util.HashSet<>();
+            for (TrainDeparture d : departures) direkta.add(d.getTrainId());
+            departures.addAll(findTransferTrips(fromSt, toSt, date, fromTime, announcements,
+                                                ankomster, direkta));
+            departures.sort(java.util.Comparator.comparing(TrainDeparture::getDepartureTime));
+        }
+
         departureCache.put(cacheKey, new DepartureCacheEntry(departures, System.currentTimeMillis()));
         return departures;
     }
 
-    // ── Ankomster vid en station: tågnummer → annonserad ankomsttid (ISO) ──
+    // ── Byten ─────────────────────────────────────────────────────
+    /**
+     * Stationer där fjärr- och regionaltåg möts. Bara de som ligger nära linjen mellan start
+     * och mål provas (se {@link #chooseHubs}), och högst fyra per sökning — varje bytesstation
+     * kostar två anrop mot Trafikverket.
+     */
+    private static final List<String> BYTESSTATIONER = List.of(
+        "Stockholm C", "Göteborg C", "Malmö C", "Hallsberg", "Norrköping C", "Linköping C",
+        "Mjölby", "Nässjö C", "Alvesta", "Hässleholm C", "Lund C", "Södertälje Syd", "Örebro C",
+        "Katrineholm C", "Skövde C", "Falköping C", "Herrljunga", "Jönköping C", "Växjö",
+        "Kristianstad C", "Uppsala C", "Gävle C", "Sundsvall C", "Borlänge C", "Västerås C",
+        "Karlstad C", "Halmstad C", "Kalmar C", "Karlskrona C");
+
+    static final int MIN_BYTESTID = 6;
+    static final int MAX_VANTETID = 120;
+
+    /** Ett tåg mellan två stationer: avgång och ankomst som ISO-tider. */
+    record Leg(String trainId, String depIso, String arrIso, JsonNode ann, Ankomst ankomst) {}
+
+    /** En resa med byte: första och andra tåget. */
+    record Connection(Leg first, Leg second) {}
+
+    private List<TrainDeparture> findTransferTrips(TrainStation fromSt, TrainStation toSt, LocalDate date,
+                                                   String fromTime, JsonNode fromAnnouncements,
+                                                   Map<String, List<Ankomst>> ankomsterVidMal,
+                                                   java.util.Set<String> direkta) {
+        List<TrainStation> kandidater = new ArrayList<>();
+        for (String namn : BYTESSTATIONER) {
+            if (stationCache != null) bestMatch(stationCache, namn).ifPresent(kandidater::add);
+        }
+        List<TrainStation> hubs = chooseHubs(fromSt, toSt, kandidater, 4);
+
+        // Bytesstationerna hämtas parallellt — sekventiellt blev sökningen märkbart seg
+        List<java.util.concurrent.CompletableFuture<List<Connection>>> jobb = new ArrayList<>();
+        for (TrainStation hub : hubs) {
+            jobb.add(java.util.concurrent.CompletableFuture.supplyAsync(() -> {
+                Map<String, List<Ankomst>> vidByte = getArrivals(hub.getSignature(), date);
+                JsonNode franByte = getDepartureAnnouncements(hub.getSignature(), date, fromTime);
+                return connect(legsTo(fromAnnouncements, vidByte), legsTo(franByte, ankomsterVidMal),
+                               direkta);
+            }));
+        }
+        List<Connection> alla = new ArrayList<>();
+        List<TrainStation> hubForConn = new ArrayList<>();
+        for (int i = 0; i < jobb.size(); i++) {
+            try {
+                for (Connection c : jobb.get(i).get(20, java.util.concurrent.TimeUnit.SECONDS)) {
+                    alla.add(c); hubForConn.add(hubs.get(i));
+                }
+            } catch (Exception e) { /* en bytesstation som inte svarar hoppas över */ }
+        }
+
+        List<Connection> basta = pareto(alla);
+        List<TrainDeparture> ut = new ArrayList<>();
+        double dist = haversine(fromSt.getLat(), fromSt.getLon(), toSt.getLat(), toSt.getLon());
+        for (Connection c : basta) {
+            TrainStation hub = hubForConn.get(alla.indexOf(c));
+            TrainDeparture dep = parseAnnouncement(c.first().ann());
+            TrainDeparture andra = parseAnnouncement(c.second().ann());
+            TrainModelService.TrainModelInfo m1 = trainModelService.resolveModel(dep, fromSt.getName());
+            TrainModelService.TrainModelInfo m2 = trainModelService.resolveModel(andra, hub.getName());
+            String kombinerat = c.first().trainId() + "+" + c.second().trainId();
+
+            dep.setDestination(toSt.getName());
+            dep.setDestinationSignature(toSt.getSignature());
+            dep.setTransfers(1);
+            dep.setTransferStation(hub.getName());
+            dep.setTransferArrival(formatTime(c.first().arrIso()));
+            dep.setTransferDeparture(formatTime(c.second().depIso()));
+            dep.setSecondTrainId(c.second().trainId());
+            dep.setTrainModel(m1.name().equals(m2.name()) ? m1.name() : m1.name() + " + " + m2.name());
+            dep.setTrainColor(m1.color());
+            dep.setTrainImage(m1.imageUrl());
+            dep.setHasSeatMap(false);      // platskartan gäller ett tåg — med byte väljs plats ombord
+            dep.setSeatLayout("none");
+            dep.setTravelMinutes(travelMinutes(c.first().depIso(), c.second().arrIso()));
+            setEstimatedArrival(dep, c.second().ankomst());
+            dep.setPrice(trainModelService.calculatePrice(dist, kombinerat));
+            dep.setPriceLugn(trainModelService.calculatePriceLugn(dist, kombinerat));
+            dep.setPrice1klass(trainModelService.calculatePrice1Klass(dist, kombinerat));
+            dep.setPriceOriginal(trainModelService.calculateOrdinaryPrice(dist, kombinerat));
+            dep.setSeatsLeft(trainModelService.calculateSeatsLeft(kombinerat));
+            dep.setCo2SavedKg(Math.round((110.0 - 6.0) * dist / 1000.0 * 10.0) / 10.0);
+            ut.add(dep);
+        }
+        return ut;
+    }
+
+    /**
+     * Bytesstationer som ligger på vägen: omvägen via stationen får vara högst 60 % längre
+     * än fågelvägen (järnvägen svänger: Stockholm → Alvesta → Kalmar är 1,6), och start/mål
+     * räknas inte. Kortast omväg först.
+     */
+    static List<TrainStation> chooseHubs(TrainStation from, TrainStation to, List<TrainStation> kandidater, int max) {
+        double direkt = haversineStatic(from.getLat(), from.getLon(), to.getLat(), to.getLon());
+        if (direkt < 1) return List.of();
+        record Kandidat(TrainStation s, double kvot) {}
+        List<Kandidat> ok = new ArrayList<>();
+        for (TrainStation h : kandidater) {
+            double a = haversineStatic(from.getLat(), from.getLon(), h.getLat(), h.getLon());
+            double b = haversineStatic(h.getLat(), h.getLon(), to.getLat(), to.getLon());
+            if (a < 5 || b < 5) continue;
+            double kvot = (a + b) / direkt;
+            if (kvot <= 1.6) ok.add(new Kandidat(h, kvot));
+        }
+        ok.sort(java.util.Comparator.comparingDouble(Kandidat::kvot));
+        List<TrainStation> ut = new ArrayList<>();
+        for (Kandidat k : ok) {
+            if (ut.stream().noneMatch(s -> s.getSignature().equals(k.s().getSignature()))) ut.add(k.s());
+            if (ut.size() == max) break;
+        }
+        return ut;
+    }
+
+    /** Avgångarna i {@code anns} som når en station med kända ankomster, efter avgången. */
+    static List<Leg> legsTo(JsonNode anns, Map<String, List<Ankomst>> ankomster) {
+        List<Leg> legs = new ArrayList<>();
+        if (anns == null || !anns.isArray() || ankomster.isEmpty()) return legs;
+        for (JsonNode ann : anns) {
+            if (ann.path("Canceled").asBoolean(false)) continue;
+            String id  = ann.path("AdvertisedTrainIdent").asText("");
+            String dep = ann.path("AdvertisedTimeAtLocation").asText("");
+            Ankomst a = firstArrivalAfter(dep, ankomster.get(id));
+            if (a != null) legs.add(new Leg(id, dep, a.planerad(), ann, a));
+        }
+        return legs;
+    }
+
+    /**
+     * Para ihop tåg 1 (till bytet) med det tåg 2 (från bytet) som är FRAMME först, inom
+     * {@value #MIN_BYTESTID}–{@value #MAX_VANTETID} minuters bytestid. Tåg 1 som redan går
+     * direkt till målet hoppas över — den resan står redan i listan som direkttåg.
+     */
+    static List<Connection> connect(List<Leg> forsta, List<Leg> andra, java.util.Set<String> direkta) {
+        List<Connection> ut = new ArrayList<>();
+        for (Leg l1 : forsta) {
+            if (direkta.contains(l1.trainId())) continue;
+            Leg bast = null;
+            for (Leg l2 : andra) {
+                if (l2.trainId().equals(l1.trainId())) continue;
+                Integer byte_ = travelMinutes(l1.arrIso(), l2.depIso());
+                if (byte_ == null || byte_ < MIN_BYTESTID || byte_ > MAX_VANTETID) continue;
+                if (bast == null || travelMinutes(l2.arrIso(), bast.arrIso()) != null) bast = l2;
+            }
+            if (bast != null) ut.add(new Connection(l1, bast));
+        }
+        return ut;
+    }
+
+    /**
+     * Behåll bara resor som ingen annan slår: en resa som avgår tidigare OCH är framme
+     * senare (eller samtidigt) än en annan är onödig. Samma tåg 2 nås ofta från flera tåg 1
+     * — bara det SENASTE tåg 1 är värt att visa.
+     */
+    static List<Connection> pareto(List<Connection> alla) {
+        List<Connection> ut = new ArrayList<>();
+        for (Connection c : alla) {
+            boolean slagen = false;
+            for (Connection o : alla) {
+                if (o == c) continue;
+                long depC = java.time.OffsetDateTime.parse(c.first().depIso()).toEpochSecond();
+                long depO = java.time.OffsetDateTime.parse(o.first().depIso()).toEpochSecond();
+                long arrC = java.time.OffsetDateTime.parse(c.second().arrIso()).toEpochSecond();
+                long arrO = java.time.OffsetDateTime.parse(o.second().arrIso()).toEpochSecond();
+                boolean minstLikaBra = depO >= depC && arrO <= arrC;
+                boolean baattre = depO > depC || arrO < arrC;
+                // Exakt samma tider: behåll bara den första i listan
+                boolean dubblett = depO == depC && arrO == arrC && alla.indexOf(o) < alla.indexOf(c);
+                if ((minstLikaBra && baattre) || dubblett) { slagen = true; break; }
+            }
+            if (!slagen) ut.add(c);
+        }
+        return ut;
+    }
+
+    private JsonNode getDepartureAnnouncements(String signature, LocalDate date, String fromTime) {
+        String xml = """
+            <REQUEST>
+              <LOGIN authenticationkey="%s"/>
+              <QUERY objecttype="TrainAnnouncement" namespace="rail.trafficinfo" schemaversion="2.0" limit="1000" orderby="AdvertisedTimeAtLocation">
+                <FILTER>
+                  <AND>
+                    <EQ name="LocationSignature" value="%s"/>
+                    <EQ name="ActivityType" value="Avgang"/>
+                    <GT name="AdvertisedTimeAtLocation" value="%sT%s"/>
+                    <LT name="AdvertisedTimeAtLocation" value="%sT06:00:00"/>
+                  </AND>
+                </FILTER>
+                <INCLUDE>AdvertisedTrainIdent</INCLUDE>
+                <INCLUDE>AdvertisedTimeAtLocation</INCLUDE>
+                <INCLUDE>EstimatedTimeAtLocation</INCLUDE>
+                <INCLUDE>ToLocation</INCLUDE>
+                <INCLUDE>TrainOwner</INCLUDE>
+                <INCLUDE>Canceled</INCLUDE>
+                <INCLUDE>ProductInformation</INCLUDE>
+              </QUERY>
+            </REQUEST>
+            """.formatted(apiKey, signature, date, fromTime, date.plusDays(1));
+        try {
+            return callApi(xml).path("RESPONSE").path("RESULT").get(0).path("TrainAnnouncement");
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /** Ankomst vid en station: annonserad tid och (om Trafikverket har en) beräknad tid. */
+    record Ankomst(String planerad, String beraknad) {}
+
+    /** Beräknad ankomst sätts bara när den skiljer sig från tidtabellen. */
+    private void setEstimatedArrival(TrainDeparture dep, Ankomst a) {
+        if (a == null || a.beraknad() == null || a.beraknad().isBlank()) return;
+        Integer sen = travelMinutes(a.planerad(), a.beraknad());
+        if (sen != null && sen > 0) dep.setEstimatedArrival(formatTime(a.beraknad()));
+    }
+
+    // ── Ankomster vid en station: tågnummer → annonserad (+ beräknad) ankomsttid ──
     // Fönstret går till 06:00 nästa dygn så att ett kvällståg som är framme efter midnatt
     // inte faller bort. Misslyckas anropet blir kartan tom, och sökningen faller tillbaka på
     // slutstationsmatchningen — en tom lista av ett nätverksfel vore värre än en gissad restid.
-    private Map<String, List<String>> getArrivals(String toSignature, LocalDate date) {
+    private Map<String, List<Ankomst>> getArrivals(String toSignature, LocalDate date) {
         String xml = """
             <REQUEST>
               <LOGIN authenticationkey="%s"/>
@@ -273,6 +500,7 @@ public class TrafikverketService {
                 </FILTER>
                 <INCLUDE>AdvertisedTrainIdent</INCLUDE>
                 <INCLUDE>AdvertisedTimeAtLocation</INCLUDE>
+                <INCLUDE>EstimatedTimeAtLocation</INCLUDE>
               </QUERY>
             </REQUEST>
             """.formatted(apiKey, toSignature, date, date.plusDays(1));
@@ -284,28 +512,31 @@ public class TrafikverketService {
     }
 
     /**
-     * Restid till den FÖRSTA ankomsten efter avgången. Ett tågnummer kan ha två ankomster i
-     * fönstret: tåg 451 (Stockholm 21:22) var framme i Göteborg 01:47 natten FÖRE — gårdagens
-     * tur — och 00:47 natten efter. Att ta den första i listan kastade tåget helt.
+     * Den FÖRSTA ankomsten efter avgången. Ett tågnummer kan ha två ankomster i fönstret:
+     * tåg 451 (Stockholm 21:22) var framme i Göteborg 01:47 natten FÖRE — gårdagens tur —
+     * och 00:47 natten efter. Att ta den första i listan kastade tåget helt.
      */
-    static Integer firstTravelMinutes(String departureIso, List<String> arrivals) {
+    static Ankomst firstArrivalAfter(String departureIso, List<Ankomst> arrivals) {
         if (arrivals == null) return null;
-        Integer best = null;
-        for (String arr : arrivals) {
-            Integer min = travelMinutes(departureIso, arr);
-            if (min != null && (best == null || min < best)) best = min;
+        Ankomst best = null;
+        Integer bestMin = null;
+        for (Ankomst a : arrivals) {
+            Integer min = travelMinutes(departureIso, a.planerad());
+            if (min != null && (bestMin == null || min < bestMin)) { best = a; bestMin = min; }
         }
         return best;
     }
 
     /** Alla ankomster per tågnummer, i tidsordning. */
-    static Map<String, List<String>> arrivalsByTrain(JsonNode announcements) {
-        Map<String, List<String>> map = new HashMap<>();
+    static Map<String, List<Ankomst>> arrivalsByTrain(JsonNode announcements) {
+        Map<String, List<Ankomst>> map = new HashMap<>();
         if (announcements != null && announcements.isArray()) {
             for (JsonNode a : announcements) {
-                String id = a.path("AdvertisedTrainIdent").asText("");
-                String t  = a.path("AdvertisedTimeAtLocation").asText("");
-                if (!id.isBlank() && !t.isBlank()) map.computeIfAbsent(id, k -> new ArrayList<>()).add(t);
+                String id  = a.path("AdvertisedTrainIdent").asText("");
+                String t   = a.path("AdvertisedTimeAtLocation").asText("");
+                String est = a.path("EstimatedTimeAtLocation").asText("");
+                if (!id.isBlank() && !t.isBlank())
+                    map.computeIfAbsent(id, k -> new ArrayList<>()).add(new Ankomst(t, est));
             }
         }
         return map;
@@ -404,6 +635,10 @@ public class TrafikverketService {
     }
 
     private double haversine(double lat1, double lon1, double lat2, double lon2) {
+        return haversineStatic(lat1, lon1, lat2, lon2);
+    }
+
+    static double haversineStatic(double lat1, double lon1, double lat2, double lon2) {
         double R    = 6371;
         double dLat = Math.toRadians(lat2 - lat1);
         double dLon = Math.toRadians(lon2 - lon1);

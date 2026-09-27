@@ -50,30 +50,90 @@ class TrafikverketServiceTest {
     @Test
     void allaAnkomsterPerTagnummerSparas() throws Exception {
         JsonNode json = new ObjectMapper().readTree("""
-            [ {"AdvertisedTrainIdent":"2027","AdvertisedTimeAtLocation":"2026-09-28T12:55:00.000+02:00"},
+            [ {"AdvertisedTrainIdent":"2027","AdvertisedTimeAtLocation":"2026-09-28T12:55:00.000+02:00",
+               "EstimatedTimeAtLocation":"2026-09-28T13:05:00.000+02:00"},
               {"AdvertisedTrainIdent":"427", "AdvertisedTimeAtLocation":"2026-09-28T12:20:00.000+02:00"},
               {"AdvertisedTrainIdent":"2027","AdvertisedTimeAtLocation":"2026-09-29T02:00:00.000+02:00"},
               {"AdvertisedTrainIdent":"",    "AdvertisedTimeAtLocation":"2026-09-28T13:00:00.000+02:00"} ]
             """);
-        Map<String, List<String>> map = TrafikverketService.arrivalsByTrain(json);
+        Map<String, List<TrafikverketService.Ankomst>> map = TrafikverketService.arrivalsByTrain(json);
         assertThat(map).hasSize(2);
         assertThat(map.get("2027")).hasSize(2);
+        // Den beräknade tiden följer med — den visar förseningen vid målet
+        assertThat(map.get("2027").get(0).beraknad()).isEqualTo("2026-09-28T13:05:00.000+02:00");
+    }
+
+    private static TrafikverketService.Ankomst ank(String planerad) {
+        return new TrafikverketService.Ankomst(planerad, "");
     }
 
     @Test
     void gardagensTurForeAvgangenKastarInteTaget() {
         // Uppmätt 2026-09-28, tåg 451 Stockholm C 21:22: framme i Göteborg C 01:47 natten FÖRE
         // (gårdagens tur) och 00:47 natten efter. Bara den senare hör till avgången.
-        List<String> ankomster = List.of("2026-09-28T01:47:00.000+02:00", "2026-09-29T00:47:00.000+02:00");
-        assertThat(TrafikverketService.firstTravelMinutes("2026-09-28T21:22:00.000+02:00", ankomster))
-            .isEqualTo(205);
+        List<TrafikverketService.Ankomst> ankomster =
+            List.of(ank("2026-09-28T01:47:00.000+02:00"), ank("2026-09-29T00:47:00.000+02:00"));
+        assertThat(TrafikverketService.firstArrivalAfter("2026-09-28T21:22:00.000+02:00", ankomster).planerad())
+            .isEqualTo("2026-09-29T00:47:00.000+02:00");
     }
 
     @Test
     void ingenAnkomstEfterAvgangenGerNull() {
-        assertThat(TrafikverketService.firstTravelMinutes("2026-09-28T21:22:00.000+02:00",
-            List.of("2026-09-28T01:47:00.000+02:00"))).isNull();
-        assertThat(TrafikverketService.firstTravelMinutes("2026-09-28T21:22:00.000+02:00", null)).isNull();
+        assertThat(TrafikverketService.firstArrivalAfter("2026-09-28T21:22:00.000+02:00",
+            List.of(ank("2026-09-28T01:47:00.000+02:00")))).isNull();
+        assertThat(TrafikverketService.firstArrivalAfter("2026-09-28T21:22:00.000+02:00", null)).isNull();
+    }
+
+    // --- byten ---
+
+    private static TrafikverketService.Leg leg(String id, String dep, String arr) {
+        return new TrafikverketService.Leg(id, "2026-09-28T" + dep + ":00.000+02:00",
+            "2026-09-28T" + arr + ":00.000+02:00", null, ank("2026-09-28T" + arr + ":00.000+02:00"));
+    }
+
+    @Test
+    void bytetValjerTagetSomArFrammeForst() {
+        var forsta = List.of(leg("10", "08:00", "10:00"));
+        var andra = List.of(
+            leg("20", "10:03", "11:00"),   // för kort bytestid (3 min)
+            leg("21", "10:15", "12:30"),
+            leg("22", "10:40", "12:00"),   // senare avgång men FRAMME först
+            leg("23", "13:00", "14:00"));  // för lång väntan (180 min)
+        var c = TrafikverketService.connect(forsta, andra, java.util.Set.of());
+        assertThat(c).hasSize(1);
+        assertThat(c.get(0).second().trainId()).isEqualTo("22");
+    }
+
+    @Test
+    void direkttagOchSammaTagnummerBlirInteByte() {
+        var forsta = List.of(leg("10", "08:00", "10:00"), leg("11", "08:30", "10:20"));
+        var andra = List.of(leg("11", "10:30", "12:00"), leg("30", "10:40", "12:10"));
+        // 10 går redan direkt till målet; 11 får inte "byta" till sig själv
+        var c = TrafikverketService.connect(forsta, andra, java.util.Set.of("10"));
+        assertThat(c).hasSize(1);
+        assertThat(c.get(0).first().trainId()).isEqualTo("11");
+        assertThat(c.get(0).second().trainId()).isEqualTo("30");
+    }
+
+    @Test
+    void paretoTarBortResorSomSlasAvEnSenareAvgang() {
+        var a = new TrafikverketService.Connection(leg("1", "07:00", "09:00"), leg("9", "09:30", "12:00"));
+        var b = new TrafikverketService.Connection(leg("2", "08:00", "09:20"), leg("9", "09:30", "12:00"));
+        var c = new TrafikverketService.Connection(leg("3", "08:30", "10:00"), leg("8", "10:10", "13:00"));
+        var kvar = TrafikverketService.pareto(List.of(a, b, c));
+        // a avgår tidigare än b men är framme samtidigt → bort. c är framme senare men avgår senare → kvar.
+        assertThat(kvar).containsExactly(b, c);
+    }
+
+    @Test
+    void bytesstationMaste_liggaPaVagen() {
+        TrainStation sthlm  = new TrainStation("Cst", "Stockholm C", 59.33, 18.06);
+        TrainStation kalmar = new TrainStation("Kac", "Kalmar C",    56.66, 16.36);
+        TrainStation nassjo = new TrainStation("N",   "Nässjö C",    57.65, 14.69);
+        TrainStation linkop = new TrainStation("Lp",  "Linköping C", 58.42, 15.62);
+        TrainStation umea   = new TrainStation("Umc", "Umeå C",      63.83, 20.26);
+        var hubs = TrafikverketService.chooseHubs(sthlm, kalmar, List.of(nassjo, linkop, umea, sthlm), 3);
+        assertThat(hubs).extracting(TrainStation::getSignature).containsExactly("Lp", "N");
     }
 
     @Test
