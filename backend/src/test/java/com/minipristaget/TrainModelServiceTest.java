@@ -195,4 +195,78 @@ class TrainModelServiceTest {
         assertThat(service.estimateTravelMinutes(0, 160)).isZero();
         assertThat(service.estimateTravelMinutes(455, 0)).isZero();
     }
+
+    // --- alla bolag och produkter i Trafikverkets data (inventerat 2026-09-27) ---
+
+    private TrainModelService.TrainModelInfo modell(String owner, String produkt, String trafiktyp) {
+        TrainDeparture d = new TrainDeparture();
+        d.setTrainId("9999");
+        d.setOperator(owner);
+        d.setProductInformation(produkt);
+        d.setTypeOfTraffic(trafiktyp);
+        d.setDestination("Någonstans");
+        return service.resolveModel(d, "Stockholm C");
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource(delimiter = '|', value = {
+        // owner   | produkt            | trafiktyp  | förväntat namn         | bolag
+        "MÄLAB     | Mälartåg           | Tåg        | Mälartåg               | Mälartåg",
+        "SLL       | SL Pendeltåg/40    | Pendeltåg  | SL Pendeltåg X60       | SL",
+        "SKANE     | Pågatågen          | Tåg        | Pågatåg X61            | Pågatåg",
+        "SKANE     | Pågatågen Exp      | Tåg        | Pågatåg Express X61    | Pågatåg",
+        "JLT       | Krösatågen         | Tåg        | Krösatåg               | Krösatåg",
+        "SJ        | SJ Regional        | Tåg        | SJ Regional            | SJ",
+        "SJ        | SJ InterCity       | Tåg        | SJ InterCity           | SJ",
+        "SJ        | SJ Nattåg          | Tåg        | SJ Nattåg              | SJ",
+        "VASTTRAF  | Västtågen          | Tåg        | Västtåg                | Västtåg",
+        "VASTTRAF  | Västtågen          | Pendeltåg  | Västtågen pendeltåg    | Västtåg",
+        "ÖTRAF     | Östgötapendel      | Tåg        | Östgötapendeln         | Östgötapendeln",
+        "ATRAIN    |                    | Tåg        | Arlanda Express X3     | Arlanda Express",
+        "TIB       | TiB                | Tåg        | Tåg i Bergslagen       | Tåg i Bergslagen",
+        "NORRT     | Norrtåg            | Tåg        | Norrtåg X62            | Norrtåg",
+        "XTRAFIK   | X-Tåget            | Tåg        | X-Tåget                | X-Tåget",
+        "VY        | Vy Snabbtåg        | Tåg        | Vy Snabbtåg            | Vy",
+        "SNÄLL     | Snälltåget         | Tåg        | Snälltåget             | Snälltåget",
+        "Ö-TÅG     | Öresundståg        | Tåg        | Öresundståg X31K       | Öresundståg",
+        "MTRX      | VR Snabbtåg        | Tåg        | VR Snabbtåg X74        | VR",
+        "SJ        | SJ Snabbtåg        | Tåg        | SJ X2000               | SJ",
+        "VASTTRAF  | Västtågen          | Buss       | Ersättningsbuss        | Buss",
+    })
+    void varjeBolagIDatanKannsIgen(String owner, String produkt, String trafiktyp, String namn, String bolag) {
+        assertThat(modell(owner, produkt, trafiktyp).name()).isEqualTo(namn);
+        assertThat(TrainModelService.operatorName(owner, produkt, trafiktyp)).isEqualTo(bolag);
+    }
+
+    @Test
+    void snalltagetsRiktigaOperatorskodKannsIgen() {
+        // Trafikverket skriver "SNÄLL" — tabellen hade bara "SNALLTAGET" och träffade aldrig
+        assertThat(service.getModel("SNÄLL").name()).isEqualTo("Snälltåget");
+    }
+
+    // --- priser som liknar de riktiga ---
+
+    @Test
+    void oresundstagKungsbackaTillKastrupKostarSomRiktigt() {
+        // Kungsbacka → Copenhagen Airport ≈ 210 km fågelväg; riktigt pris 508 kr i 2 klass
+        int pris = service.basePrice(209.5, "1057", TrainModelService.Priskategori.REGIONAL);
+        assertThat(pris).isBetween(490, 530);
+        // Regionaltåg har fast pris per sträcka — samma för alla avgångar
+        assertThat(service.basePrice(209.5, "1099", TrainModelService.Priskategori.REGIONAL)).isEqualTo(pris);
+    }
+
+    @Test
+    void slOchArlandaExpressHarFastaPriserUtanOverstrykning() {
+        assertThat(service.basePrice(40, "2280", TrainModelService.Priskategori.SL)).isEqualTo(45);
+        assertThat(service.calculateOrdinaryPrice(40, "2280", TrainModelService.Priskategori.SL)).isZero();
+        assertThat(service.basePrice(37, "7878", TrainModelService.Priskategori.ARLANDA)).isEqualTo(339);
+    }
+
+    @Test
+    void prisKategoriFoljerTagtypen() {
+        assertThat(TrainModelService.kategori(TrainModelService.PAGATAG)).isEqualTo(TrainModelService.Priskategori.REGIONAL);
+        assertThat(TrainModelService.kategori(TrainModelService.NATTAG)).isEqualTo(TrainModelService.Priskategori.NATT);
+        assertThat(TrainModelService.kategori(TrainModelService.SL_PENDEL)).isEqualTo(TrainModelService.Priskategori.SL);
+        assertThat(TrainModelService.kategori(TrainModelService.INTERCITY)).isEqualTo(TrainModelService.Priskategori.SNABB);
+    }
 }

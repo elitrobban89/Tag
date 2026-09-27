@@ -38,11 +38,21 @@ public class GroqChatService {
           klasserna, dubbla eluttag vid varje plats, nedfällbara bord med mugghållare.
           Ca 62 platser i 1 klass och 183 i 2 klass. Kör bl.a. Göteborg–Stockholm,
           Göteborg–Malmö, Stockholm–Sundsvall/Östersund och Stockholm–Oslo.
-        - **MTRX / X74** — höghastighetståg, WiFi, 1:a och 2:a klass, modern inredning
-        - **SJ Intercity / Regional** — WiFi på nyare vagnar, 2:a klass standard
-        - **Öresundståg X31** — regionaltåg Malmö–Köpenhamn och södra Sverige, öppen placering, WiFi
-        - **Snälltåget** — nattåg och semester, liggvagn tillgänglig, WiFi
-        - **MTR Express** — Stockholm–Göteborg, modern, WiFi, konkurrenskraftiga priser
+        - **VR Snabbtåg (X74, fd MTR Express)** — byggt av schweiziska Stadler, 6 tågsätt,
+          105,5 m långa, max 200 km/h, 4 500 kW. Specialbyggda för svenskt vinterklimat,
+          ingen korglutning. Mat och dryck ombord, WiFi. Kör Stockholm–Göteborg.
+        - **SJ InterCity / SJ Regional** — WiFi på nyare vagnar, 2:a klass standard
+        - **SJ Nattåg** — Stockholm–Luleå/Narvik m.fl., sovvagn och liggvagn
+        - **Öresundståg (X31K, i Danmark ET)** — Bombardier Contessa, 111 tågsätt, max 180 km/h.
+          Tre vagnar och 229 sittplatser per tågsätt, upp till tre kopplade (687 platser).
+          1:a och 2:a klass; 2:a klass har tyst avdelning och avdelning för husdjur.
+          Eluttag (220 V) vid varje sätesgrupp, trådlöst internet. Mittvagnen har
+          rullstolsplatser och handikappanpassad toalett. Öppen placering.
+        - **Regionaltåg**: Mälartåg (Mälardalen), Pågatåg X61 (Skåne), Västtåg (Västra Götaland),
+          Krösatåg (Småland), Östgötapendeln, Norrtåg X62, X-Tåget, Tåg i Bergslagen — öppen placering
+        - **SL Pendeltåg (X60)** — Stockholmsregionen. **Arlanda Express (X3)** — Stockholm C–Arlanda
+        - **Vy Snabbtåg** — Göteborg–Oslo. **Snälltåget** — fjärrtåg och nattåg, liggvagn
+        - **Ersättningsbuss** — när en avgång har trafiktypen Buss går en buss i stället för tåget
 
         ## Faciliteter ombord (generellt SJ/MTRX)
         - **WiFi**: ingår kostnadsfritt på X2000, SJ 3000, MTRX och de flesta Intercity-tåg
@@ -78,12 +88,10 @@ public class GroqChatService {
         - **Nattåg (SJ/Vy)**: Stockholm och södra Sverige upp till övre Norrland — Umeå, Luleå,
           Kiruna och Narvik.
 
-        ## Topp 5 rutter (ungefärlig restid)
-        1. Stockholm → Göteborg: ca 3h (X2000), 2h40 (MTRX snabbaste)
-        2. Stockholm → Malmö: ca 4h30 (X2000 direkttåg)
-        3. Göteborg → Malmö: ca 2h40 (Öresundståg/SJ Regional)
-        4. Stockholm → Sundsvall: ca 3h30 (SJ Regional)
-        5. Stockholm → Östersund: ca 4h30 (SJ Intercity)
+        ## Restider
+        Restid, byten och ankomst står i avgångsdatan och kommer från Trafikverkets tidtabell —
+        använd DEM. Gissa aldrig en restid ur minnet (Stockholm–Göteborg tar i dagens tidtabell
+        ca 3h25–3h45, inte 2h40).
 
         Svara alltid på svenska. Var kortfattad och konkret. Använd **fetstil** och listor med - för att strukturera svaret.
         """;

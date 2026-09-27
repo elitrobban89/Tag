@@ -106,17 +106,63 @@ public class TrafikverketService {
      * station som innehåller texten. Förut vann den första som INNEHÖLL texten, i den ordning
      * Trafikverket råkade lista stationerna — "Göteborg" kunde bli Olskroken eller Sävenäs.
      */
+    /**
+     * Namn som folk skriver men som Trafikverket inte använder. Kastrup heter "Copenhagen
+     * Airport" i datan och gav noll träffar; "København"/"Copenhagen" hittade inte Köpenhamn H.
+     */
+    static final Map<String, String> ALIAS = Map.ofEntries(
+        Map.entry("kastrup", "Copenhagen Airport"),
+        Map.entry("kastrup flygplats", "Copenhagen Airport"),
+        Map.entry("köpenhamns flygplats", "Copenhagen Airport"),
+        Map.entry("köpenhamn flygplats", "Copenhagen Airport"),
+        Map.entry("köpenhamn kastrup", "Copenhagen Airport"),
+        Map.entry("københavns lufthavn", "Copenhagen Airport"),
+        Map.entry("kobenhavns lufthavn", "Copenhagen Airport"),
+        Map.entry("cph", "Copenhagen Airport"),
+        Map.entry("cph airport", "Copenhagen Airport"),
+        Map.entry("köpenhamn", "Köpenhamn H"),
+        Map.entry("köpenhamn central", "Köpenhamn H"),
+        Map.entry("københavn", "Köpenhamn H"),
+        Map.entry("københavn h", "Köpenhamn H"),
+        Map.entry("kobenhavn", "Köpenhamn H"),
+        Map.entry("copenhagen", "Köpenhamn H"),
+        Map.entry("copenhagen central", "Köpenhamn H"),
+        Map.entry("arlanda", "Arlanda C"),
+        Map.entry("arlanda flygplats", "Arlanda C"),
+        Map.entry("oslo s", "Oslo"),
+        Map.entry("oslo sentralstasjon", "Oslo"));
+
+    /** Stationsnamn vars alias BÖRJAR med det man skrivit — för autokompletteringen. */
+    public static List<String> aliasSuggestions(String query) {
+        String q = query == null ? "" : query.trim().toLowerCase();
+        if (q.length() < 3) return List.of();   // "Kö" ska inte ge Copenhagen Airport överst
+        return ALIAS.entrySet().stream()
+            .filter(e -> e.getKey().startsWith(q))
+            .sorted(Map.Entry.comparingByKey())
+            .map(Map.Entry::getValue).distinct().toList();
+    }
+
     static Optional<TrainStation> bestMatch(List<TrainStation> stations, String name) {
         String lower = name.trim().toLowerCase();
+        String alias = ALIAS.get(lower);
+        if (alias != null) {
+            Optional<TrainStation> a = stations.stream().filter(s -> s.getName().equalsIgnoreCase(alias)).findFirst();
+            if (a.isPresent()) return a;
+        }
         Optional<TrainStation> exakt = stations.stream()
             .filter(s -> s.getName().equalsIgnoreCase(lower)).findFirst();
         if (exakt.isPresent()) return exakt;
         Optional<TrainStation> central = stations.stream()
             .filter(s -> s.getName().equalsIgnoreCase(lower + " c")).findFirst();
         if (central.isPresent()) return central;
-        return stations.stream()
+        Optional<TrainStation> innehaller = stations.stream()
             .filter(s -> s.getName().toLowerCase().contains(lower))
             .findFirst();
+        if (innehaller.isPresent()) return innehaller;
+        // "Trollhättan C" / "Oslo S": Trafikverket heter "Trollhättan" och "Oslo". Ett
+        // stationssuffix för mycket gav "Hittade ingen station" — prova utan det.
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("^(.+?)\\s+(c|s|central|centralstation)$").matcher(lower);
+        return m.matches() ? bestMatch(stations, m.group(1)) : Optional.empty();
     }
 
     // ── Hämta avgångar ────────────────────────────────────────────
@@ -171,12 +217,14 @@ public class TrafikverketService {
                 <INCLUDE>AdvertisedTimeAtLocation</INCLUDE>
                 <INCLUDE>EstimatedTimeAtLocation</INCLUDE>
                 <INCLUDE>ToLocation</INCLUDE>
+                <INCLUDE>ViaToLocation</INCLUDE>
                 <INCLUDE>TrainOwner</INCLUDE>
                 <INCLUDE>Canceled</INCLUDE>
                 <!-- Produktnamnet ("SJ Snabbtåg", "SJ Regional"…). Trafikverket anger ALDRIG
                      fordonstyp, så X2000/SJ 3000 går inte att läsa ut — men produktnamnet
                      skiljer i alla fall snabbtåg från regionaltåg. -->
                 <INCLUDE>ProductInformation</INCLUDE>
+                <INCLUDE>TypeOfTraffic</INCLUDE>
               </QUERY>
             </REQUEST>
             """.formatted(apiKey, limit, fromSignature, date, fromTime, date);
@@ -191,7 +239,15 @@ public class TrafikverketService {
         // (~4,5 h till Göteborg) fick snabbtågets restid. Trafikverket har ankomsten vid
         // målstationen — samma tågnummer samma dag — så den hämtas i stället för att gissas.
         TrainStation toSt = harMal ? findStationByName(toName).orElse(null) : null;
-        Map<String, List<Ankomst>> ankomster = toSt != null ? getArrivals(toSt.getSignature(), date) : Map.of();
+        // Danska mål: Trafikverket publicerar inga tider för Kastrup eller Köpenhamn H — tågen
+        // står bara som "till Köpenhamn H". Sista svenska stationen, Hyllie, har riktiga tider,
+        // så ankomsten räknas därifrån plus den fasta körtiden över bron.
+        Integer broMinuter = toSt != null ? DANSKA_MAL.get(toSt.getName()) : null;
+        TrainStation hyllie = broMinuter != null && stationCache != null ? bestMatch(stationCache, "Hyllie").orElse(null) : null;
+        JsonNode ankomsterRa = toSt == null ? null
+            : getArrivalsRaw(hyllie != null ? hyllie.getSignature() : toSt.getSignature(), date);
+        Map<String, List<Ankomst>> ankomster = hyllie != null
+            ? forskjut(arrivalsByTrain(tillDanmark(ankomsterRa)), broMinuter) : arrivalsByTrain(ankomsterRa);
 
         List<TrainDeparture> departures = new ArrayList<>();
         Map<TrainDeparture, Integer> riktigRestid = new HashMap<>();
@@ -202,7 +258,13 @@ public class TrafikverketService {
                     // Ankomsten är känd: tåget ska stanna vid målet EFTER avgången här.
                     String depIso = ann.path("AdvertisedTimeAtLocation").asText();
                     Ankomst a = firstArrivalAfter(depIso, ankomster.get(ann.path("AdvertisedTrainIdent").asText()));
-                    if (a == null) continue;
+                    if (a == null) {
+                        // Slutstation utan ankomstpost: stationer utanför det svenska nätet
+                        // (Oslo) annonseras som mål men aldrig med en ankomst. Vy:s direkttåg
+                        // Göteborg → Oslo föll därför bort. Restiden uppskattas för dem.
+                        if (toSt != null && slutarVid(ann, toSt.getSignature())) departures.add(parseAnnouncement(ann));
+                        continue;
+                    }
                     TrainDeparture dep = parseAnnouncement(ann);
                     setEstimatedArrival(dep, a);
                     departures.add(dep);
@@ -224,6 +286,8 @@ public class TrafikverketService {
             dep.setTrainColor(model.color());
             dep.setTrainImage(model.imageUrl());
             dep.setTransfers(0);
+            dep.setOperatorName(TrainModelService.operatorName(
+                dep.getOperator(), dep.getProductInformation(), dep.getTypeOfTraffic()));
 
             // Målet är stationen man SÖKT, inte tågets slutstation. Göteborg → Katrineholm
             // visade "Stockholm C" i platskartan, på kvittot och i Mina bokningar, fast man
@@ -244,10 +308,11 @@ public class TrafikverketService {
                 if (prisMal != null) {
                     double dist = haversine(fromSt.getLat(), fromSt.getLon(),
                                             prisMal.getLat(), prisMal.getLon());
-                    dep.setPrice(trainModelService.calculatePrice(dist, dep.getTrainId()));
-                    dep.setPriceLugn(trainModelService.calculatePriceLugn(dist, dep.getTrainId()));
-                    dep.setPrice1klass(trainModelService.calculatePrice1Klass(dist, dep.getTrainId()));
-                    dep.setPriceOriginal(trainModelService.calculateOrdinaryPrice(dist, dep.getTrainId()));
+                    TrainModelService.Priskategori pk = TrainModelService.kategori(model);
+                    dep.setPrice(trainModelService.calculatePrice(dist, dep.getTrainId(), pk));
+                    dep.setPriceLugn(trainModelService.calculatePriceLugn(dist, dep.getTrainId(), pk));
+                    dep.setPrice1klass(trainModelService.calculatePrice1Klass(dist, dep.getTrainId(), pk));
+                    dep.setPriceOriginal(trainModelService.calculateOrdinaryPrice(dist, dep.getTrainId(), pk));
                     dep.setSeatsLeft(trainModelService.calculateSeatsLeft(dep.getTrainId()));
                     dep.setHasSeatMap(model.hasSeatMap());
                     dep.setSeatLayout(model.seatLayout());
@@ -268,7 +333,8 @@ public class TrafikverketService {
             java.util.Set<String> direkta = new java.util.HashSet<>();
             for (TrainDeparture d : departures) direkta.add(d.getTrainId());
             departures.addAll(findTransferTrips(fromSt, toSt, date, fromTime, announcements,
-                                                ankomster, direkta));
+                                                ankomster, direkta,
+                                                reach(ankomsterRa, "FromLocation", "ViaFromLocation")));
             departures.sort(java.util.Comparator.comparing(TrainDeparture::getDepartureTime));
         }
 
@@ -284,84 +350,187 @@ public class TrafikverketService {
      */
     private static final List<String> BYTESSTATIONER = List.of(
         "Stockholm C", "Göteborg C", "Malmö C", "Hallsberg", "Norrköping C", "Linköping C",
-        "Mjölby", "Nässjö C", "Alvesta", "Hässleholm C", "Lund C", "Södertälje Syd", "Örebro C",
-        "Katrineholm C", "Skövde C", "Falköping C", "Herrljunga", "Jönköping C", "Växjö",
+        "Mjölby", "Nässjö C", "Alvesta", "Hässleholm", "Lund C", "Södertälje Syd", "Örebro C",
+        "Katrineholm C", "Skövde C", "Falköping C", "Herrljunga C", "Jönköping C", "Växjö",
         "Kristianstad C", "Uppsala C", "Gävle C", "Sundsvall C", "Borlänge C", "Västerås C",
         "Karlstad C", "Halmstad C", "Kalmar C", "Karlskrona C");
 
     static final int MIN_BYTESTID = 6;
-    static final int MAX_VANTETID = 120;
+    // 180, inte 120: nattåg går sällan — Kiruna → Luleå är framme 18:50, nattåget mot
+    // Stockholm går 21:09. Med 120 minuter blev Kiruna → Stockholm tom.
+    static final int MAX_VANTETID = 180;
 
     /** Ett tåg mellan två stationer: avgång och ankomst som ISO-tider. */
     record Leg(String trainId, String depIso, String arrIso, JsonNode ann, Ankomst ankomst) {}
 
-    /** En resa med byte: första och andra tåget. */
-    record Connection(Leg first, Leg second) {}
+    /**
+     * En resa med byten: tågen i ordning (två = ett byte, tre = två byten) och
+     * bytesstationerna däremellan.
+     */
+    record Connection(List<Leg> legs, List<TrainStation> hubs) {
+        Connection(Leg a, Leg b) { this(List.of(a, b), List.of()); }
+        Leg first()  { return legs.get(0); }
+        Leg second() { return legs.get(1); }
+        Leg last()   { return legs.get(legs.size() - 1); }
+    }
+
+    /** Ankomster och avgångar vid en bytesstation — hämtas EN gång och delas av alla varianter. */
+    private record HubData(TrainStation hub, Map<String, List<Ankomst>> ankomster, JsonNode avgangar) {}
 
     private List<TrainDeparture> findTransferTrips(TrainStation fromSt, TrainStation toSt, LocalDate date,
                                                    String fromTime, JsonNode fromAnnouncements,
                                                    Map<String, List<Ankomst>> ankomsterVidMal,
-                                                   java.util.Set<String> direkta) {
+                                                   java.util.Set<String> direkta,
+                                                   java.util.Set<String> tillMal) {
         List<TrainStation> kandidater = new ArrayList<>();
         for (String namn : BYTESSTATIONER) {
             if (stationCache != null) bestMatch(stationCache, namn).ifPresent(kandidater::add);
         }
-        List<TrainStation> hubs = chooseHubs(fromSt, toSt, kandidater, 4);
+        // Stationer som tågen HÄRIFRÅN når och som tågen TILL målet kommer ifrån är riktiga
+        // bytespunkter även om de inte står i listan (t.ex. Borlänge för Mora).
+        java.util.Set<String> franStart = reach(fromAnnouncements, "ToLocation", "ViaToLocation");
+        if (stationIndex != null) {
+            for (String sig : franStart) {
+                TrainStation s = stationIndex.get(sig);
+                if (s != null && tillMal.contains(sig) && kandidater.stream().noneMatch(k -> k.getSignature().equalsIgnoreCase(sig)))
+                    kandidater.add(s);
+            }
+        }
+        List<TrainStation> hubs = franStart.isEmpty() || tillMal.isEmpty()
+            ? chooseHubs(fromSt, toSt, kandidater, 4)          // reserv: Via-fälten saknas i svaret
+            : chooseHubsByReach(fromSt, toSt, kandidater, franStart, tillMal, 6);
 
         // Bytesstationerna hämtas parallellt — sekventiellt blev sökningen märkbart seg
-        List<java.util.concurrent.CompletableFuture<List<Connection>>> jobb = new ArrayList<>();
+        List<java.util.concurrent.CompletableFuture<HubData>> jobb = new ArrayList<>();
         for (TrainStation hub : hubs) {
-            jobb.add(java.util.concurrent.CompletableFuture.supplyAsync(() -> {
-                Map<String, List<Ankomst>> vidByte = getArrivals(hub.getSignature(), date);
-                JsonNode franByte = getDepartureAnnouncements(hub.getSignature(), date, fromTime);
-                return connect(legsTo(fromAnnouncements, vidByte), legsTo(franByte, ankomsterVidMal),
-                               direkta);
-            }));
+            jobb.add(java.util.concurrent.CompletableFuture.supplyAsync(() -> new HubData(hub,
+                getArrivals(hub.getSignature(), date), getDepartureAnnouncements(hub.getSignature(), date, fromTime))));
         }
-        List<Connection> alla = new ArrayList<>();
-        List<TrainStation> hubForConn = new ArrayList<>();
-        for (int i = 0; i < jobb.size(); i++) {
-            try {
-                for (Connection c : jobb.get(i).get(20, java.util.concurrent.TimeUnit.SECONDS)) {
-                    alla.add(c); hubForConn.add(hubs.get(i));
-                }
-            } catch (Exception e) { /* en bytesstation som inte svarar hoppas över */ }
+        List<HubData> data = new ArrayList<>();
+        for (var j : jobb) {
+            try { data.add(j.get(20, java.util.concurrent.TimeUnit.SECONDS)); }
+            catch (Exception e) { /* en bytesstation som inte svarar hoppas över */ }
         }
 
-        List<Connection> basta = pareto(alla);
+        // Ett byte
+        List<Connection> alla = new ArrayList<>();
+        for (HubData h : data) {
+            for (Connection c : connect(legsTo(fromAnnouncements, h.ankomster()),
+                                        legsTo(h.avgangar(), ankomsterVidMal), direkta)) {
+                alla.add(new Connection(c.legs(), List.of(h.hub())));
+            }
+        }
+
+        // Två byten — bara när ett byte inte räckte. Göteborg → Umeå blev tom: från Stockholm
+        // går tågen norrut bara till Sundsvall, så resan kräver två byten. Bytesstationerna
+        // tas i ordning längs vägen (den närmare starten först).
+        if (alla.isEmpty()) {
+            for (HubData h1 : data) {
+                for (HubData h2 : data) {
+                    if (h1 == h2 || avstand(fromSt, h1.hub()) >= avstand(fromSt, h2.hub())) continue;
+                    // Andra bytet måste ligga NÄRMARE målet än det första — annars blir det
+                    // resor som går bakåt (Göteborg → Karlstad → Kristinehamn → Oslo).
+                    if (avstand(h2.hub(), toSt) >= avstand(h1.hub(), toSt)) continue;
+                    List<Connection> tvaForsta = connect(legsTo(fromAnnouncements, h1.ankomster()),
+                                                         legsTo(h1.avgangar(), h2.ankomster()), direkta);
+                    for (Connection c : extend(tvaForsta, legsTo(h2.avgangar(), ankomsterVidMal))) {
+                        alla.add(new Connection(c.legs(), List.of(h1.hub(), h2.hub())));
+                    }
+                }
+            }
+        }
+
         List<TrainDeparture> ut = new ArrayList<>();
         double dist = haversine(fromSt.getLat(), fromSt.getLon(), toSt.getLat(), toSt.getLon());
-        for (Connection c : basta) {
-            TrainStation hub = hubForConn.get(alla.indexOf(c));
-            TrainDeparture dep = parseAnnouncement(c.first().ann());
-            TrainDeparture andra = parseAnnouncement(c.second().ann());
-            TrainModelService.TrainModelInfo m1 = trainModelService.resolveModel(dep, fromSt.getName());
-            TrainModelService.TrainModelInfo m2 = trainModelService.resolveModel(andra, hub.getName());
-            String kombinerat = c.first().trainId() + "+" + c.second().trainId();
+        for (Connection c : pareto(alla)) ut.add(toDeparture(c, fromSt, toSt, dist));
+        return ut;
+    }
 
-            dep.setDestination(toSt.getName());
-            dep.setDestinationSignature(toSt.getSignature());
-            dep.setTransfers(1);
-            dep.setTransferStation(hub.getName());
-            dep.setTransferArrival(formatTime(c.first().arrIso()));
-            dep.setTransferDeparture(formatTime(c.second().depIso()));
-            dep.setSecondTrainId(c.second().trainId());
-            dep.setTrainModel(m1.name().equals(m2.name()) ? m1.name() : m1.name() + " + " + m2.name());
-            dep.setTrainColor(m1.color());
-            dep.setTrainImage(m1.imageUrl());
-            dep.setHasSeatMap(false);      // platskartan gäller ett tåg — med byte väljs plats ombord
-            dep.setSeatLayout("none");
-            dep.setTravelMinutes(travelMinutes(c.first().depIso(), c.second().arrIso()));
-            setEstimatedArrival(dep, c.second().ankomst());
-            dep.setPrice(trainModelService.calculatePrice(dist, kombinerat));
-            dep.setPriceLugn(trainModelService.calculatePriceLugn(dist, kombinerat));
-            dep.setPrice1klass(trainModelService.calculatePrice1Klass(dist, kombinerat));
-            dep.setPriceOriginal(trainModelService.calculateOrdinaryPrice(dist, kombinerat));
-            dep.setSeatsLeft(trainModelService.calculateSeatsLeft(kombinerat));
-            dep.setCo2SavedKg(Math.round((110.0 - 6.0) * dist / 1000.0 * 10.0) / 10.0);
-            ut.add(dep);
+    private double avstand(TrainStation a, TrainStation b) {
+        return haversine(a.getLat(), a.getLon(), b.getLat(), b.getLon());
+    }
+
+    /** En resa med byten som ett avgångskort: första tåget bär tiden, resten beskrivs som byten. */
+    private TrainDeparture toDeparture(Connection c, TrainStation fromSt, TrainStation toSt, double dist) {
+        TrainDeparture dep = parseAnnouncement(c.first().ann());
+        List<String> modeller = new ArrayList<>();
+        List<String> bolag = new ArrayList<>();
+        List<String> ids = new ArrayList<>();
+        TrainModelService.TrainModelInfo forstaModell = null;
+        // Priset: fjärrtågets prissättning om NÅGON delsträcka är SJ/VR/Vy/nattåg, annars regionalt
+        TrainModelService.Priskategori pk = TrainModelService.Priskategori.REGIONAL;
+        for (int i = 0; i < c.legs().size(); i++) {
+            Leg l = c.legs().get(i);
+            TrainDeparture d = i == 0 ? dep : parseAnnouncement(l.ann());
+            TrainModelService.TrainModelInfo m = trainModelService.resolveModel(d,
+                i == 0 ? fromSt.getName() : c.hubs().get(i - 1).getName());
+            if (i == 0) forstaModell = m;
+            if (!modeller.contains(m.name())) modeller.add(m.name());
+            TrainModelService.Priskategori k = TrainModelService.kategori(m);
+            if (k == TrainModelService.Priskategori.SNABB || k == TrainModelService.Priskategori.NATT) pk = TrainModelService.Priskategori.SNABB;
+            String b = TrainModelService.operatorName(d.getOperator(), d.getProductInformation(), d.getTypeOfTraffic());
+            if (!bolag.contains(b)) bolag.add(b);
+            if (i > 0) ids.add(l.trainId());
+        }
+        List<String> stopp = new ArrayList<>();
+        List<String> detaljer = new ArrayList<>();
+        for (int i = 0; i < c.hubs().size(); i++) {
+            stopp.add(c.hubs().get(i).getName());
+            detaljer.add(c.hubs().get(i).getName() + " " + formatTime(c.legs().get(i).arrIso())
+                         + " → " + formatTime(c.legs().get(i + 1).depIso()));
+        }
+        String kombinerat = c.first().trainId() + "+" + String.join("+", ids);
+
+        dep.setDestination(toSt.getName());
+        dep.setDestinationSignature(toSt.getSignature());
+        dep.setTransfers(c.legs().size() - 1);
+        dep.setTransferStation(String.join(" och ", stopp));
+        dep.setTransferStops(stopp);
+        dep.setTransferDetails(detaljer);
+        dep.setTransferArrival(formatTime(c.first().arrIso()));
+        dep.setTransferDeparture(formatTime(c.second().depIso()));
+        dep.setSecondTrainId(String.join("+", ids));
+        dep.setTrainModel(String.join(" + ", modeller));
+        dep.setOperatorName(bolag.get(0));
+        dep.setTrainColor(forstaModell.color());
+        dep.setTrainImage(forstaModell.imageUrl());
+        dep.setHasSeatMap(false);      // platskartan gäller ett tåg — med byte väljs plats ombord
+        dep.setSeatLayout("none");
+        dep.setTravelMinutes(travelMinutes(c.first().depIso(), c.last().arrIso()));
+        setEstimatedArrival(dep, c.last().ankomst());
+        dep.setPrice(trainModelService.calculatePrice(dist, kombinerat, pk));
+        dep.setPriceLugn(trainModelService.calculatePriceLugn(dist, kombinerat, pk));
+        dep.setPrice1klass(trainModelService.calculatePrice1Klass(dist, kombinerat, pk));
+        dep.setPriceOriginal(trainModelService.calculateOrdinaryPrice(dist, kombinerat, pk));
+        dep.setSeatsLeft(trainModelService.calculateSeatsLeft(kombinerat));
+        dep.setCo2SavedKg(Math.round((110.0 - 6.0) * dist / 1000.0 * 10.0) / 10.0);
+        return dep;
+    }
+
+    /** Förläng resor med ett tåg till: det som är framme först, inom bytestiden. */
+    static List<Connection> extend(List<Connection> resor, List<Leg> nasta) {
+        List<Connection> ut = new ArrayList<>();
+        for (Connection c : resor) {
+            Leg bast = bastaAnslutning(c.last(), nasta, c);
+            if (bast == null) continue;
+            List<Leg> legs = new ArrayList<>(c.legs());
+            legs.add(bast);
+            ut.add(new Connection(legs, c.hubs()));
         }
         return ut;
+    }
+
+    /** Tåget från bytet som är framme först, 6–120 min efter ankomsten, och inte redan i resan. */
+    private static Leg bastaAnslutning(Leg in, List<Leg> kandidater, Connection resa) {
+        Leg bast = null;
+        for (Leg l2 : kandidater) {
+            if (l2.trainId().equals(in.trainId())) continue;
+            if (resa != null && resa.legs().stream().anyMatch(l -> l.trainId().equals(l2.trainId()))) continue;
+            Integer byte_ = travelMinutes(in.arrIso(), l2.depIso());
+            if (byte_ == null || byte_ < MIN_BYTESTID || byte_ > MAX_VANTETID) continue;
+            if (bast == null || travelMinutes(l2.arrIso(), bast.arrIso()) != null) bast = l2;
+        }
+        return bast;
     }
 
     /**
@@ -413,13 +582,7 @@ public class TrafikverketService {
         List<Connection> ut = new ArrayList<>();
         for (Leg l1 : forsta) {
             if (direkta.contains(l1.trainId())) continue;
-            Leg bast = null;
-            for (Leg l2 : andra) {
-                if (l2.trainId().equals(l1.trainId())) continue;
-                Integer byte_ = travelMinutes(l1.arrIso(), l2.depIso());
-                if (byte_ == null || byte_ < MIN_BYTESTID || byte_ > MAX_VANTETID) continue;
-                if (bast == null || travelMinutes(l2.arrIso(), bast.arrIso()) != null) bast = l2;
-            }
+            Leg bast = bastaAnslutning(l1, andra, null);
             if (bast != null) ut.add(new Connection(l1, bast));
         }
         return ut;
@@ -438,8 +601,8 @@ public class TrafikverketService {
                 if (o == c) continue;
                 long depC = java.time.OffsetDateTime.parse(c.first().depIso()).toEpochSecond();
                 long depO = java.time.OffsetDateTime.parse(o.first().depIso()).toEpochSecond();
-                long arrC = java.time.OffsetDateTime.parse(c.second().arrIso()).toEpochSecond();
-                long arrO = java.time.OffsetDateTime.parse(o.second().arrIso()).toEpochSecond();
+                long arrC = java.time.OffsetDateTime.parse(c.last().arrIso()).toEpochSecond();
+                long arrO = java.time.OffsetDateTime.parse(o.last().arrIso()).toEpochSecond();
                 boolean minstLikaBra = depO >= depC && arrO <= arrC;
                 boolean baattre = depO > depC || arrO < arrC;
                 // Exakt samma tider: behåll bara den första i listan
@@ -471,6 +634,7 @@ public class TrafikverketService {
                 <INCLUDE>TrainOwner</INCLUDE>
                 <INCLUDE>Canceled</INCLUDE>
                 <INCLUDE>ProductInformation</INCLUDE>
+                <INCLUDE>TypeOfTraffic</INCLUDE>
               </QUERY>
             </REQUEST>
             """.formatted(apiKey, signature, date, fromTime, date.plusDays(1));
@@ -492,33 +656,93 @@ public class TrafikverketService {
     }
 
     // ── Ankomster vid en station: tågnummer → annonserad (+ beräknad) ankomsttid ──
-    // Fönstret går till 06:00 nästa dygn så att ett kvällståg som är framme efter midnatt
+    // Fönstret går till 14:00 nästa dygn så att kvällståg och NATTÅG kommer med (nattåg 93
+    // Luleå → Stockholm är framme 12:13; med 06:00 och sedan 12:00 som gräns blev Kiruna → Stockholm tom).
+    // Förr: 06:00 nästa dygn så att ett kvällståg som är framme efter midnatt
     // inte faller bort. Misslyckas anropet blir kartan tom, och sökningen faller tillbaka på
     // slutstationsmatchningen — en tom lista av ett nätverksfel vore värre än en gissad restid.
     private Map<String, List<Ankomst>> getArrivals(String toSignature, LocalDate date) {
+        return arrivalsByTrain(getArrivalsRaw(toSignature, date));
+    }
+
+    /** Råa ankomstannonser, med varifrån tågen kommer (för att välja bytesstationer). */
+    private JsonNode getArrivalsRaw(String toSignature, LocalDate date) {
         String xml = """
             <REQUEST>
               <LOGIN authenticationkey="%s"/>
-              <QUERY objecttype="TrainAnnouncement" namespace="rail.trafficinfo" schemaversion="2.0" limit="1000" orderby="AdvertisedTimeAtLocation">
+              <QUERY objecttype="TrainAnnouncement" namespace="rail.trafficinfo" schemaversion="2.0" limit="2000" orderby="AdvertisedTimeAtLocation">
                 <FILTER>
                   <AND>
                     <EQ name="LocationSignature" value="%s"/>
                     <EQ name="ActivityType" value="Ankomst"/>
                     <GT name="AdvertisedTimeAtLocation" value="%sT00:00:00"/>
-                    <LT name="AdvertisedTimeAtLocation" value="%sT06:00:00"/>
+                    <LT name="AdvertisedTimeAtLocation" value="%sT14:00:00"/>
                   </AND>
                 </FILTER>
                 <INCLUDE>AdvertisedTrainIdent</INCLUDE>
                 <INCLUDE>AdvertisedTimeAtLocation</INCLUDE>
                 <INCLUDE>EstimatedTimeAtLocation</INCLUDE>
+                <INCLUDE>FromLocation</INCLUDE>
+                <INCLUDE>ViaFromLocation</INCLUDE>
+                <INCLUDE>ToLocation</INCLUDE>
               </QUERY>
             </REQUEST>
             """.formatted(apiKey, toSignature, date, date.plusDays(1));
         try {
-            return arrivalsByTrain(callApi(xml).path("RESPONSE").path("RESULT").get(0).path("TrainAnnouncement"));
+            return callApi(xml).path("RESPONSE").path("RESULT").get(0).path("TrainAnnouncement");
         } catch (Exception e) {
-            return Map.of();
+            return null;
         }
+    }
+
+    /**
+     * Stationssignaturerna i angivna fält (t.ex. ToLocation + ViaToLocation) över alla
+     * annonser — de stationer tågen härifrån faktiskt når, eller kommer ifrån.
+     */
+    static java.util.Set<String> reach(JsonNode anns, String... falt) {
+        java.util.Set<String> ut = new java.util.HashSet<>();
+        if (anns == null || !anns.isArray()) return ut;
+        for (JsonNode a : anns) {
+            for (String f : falt) {
+                JsonNode lista = a.path(f);
+                if (!lista.isArray()) continue;
+                for (JsonNode l : lista) {
+                    String sig = l.path("LocationName").asText("");
+                    if (!sig.isBlank()) ut.add(sig.toUpperCase());
+                }
+            }
+        }
+        return ut;
+    }
+
+    /**
+     * Bytesstationer ur DATAN, inte ur geometrin. Förut valdes de stationer som låg närmast en
+     * rak linje: Borås → Stockholm fick Södertälje, Mjölby, Norrköping och Linköping, fast
+     * tågen från Borås går till Göteborg och Herrljunga — noll resor. Nu: stationer som tågen
+     * från starten når (ToLocation/ViaToLocation) OCH som tågen till målet kommer ifrån
+     * (FromLocation/ViaFromLocation) först, sedan de som bara ligger på ena sidan (för två byten).
+     * Inom varje grupp kortast omväg först.
+     */
+    static List<TrainStation> chooseHubsByReach(TrainStation from, TrainStation to, List<TrainStation> kandidater,
+                                                java.util.Set<String> franStart, java.util.Set<String> tillMal, int max) {
+        List<TrainStation> baada = new ArrayList<>(), startSida = new ArrayList<>(), malSida = new ArrayList<>();
+        for (TrainStation h : kandidater) {
+            String sig = h.getSignature().toUpperCase();
+            if (sig.equalsIgnoreCase(from.getSignature()) || sig.equalsIgnoreCase(to.getSignature())) continue;
+            boolean a = franStart.contains(sig), b = tillMal.contains(sig);
+            if (a && b) baada.add(h); else if (a) startSida.add(h); else if (b) malSida.add(h);
+        }
+        java.util.Comparator<TrainStation> omvag = java.util.Comparator.comparingDouble(h ->
+            haversineStatic(from.getLat(), from.getLon(), h.getLat(), h.getLon())
+          + haversineStatic(h.getLat(), h.getLon(), to.getLat(), to.getLon()));
+        baada.sort(omvag); startSida.sort(omvag); malSida.sort(omvag);
+        List<TrainStation> ut = new ArrayList<>(baada.subList(0, Math.min(baada.size(), max)));
+        // Fyll på växelvis från båda sidor — två byten kräver en station på varje sida
+        for (int i = 0; ut.size() < max && (i < startSida.size() || i < malSida.size()); i++) {
+            if (i < startSida.size() && ut.size() < max) ut.add(startSida.get(i));
+            if (i < malSida.size() && ut.size() < max) ut.add(malSida.get(i));
+        }
+        return ut;
     }
 
     /**
@@ -569,6 +793,47 @@ public class TrafikverketService {
         }
     }
 
+    /**
+     * Bara tåg som FORTSÄTTER till Danmark (slutstation Dk.*). I Hyllie vänder också många
+     * Pågatåg — de når aldrig Kastrup och får inte räknas som att de gör det.
+     */
+    static JsonNode tillDanmark(JsonNode anns) {
+        com.fasterxml.jackson.databind.node.ArrayNode ut = new ObjectMapper().createArrayNode();
+        if (anns == null || !anns.isArray()) return ut;
+        for (JsonNode a : anns) {
+            JsonNode to = a.path("ToLocation");
+            if (to.isArray() && to.size() > 0
+                    && to.get(to.size() - 1).path("LocationName").asText("").toUpperCase().startsWith("DK.")) ut.add(a);
+        }
+        return ut;
+    }
+
+    /** Minuter från Hyllie till danska stationer som Öresundstågen stannar vid (körtid över bron). */
+    static final Map<String, Integer> DANSKA_MAL = Map.of(
+        "Copenhagen Airport", 12,
+        "Köpenhamn H", 25);
+
+    /** Ankomsterna flyttade {@code minuter} framåt — Hyllie-tiden blir tiden vid det danska målet. */
+    static Map<String, List<Ankomst>> forskjut(Map<String, List<Ankomst>> ankomster, int minuter) {
+        Map<String, List<Ankomst>> ut = new HashMap<>();
+        ankomster.forEach((id, lista) -> ut.put(id, lista.stream().map(a -> new Ankomst(
+            plus(a.planerad(), minuter), a.beraknad() == null || a.beraknad().isBlank() ? "" : plus(a.beraknad(), minuter)))
+            .toList()));
+        return ut;
+    }
+
+    private static String plus(String iso, int minuter) {
+        try { return java.time.OffsetDateTime.parse(iso).plusMinutes(minuter).toString(); }
+        catch (Exception e) { return iso; }
+    }
+
+    /** Tågets sista ToLocation är målstationen. */
+    static boolean slutarVid(JsonNode ann, String signatur) {
+        JsonNode locs = ann.path("ToLocation");
+        return locs.isArray() && locs.size() > 0
+            && locs.get(locs.size() - 1).path("LocationName").asText("").equalsIgnoreCase(signatur);
+    }
+
     // ── Privata hjälpmetoder ──────────────────────────────────────
     private boolean matchesDestination(JsonNode ann, String toName) {
         JsonNode locs = ann.path("ToLocation");
@@ -600,6 +865,7 @@ public class TrafikverketService {
         dep.setOperator(ann.path("TrainOwner").asText());
         dep.setCanceled(ann.path("Canceled").asBoolean(false));
         dep.setProductInformation(readProductInformation(ann));
+        dep.setTypeOfTraffic(readTypeOfTraffic(ann));
 
         JsonNode locs = ann.path("ToLocation");
         if (locs.isArray() && locs.size() > 0) {
@@ -616,6 +882,17 @@ public class TrafikverketService {
     }
 
     /** ProductInformation kommer som array av objekt eller strängar beroende på schemaversion. */
+    /** "Tåg", "Pendeltåg" eller "Buss" — samma form som ProductInformation. */
+    private String readTypeOfTraffic(JsonNode ann) {
+        JsonNode t = ann.path("TypeOfTraffic");
+        if (t.isTextual()) return t.asText();
+        if (t.isArray() && t.size() > 0) {
+            JsonNode f = t.get(0);
+            return f.isTextual() ? f.asText() : f.path("Description").asText("");
+        }
+        return "";
+    }
+
     private String readProductInformation(JsonNode ann) {
         JsonNode pi = ann.path("ProductInformation");
         if (pi.isMissingNode() || pi.isNull()) return "";

@@ -2963,11 +2963,15 @@ function seatBtnSub(className, price) {
 }
 
 // ── Operatör, dygnsdel och filterraden ───────────────────────────
-// Bolaget läses ur Trafikverkets produktnamn ("SJ Snabbtåg", "VR Snabbtåg") och i andra
-// hand ur operatörskoden. MTRX är VR sedan köpet — produktnamnet säger redan "VR".
-var OP_FARGER = { 'SJ':'#dc2626', 'VR':'#16a34a', 'Öresundståg':'#7c3aed', 'Västtrafik':'#0ea5e9',
-                  'Snälltåget':'#f59e0b', 'Mälartåg':'#0d9488', 'Norrtåg':'#2563eb', 'Tåg i Bergslagen':'#ea580c' };
+// Bolaget kommer från servern (TrainModelService.operatorName — alla 19 bolag/produkter i
+// Trafikverkets data). Tolkningen här nedan är bara reserv för ett svar utan operatorName.
+var OP_FARGER = { 'SJ':'#dc2626', 'VR':'#16a34a', 'Vy':'#e11d48', 'Öresundståg':'#7c3aed',
+                  'Pågatåg':'#a855f7', 'Västtåg':'#0ea5e9', 'Västtrafik':'#0ea5e9', 'Mälartåg':'#0d9488',
+                  'SL':'#db2777', 'Krösatåg':'#f59e0b', 'Östgötapendeln':'#0284c7',
+                  'Arlanda Express':'#ca8a04', 'Tåg i Bergslagen':'#ea580c', 'Norrtåg':'#2563eb',
+                  'X-Tåget':'#059669', 'Snälltåget':'#b45309', 'Buss':'#64748b' };
 function opLabel(d) {
+  if (d.operatorName) return { namn: d.operatorName, farg: OP_FARGER[d.operatorName] || '#64748b' };
   var p = String(d.productInformation || '');
   var o = String(d.operator || '').toUpperCase();
   var namn;
@@ -3074,7 +3078,7 @@ function buildDepList(deps, title, isReturn) {
 
       // Restid + byten
       var dur = formatDuration(d.travelMinutes);
-      var travelInfo = (dur ? dur + ' · ' : '') + (d.transfers > 0 ? '1 byte' : 'direkt');
+      var travelInfo = (dur ? dur + ' · ' : '') + (d.transfers > 1 ? d.transfers + ' byten' : d.transfers > 0 ? '1 byte' : 'direkt');
       var op = opLabel(d);
       var prisTal = parseInt(String(d.price || '').replace(/[^0-9]/g, ''), 10) || 0;
 
@@ -3096,7 +3100,7 @@ function buildDepList(deps, title, isReturn) {
         ' data-operator="'    + esc(d.operator      || '') + '"' +
         ' data-op="'          + esc(op.namn) + '"' +
         ' data-period="'      + dygnsdel(d.departureTime) + '"' +
-        ' data-byte="'        + esc(d.transferStation || '') + '"' +
+        ' data-byte="'        + esc((d.transferStops || (d.transferStation ? [d.transferStation] : [])).join('|')) + '"' +
         ' data-final="'       + esc(d.finalDestination || '') + '"' +
         ' data-pris="'        + prisTal + '"' +
         ' onclick="toggleClassPanel(this)">';
@@ -3122,9 +3126,18 @@ function buildDepList(deps, title, isReturn) {
       html +=           ' · tåg ' + esc(d.trainId) + (d.secondTrainId ? '+' + esc(d.secondTrainId) : '') +
                         ' · ' + esc(travelInfo) +
                         (d.finalDestination ? ' · <span class="card-mot">tåget fortsätter mot ' + esc(d.finalDestination) + '</span>' : '');
-      if (d.transfers > 0 && d.transferStation) {
+      if (d.transfers > 0 && d.transferDetails && d.transferDetails.length) {
+        // Ett eller två byten: "Stockholm C 08:20 → 08:40 · Sundsvall C 12:10 → 12:50"
+        html += '<div class="card-transfer">🔁 Byte i ' + d.transferDetails.map(function (t) {
+          var i = t.search(/ \d\d:\d\d/);
+          return '<strong>' + esc(t.slice(0, i)) + '</strong>' + esc(t.slice(i));
+        }).join(' · ') + '</div>';
+      } else if (d.transfers > 0 && d.transferStation) {
         html += '<div class="card-transfer">🔁 Byte i <strong>' + esc(d.transferStation) + '</strong> ' +
                 esc(d.transferArrival || '') + ' → ' + esc(d.transferDeparture || '') + '</div>';
+      }
+      if (/buss/i.test(d.typeOfTraffic || '')) {
+        html += '<div class="card-transfer">🚌 Ersättningsbuss – bussen går i stället för tåget</div>';
       }
       html +=         '</div>';
       html +=       '</div>';
@@ -3178,25 +3191,39 @@ function buildDepList(deps, title, isReturn) {
       html +=     '<div class="class-perks">Res bekvämt till ett bra pris &middot; Mat kan förbeställas och hämtas i bistron</div>';
       html +=   '</div>';
 
-      // 2 klass Lugn
+      // Förmånerna skiljer sig mellan bolagen — SJ:s lounge och frukost stod förut på alla tåg.
+      // Öresundstågets fakta: tyst avdelning i 2 klass, eluttag vid varje sätesgrupp.
+      var arSJ = op.namn === 'SJ';
+      var perksLugn = arSJ
+        ? '🔇 Tyst zon, mobiler på ljudlöst &middot; ☕ Kaffe &amp; te ingår &middot; 🥐 Frukost ingår på avgångar före 09:00'
+        : '🔇 Tyst avdelning – mobiler på ljudlöst, lågmälda samtal';
+      var perks1 = arSJ
+        ? '🪑 Breda säten med extra benutrymme &middot; ☕ Kaffe, te &amp; frukt i vagnen &middot; 🥐 Frukost serveras vid platsen (avgångar före 09:00) &middot; 🏛️ SJ Lounge i Stockholm, Göteborg &amp; Malmö'
+        : '🪑 Rymligare säten och lugnare vagnsdel &middot; 🔌 Eluttag vid platsen';
+
+      // 2 klass Lugn — finns inte på SL eller Arlanda Express (priset är då tomt)
       var pLugn = d.priceLugn || '';
-      html +=   '<div class="class-option" data-price="' + esc(pLugn) + '" data-class-name="2 klass Lugn" onclick="selectClassOption(this)">';
-      html +=     '<div class="class-opt-top">';
-      html +=       '<span class="class-badge cls-lugn">2 klass Lugn</span>';
-      html +=       '<span class="class-price-lbl">' + esc(pLugn) + '</span>';
-      html +=     '</div>';
-      html +=     '<div class="class-perks">🔇 Tyst zon, mobiler på ljudlöst &middot; ☕ Kaffe &amp; te ingår &middot; 🥐 Frukost ingår på avgångar före 09:00</div>';
-      html +=   '</div>';
+      if (pLugn) {
+        html +=   '<div class="class-option" data-price="' + esc(pLugn) + '" data-class-name="2 klass Lugn" onclick="selectClassOption(this)">';
+        html +=     '<div class="class-opt-top">';
+        html +=       '<span class="class-badge cls-lugn">2 klass Lugn</span>';
+        html +=       '<span class="class-price-lbl">' + esc(pLugn) + '</span>';
+        html +=     '</div>';
+        html +=     '<div class="class-perks">' + perksLugn + '</div>';
+        html +=   '</div>';
+      }
 
       // 1 klass
       var p1 = d.price1klass || '';
-      html +=   '<div class="class-option" data-price="' + esc(p1) + '" data-class-name="1 klass" onclick="selectClassOption(this)">';
-      html +=     '<div class="class-opt-top">';
-      html +=       '<span class="class-badge cls-1">1 klass</span>';
-      html +=       '<span class="class-price-lbl">' + esc(p1) + '</span>';
-      html +=     '</div>';
-      html +=     '<div class="class-perks">🪑 Breda säten med extra benutrymme &middot; ☕ Kaffe, te &amp; frukt i vagnen &middot; 🥐 Frukost serveras vid platsen (avgångar före 09:00) &middot; 🏛️ SJ Lounge i Stockholm, Göteborg &amp; Malmö</div>';
-      html +=   '</div>';
+      if (p1) {
+        html +=   '<div class="class-option" data-price="' + esc(p1) + '" data-class-name="1 klass" onclick="selectClassOption(this)">';
+        html +=     '<div class="class-opt-top">';
+        html +=       '<span class="class-badge cls-1">1 klass</span>';
+        html +=       '<span class="class-price-lbl">' + esc(p1) + '</span>';
+        html +=     '</div>';
+        html +=     '<div class="class-perks">' + perks1 + '</div>';
+        html +=   '</div>';
+      }
 
       // Välj sittplats-knapp eller öppen-placering-notering
       if (d.hasSeatMap) {

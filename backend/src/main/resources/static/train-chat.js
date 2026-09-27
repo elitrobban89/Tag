@@ -1233,7 +1233,9 @@
     var seatsLeft  = parseInt(btn.getAttribute('data-seats-left'),  10) || 0;
     var travelMins = parseInt(btn.getAttribute('data-travel-mins'), 10) || 0;
 
-    var byte       = btn.getAttribute('data-byte') || '';
+    // Bytesstationerna, "|"-separerade (en eller två)
+    var bytesstopp = (btn.getAttribute('data-byte') || '').split('|').filter(Boolean);
+    var byte       = bytesstopp.join(' och ');
     var slutstation = btn.getAttribute('data-final') || '';
     var fromName = (window._trainSearchData && window._trainSearchData.fromName) || '';
     var toName   = (window._trainSearchData && window._trainSearchData.toName)   || dest;
@@ -1252,7 +1254,7 @@
       'Sträcka: ' + fromName + ' → ' + toName + '\n' +
       'Datum: ' + date + '\n' +
       'Avgångstid: ' + depTime + (arrTime ? ', ankomst: ' + arrTime : '') + '\n' +
-      (dur ? 'Restid: ' + dur + ' · ' + (byte ? '1 byte i ' + byte : 'direkttåg, 0 byten') + '\n' : '') +
+      (dur ? 'Restid: ' + dur + ' · ' + (byte ? bytesstopp.length + (bytesstopp.length > 1 ? ' byten i ' : ' byte i ') + byte : 'direkttåg, 0 byten') + '\n' : '') +
       'Tåg: ' + trainId + (model ? ' (' + model + ')' : '') + '\n' +
       (slutstation ? 'Tåget fortsätter mot ' + slutstation + ' — resenären kliver av i ' + toName + '\n' : '') +
       'Pris: ' + price + '\n' +
@@ -1297,7 +1299,7 @@
       seatsMsg +
       '\n\nVad vill du veta mer om denna resa?';
     var introBubbla = tcAppendBot(introText, false);
-    tcAppendRouteMap(introBubbla, byte ? [fromName, byte, toName] : [fromName, toName]);
+    tcAppendRouteMap(introBubbla, [fromName].concat(bytesstopp, [toName]));
 
     var inp = document.getElementById('tc-input');
     if (inp) {

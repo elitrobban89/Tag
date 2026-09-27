@@ -27,12 +27,18 @@ public class TrainModelService {
                                     "X74 · 200 km/h max",           "/images/train-vy.jpg",        true,  "x74")),
         Map.entry("VASTTRAF",   new TrainModelInfo("X61 Västtåg",     "#0055a5", 110,
                                     "Regionaltåg västkusten",       "/images/train-sj-regional.png", false, "none")),
-        Map.entry("Ö-TÅG",      new TrainModelInfo("Öresundståg X31","#004EA8", 120,
-                                    "Regionaltåg Skåne",            "/images/train-oresundstag.jpg", false, "none")),
-        Map.entry("SKANE",      new TrainModelInfo("Öresundståg X31","#004EA8", 120,
-                                    "Regionaltåg Skåne",            "/images/train-oresundstag.jpg", false, "none")),
+        Map.entry("Ö-TÅG",      new TrainModelInfo("Öresundståg X31K","#004EA8", 120,
+                                    "X31K Contessa · 180 km/h · 229 platser", "/images/train-oresundstag.jpg", false, "none")),
+        // SKANE är Pågatågen (Öresundståg har egen operatörskod Ö-TÅG) — hette förut Öresundståg
+        Map.entry("SKANE",      new TrainModelInfo("Pågatåg X61",     "#7c3aed", 105,
+                                    "Regionaltåg i Skåne",          "/images/train-oresundstag.jpg", false, "none")),
         Map.entry("SNALLTAGET", new TrainModelInfo("Snälltåget",      "#1a1a2e", 150,
                                     "Fjärrtåg & nattåg",            "/images/train-sj-fast.png",   true,  "snalltaget")),
+        // Trafikverkets kod är "SNÄLL" — "SNALLTAGET" ovan träffade aldrig
+        Map.entry("SNÄLL",      new TrainModelInfo("Snälltåget",      "#1a1a2e", 150,
+                                    "Fjärrtåg & nattåg",            "/images/train-sj-fast.png",   true,  "snalltaget")),
+        Map.entry("ATRAIN",     new TrainModelInfo("Arlanda Express X3", "#eab308", 150,
+                                    "Stockholm C – Arlanda på ca 20 min", "/images/train-sj-fast.png", false, "none")),
         Map.entry("MTR",        new TrainModelInfo("MTR Express",     "#e85d00", 155,
                                     "Stockholm–Göteborg",           "/images/train-sj-fast.png",   true,  "mtr")),
         // Bild: SJ:s egen pressbild av X55 från Wikimedia Commons (CC BY 3.0, foto SJ AB)
@@ -130,6 +136,10 @@ public class TrainModelService {
     public TrainModelInfo resolveModel(TrainDeparture dep, String fromName) {
         if (dep == null) return DEFAULT;
 
+        // Ersättningsbuss: Trafikverket annonserar den som en avgång med trafiktyp "Buss" —
+        // den visades förut som ett tåg.
+        if (isBus(dep.getTypeOfTraffic())) return BUSS;
+
         if (dep.getTrainId() != null) {
             String known = TRAIN_NUMBER_MODELS.get(dep.getTrainId().trim());
             if (known != null) return MODELS.get(known);
@@ -150,7 +160,107 @@ public class TrainModelService {
             if (bySeries != null) return bySeries;
         }
 
+        TrainModelInfo produkt = fromProduct(dep.getProductInformation(), dep.getTypeOfTraffic());
+        if (produkt != null) return produkt;
+
         return getModel(dep.getOperator(), dep.getDestination(), dep.getProductInformation());
+    }
+
+    // ── Alla bolag och produkter i Trafikverkets data ─────────────────────────
+    //
+    // Inventerat 2026-09-27 över 38 stationer ett helt dygn: 19 kombinationer av TrainOwner
+    // och ProductInformation. Förut kändes ~5 igen och resten blev "Regionaltåg" — även
+    // Mälartåg (474 avgångar/dygn), SL Pendeltåg, Pågatåg och Västtåg. Fordonsbeteckning
+    // (X60, X61 …) anges BARA där bolaget kör en enda typ; annars bara produktnamnet, eftersom
+    // Trafikverket aldrig säger vilket fordon som går.
+    static final TrainModelInfo INTERCITY = new TrainModelInfo("SJ InterCity", "#CC0000", 140,
+        "Lok + vagnar, 160 km/h", "/images/train-sj-regional.png", false, "none");
+    static final TrainModelInfo NATTAG = new TrainModelInfo("SJ Nattåg", "#7c3aed", 105,
+        "Sovvagn och liggvagn", "/images/train-sj-fast.png", false, "none");
+    static final TrainModelInfo MALARTAG = new TrainModelInfo("Mälartåg", "#0d9488", 125,
+        "Regionaltåg i Mälardalen", "/images/train-sj-regional.png", false, "none");
+    static final TrainModelInfo SL_PENDEL = new TrainModelInfo("SL Pendeltåg X60", "#db2777", 65,
+        "Pendeltåg i Stockholmsregionen", "/images/train-sj-regional.png", false, "none");
+    static final TrainModelInfo PAGATAG = new TrainModelInfo("Pågatåg X61", "#7c3aed", 105,
+        "Regionaltåg i Skåne", "/images/train-oresundstag.jpg", false, "none");
+    static final TrainModelInfo PAGATAG_EXP = new TrainModelInfo("Pågatåg Express X61", "#7c3aed", 120,
+        "Snabbare Pågatåg med färre stopp", "/images/train-oresundstag.jpg", false, "none");
+    static final TrainModelInfo KROSATAG = new TrainModelInfo("Krösatåg", "#f59e0b", 105,
+        "Regionaltåg i Småland", "/images/train-sj-regional.png", false, "none");
+    static final TrainModelInfo VASTTAG = new TrainModelInfo("Västtåg", "#0ea5e9", 110,
+        "Regionaltåg i Västra Götaland", "/images/train-sj-regional.png", false, "none");
+    static final TrainModelInfo GBG_PENDEL = new TrainModelInfo("Västtågen pendeltåg", "#0ea5e9", 70,
+        "Pendeltåg runt Göteborg", "/images/train-sj-regional.png", false, "none");
+    static final TrainModelInfo OSTGOTA = new TrainModelInfo("Östgötapendeln", "#0284c7", 105,
+        "Regionaltåg i Östergötland", "/images/train-sj-regional.png", false, "none");
+    static final TrainModelInfo ARLANDA = new TrainModelInfo("Arlanda Express X3", "#eab308", 150,
+        "Stockholm C – Arlanda på ca 20 min", "/images/train-sj-fast.png", false, "none");
+    static final TrainModelInfo TIB = new TrainModelInfo("Tåg i Bergslagen", "#ea580c", 110,
+        "Regionaltåg i Bergslagen", "/images/train-sj-regional.png", false, "none");
+    static final TrainModelInfo NORRTAG = new TrainModelInfo("Norrtåg X62", "#2563eb", 120,
+        "Regionaltåg i Norrland", "/images/train-sj-regional.png", false, "none");
+    static final TrainModelInfo XTAGET = new TrainModelInfo("X-Tåget", "#059669", 110,
+        "Regionaltåg Gävleborg–Dalarna", "/images/train-sj-regional.png", false, "none");
+    static final TrainModelInfo VY = new TrainModelInfo("Vy Snabbtåg", "#e11d48", 130,
+        "Göteborg – Oslo", "/images/train-sj-fast.png", false, "none");
+    static final TrainModelInfo BUSS = new TrainModelInfo("Ersättningsbuss", "#64748b", 60,
+        "Buss ersätter tåget på sträckan", "", false, "none");
+
+    static boolean isBus(String typeOfTraffic) {
+        return typeOfTraffic != null && typeOfTraffic.toLowerCase(java.util.Locale.ROOT).contains("buss");
+    }
+
+    /**
+     * Fordon ur Trafikverkets produktnamn. {@code null} för SJ Snabbtåg (X2000/SJ 3000 avgörs
+     * av tågnummer och destination i {@link #getModel(String, String, String)}) och för okända
+     * produkter.
+     */
+    static TrainModelInfo fromProduct(String productInformation, String typeOfTraffic) {
+        String p = productInformation == null ? "" : productInformation.toLowerCase(java.util.Locale.ROOT);
+        if (p.isBlank()) return null;
+        if (p.startsWith("sj intercity"))  return INTERCITY;
+        if (p.startsWith("sj nattåg"))     return NATTAG;
+        if (p.startsWith("sj regional"))   return REGIONAL_SJ;
+        if (p.startsWith("mälartåg"))      return MALARTAG;
+        if (p.startsWith("sl pendeltåg"))  return SL_PENDEL;
+        if (p.startsWith("pågatågen exp")) return PAGATAG_EXP;
+        if (p.startsWith("pågatåg"))       return PAGATAG;
+        if (p.startsWith("krösatåg"))      return KROSATAG;
+        if (p.startsWith("västtåg"))
+            return typeOfTraffic != null && typeOfTraffic.toLowerCase(java.util.Locale.ROOT).contains("pendel")
+                ? GBG_PENDEL : VASTTAG;
+        if (p.startsWith("östgötapendel")) return OSTGOTA;
+        if (p.equals("tib") || p.startsWith("tåg i bergslagen")) return TIB;
+        if (p.startsWith("norrtåg"))       return NORRTAG;
+        if (p.startsWith("x-tåget"))       return XTAGET;
+        if (p.startsWith("vy snabbtåg"))   return VY;
+        return null;
+    }
+
+    /**
+     * Bolaget som det står på märket i avgångslistan. Produktnamnet i första hand (det är
+     * vad resenären känner igen), operatörskoden i andra.
+     */
+    public static String operatorName(String operator, String productInformation, String typeOfTraffic) {
+        if (isBus(typeOfTraffic)) return "Buss";
+        String p = productInformation == null ? "" : productInformation.toLowerCase(java.util.Locale.ROOT);
+        String o = operator == null ? "" : operator.trim().toUpperCase(java.util.Locale.ROOT);
+        if (p.startsWith("sj") || o.equals("SJ"))                  return "SJ";
+        if (p.startsWith("vr ") || o.startsWith("MTRX") || o.equals("VR")) return "VR";
+        if (p.startsWith("vy") || o.equals("VY"))                  return "Vy";
+        if (p.startsWith("öresundståg") || o.equals("Ö-TÅG"))      return "Öresundståg";
+        if (p.startsWith("pågatåg") || o.equals("SKANE"))          return "Pågatåg";
+        if (p.startsWith("mälartåg") || o.equals("MÄLAB"))         return "Mälartåg";
+        if (p.startsWith("sl ") || o.equals("SLL"))                return "SL";
+        if (p.startsWith("västtåg") || o.equals("VASTTRAF"))       return "Västtåg";
+        if (p.startsWith("krösatåg") || o.equals("JLT"))           return "Krösatåg";
+        if (p.startsWith("östgöta") || o.equals("ÖTRAF"))          return "Östgötapendeln";
+        if (o.equals("ATRAIN"))                                    return "Arlanda Express";
+        if (p.equals("tib") || o.equals("TIB"))                    return "Tåg i Bergslagen";
+        if (p.startsWith("norrtåg") || o.equals("NORRT"))          return "Norrtåg";
+        if (p.startsWith("x-tåget") || o.equals("XTRAFIK"))        return "X-Tåget";
+        if (p.startsWith("snälltåget") || o.startsWith("SNÄLL") || o.equals("SNALLTAGET")) return "Snälltåget";
+        return !p.isBlank() ? productInformation.split(" ")[0] : (operator == null || operator.isBlank() ? "Tåg" : operator);
     }
 
     /**
@@ -213,6 +323,67 @@ public class TrainModelService {
 
     public String calculatePrice1Klass(double distKm, String trainId) {
         int p = basePrice(distKm, trainId);
+        return p > 0 ? "från " + roundToX9(p * 1.45) + " kr" : "";
+    }
+
+    // ── Priser som liknar de riktiga (2026-09-27) ─────────────────────────────
+    //
+    // Den gamla formeln (19 kr + 0,38 kr/km) gav Kungsbacka → Kastrup med Öresundståg ~120 kr;
+    // biljetten kostar 508 kr i 2 klass. Regionaltåg har FASTA priser per sträcka (ingen
+    // variation per avgång), medan SJ/VR/Vy prissätter efter efterfrågan — där varierar
+    // MiniPriset per tåg. Avståndet är fågelvägen, så konstanterna är kalibrerade mot den.
+    public enum Priskategori { SNABB, REGIONAL, NATT, SL, ARLANDA }
+
+    public static Priskategori kategori(TrainModelInfo m) {
+        String n = m == null ? "" : m.name();
+        if (n.startsWith("SJ Nattåg"))                         return Priskategori.NATT;
+        if (n.startsWith("SL "))                               return Priskategori.SL;
+        if (n.startsWith("Arlanda Express"))                   return Priskategori.ARLANDA;
+        if (n.startsWith("SJ") || n.startsWith("VR") || n.startsWith("Vy") || n.startsWith("Snälltåget"))
+                                                               return Priskategori.SNABB;
+        return Priskategori.REGIONAL;
+    }
+
+    /** 2 klass-priset (MiniPris) för kategorin. */
+    int basePrice(double distKm, String trainId, Priskategori k) {
+        if (distKm <= 0) return 0;
+        int variation = (trainId != null ? Math.abs(trainId.hashCode()) % 61 : 0) - 30;
+        return switch (k) {
+            // Kungsbacka → Copenhagen Airport ≈ 210 km fågelväg → 30 + 2,25·210 = 502 → 509 kr
+            case REGIONAL -> roundToX9(30 + distKm * 2.25);
+            // Stockholm → Göteborg ≈ 400 km → ~359 kr MiniPris, ±30 kr per avgång
+            case SNABB    -> roundToX9(99 + distKm * 0.65 + variation);
+            case NATT     -> roundToX9(399 + distKm * 0.5 + variation);
+            case SL       -> 45;       // SL:s enkelbiljett, samma oavsett sträcka
+            case ARLANDA  -> 339;      // Arlanda Express enkel
+        };
+    }
+
+    /** Ordinarie pris (överstruket): MiniPris-rabatten finns bara på SJ/VR/Vy/nattåg. */
+    public int calculateOrdinaryPrice(double distKm, String trainId, Priskategori k) {
+        int p = basePrice(distKm, trainId, k);
+        if (p <= 0) return 0;
+        return switch (k) {
+            case SNABB, NATT -> roundToX9(p * 2.4);
+            case REGIONAL    -> roundToX9(p * 1.25);   // köpt ombord / flexbiljett
+            case SL, ARLANDA -> 0;                     // fast pris — inget att stryka över
+        };
+    }
+
+    public String calculatePrice(double distKm, String trainId, Priskategori k) {
+        int p = basePrice(distKm, trainId, k);
+        return p > 0 ? "från " + p + " kr" : "";
+    }
+
+    public String calculatePriceLugn(double distKm, String trainId, Priskategori k) {
+        if (k == Priskategori.SL || k == Priskategori.ARLANDA) return "";   // ingen Lugn-avdelning
+        int p = basePrice(distKm, trainId, k);
+        return p > 0 ? "från " + roundToX9(p * 1.18) + " kr" : "";
+    }
+
+    public String calculatePrice1Klass(double distKm, String trainId, Priskategori k) {
+        if (k == Priskategori.SL || k == Priskategori.ARLANDA) return "";   // ingen 1 klass
+        int p = basePrice(distKm, trainId, k);
         return p > 0 ? "från " + roundToX9(p * 1.45) + " kr" : "";
     }
 

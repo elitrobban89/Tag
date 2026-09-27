@@ -48,6 +48,24 @@ public class TrainDeparture {
     public String getFinalDestination()         { return finalDestination; }
     public void   setFinalDestination(String v) { this.finalDestination = v; }
 
+    /** Trafikverkets trafiktyp: "Tåg", "Pendeltåg" eller "Buss" (ersättningsbuss). */
+    private String typeOfTraffic;
+    /** Bolaget som visas på märket: "SJ", "VR", "Mälartåg", "SL" … */
+    private String operatorName;
+    /** Bytesstationerna i ordning (en eller två) — för chattens resekarta. */
+    private java.util.List<String> transferStops;
+    /** "Linköping C 08:05 → 08:20" per byte, i ordning. */
+    private java.util.List<String> transferDetails;
+
+    public String getTypeOfTraffic()         { return typeOfTraffic; }
+    public void   setTypeOfTraffic(String v) { this.typeOfTraffic = v; }
+    public String getOperatorName()         { return operatorName; }
+    public void   setOperatorName(String v) { this.operatorName = v; }
+    public java.util.List<String> getTransferStops()         { return transferStops; }
+    public void   setTransferStops(java.util.List<String> v) { this.transferStops = v; }
+    public java.util.List<String> getTransferDetails()         { return transferDetails; }
+    public void   setTransferDetails(java.util.List<String> v) { this.transferDetails = v; }
+
     public String getTransferStation()         { return transferStation; }
     public void   setTransferStation(String v) { this.transferStation = v; }
     public String getTransferArrival()         { return transferArrival; }

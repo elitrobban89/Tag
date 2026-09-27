@@ -166,4 +166,59 @@ class TrafikverketServiceTest {
         assertThat(TrafikverketService.bestMatch(STATIONER, "stockh").map(TrainStation::getSignature))
             .contains("Cst");
     }
+
+    @Test
+    void tvaBytenForlangerResanMedTagetSomArFrammeForst() {
+        // Göteborg → Stockholm → Sundsvall → Umeå: tre tåg, två byten
+        var forstaTva = List.of(new TrafikverketService.Connection(
+            leg("420", "05:11", "08:20"), leg("570", "08:40", "12:10")));
+        var sista = List.of(
+            leg("570", "12:30", "15:00"),   // samma tåg som redan är med — inget byte
+            leg("7442", "12:20", "15:40"),
+            leg("7444", "12:50", "15:10"),  // senare avgång, men framme först
+            leg("7446", "16:00", "18:00")); // över två timmars väntan
+        var resor = TrafikverketService.extend(forstaTva, sista);
+        assertThat(resor).hasSize(1);
+        assertThat(resor.get(0).legs()).extracting(TrafikverketService.Leg::trainId)
+            .containsExactly("420", "570", "7444");
+        assertThat(resor.get(0).last().trainId()).isEqualTo("7444");
+    }
+
+    @Test
+    void resaUtanAnslutningTasBort() {
+        var forstaTva = List.of(new TrafikverketService.Connection(
+            leg("1", "05:00", "07:00"), leg("2", "07:10", "09:00")));
+        assertThat(TrafikverketService.extend(forstaTva, List.of(leg("3", "08:00", "10:00")))).isEmpty();
+    }
+
+    // --- alias och stationssuffix ---
+
+    private static final List<TrainStation> MED_DANMARK = List.of(
+        new TrainStation("Dk.kh", "Köpenhamn H", 55.67, 12.56),
+        new TrainStation("Dk.kas", "Copenhagen Airport", 55.63, 12.65),
+        new TrainStation("Köp", "Köping", 59.51, 15.99),
+        new TrainStation("Thn", "Trollhättan", 58.28, 12.29));
+
+    @Test
+    void kastrupOchKobenhavnHittarRattStation() {
+        assertThat(TrafikverketService.bestMatch(MED_DANMARK, "Kastrup").map(TrainStation::getName))
+            .contains("Copenhagen Airport");
+        assertThat(TrafikverketService.bestMatch(MED_DANMARK, "København").map(TrainStation::getName))
+            .contains("Köpenhamn H");
+        assertThat(TrafikverketService.bestMatch(MED_DANMARK, "Copenhagen").map(TrainStation::getName))
+            .contains("Köpenhamn H");
+    }
+
+    @Test
+    void stationssuffixForMycketProvasUtan() {
+        // Trafikverket heter "Trollhättan" — "Trollhättan C" gav "Hittade ingen station"
+        assertThat(TrafikverketService.bestMatch(MED_DANMARK, "Trollhättan C").map(TrainStation::getName))
+            .contains("Trollhättan");
+    }
+
+    @Test
+    void aliasForslagKraverTreTecken() {
+        assertThat(TrafikverketService.aliasSuggestions("Ka")).isEmpty();
+        assertThat(TrafikverketService.aliasSuggestions("Kas")).containsExactly("Copenhagen Airport");
+    }
 }

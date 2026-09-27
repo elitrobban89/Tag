@@ -76,7 +76,11 @@ public class WebController {
                 .limit(8)
                 .map(s -> Map.of("name", s.getName()))
                 .collect(Collectors.toList());
-            return ResponseEntity.ok(matches);
+            // Alias först: "Kastrup" → Copenhagen Airport, "København" → Köpenhamn H
+            List<Map<String,String>> ut = new java.util.ArrayList<>();
+            for (String n : TrafikverketService.aliasSuggestions(q)) ut.add(Map.of("name", n));
+            for (Map<String,String> m : matches) if (!ut.contains(m) && ut.size() < 8) ut.add(m);
+            return ResponseEntity.ok(ut);
         } catch (Exception e) {
             return ResponseEntity.ok(List.of());
         }
