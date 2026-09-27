@@ -39,6 +39,14 @@ public class TrainDeparture {
     private String secondTrainId;
     /** Beräknad ankomst vid målet (HH:mm) — bara satt när tåget ligger efter tidtabellen. */
     private String estimatedArrival;
+    /**
+     * Tågets slutstation när den INTE är resenärens mål (Göteborg → Katrineholm med ett tåg
+     * mot Stockholm C). {@code destination} är då målet man sökt — där man kliver av.
+     */
+    private String finalDestination;
+
+    public String getFinalDestination()         { return finalDestination; }
+    public void   setFinalDestination(String v) { this.finalDestination = v; }
 
     public String getTransferStation()         { return transferStation; }
     public void   setTransferStation(String v) { this.transferStation = v; }

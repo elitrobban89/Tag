@@ -225,6 +225,16 @@ public class TrafikverketService {
             dep.setTrainImage(model.imageUrl());
             dep.setTransfers(0);
 
+            // Målet är stationen man SÖKT, inte tågets slutstation. Göteborg → Katrineholm
+            // visade "Stockholm C" i platskartan, på kvittot och i Mina bokningar, fast man
+            // kliver av i Katrineholm. Slutstationen sparas som "fortsätter mot". Görs EFTER
+            // resolveModel: fordonsregeln för SJ 3000 läser tågets verkliga slutstation.
+            if (toSt != null && riktigRestid.containsKey(dep)
+                    && !toSt.getName().equalsIgnoreCase(dep.getDestination())) {
+                dep.setFinalDestination(dep.getDestination());
+                dep.setDestination(toSt.getName());
+            }
+
             if (fromSt != null && dep.getDestinationSignature() != null && stationIndex != null) {
                 // Pris och CO2 räknas till stationen man SÖKT, inte till tågets slutstation —
                 // ett tåg som fortsätter förbi målet ska inte bli dyrare för det.

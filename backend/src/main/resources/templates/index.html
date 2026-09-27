@@ -555,6 +555,7 @@
     }
     .card-transfer { margin-top:3px; font-size:.72rem; color:#fde68a; }
     .card-transfer strong { color:#fef3c7; }
+    .card-mot, .sjc-mot { color:rgba(191,219,254,.6); font-style:italic; }
     .card-time-range .card-time-delayed { font-size:.7rem; }
 
     /* Filterraden över avgångslistan */
@@ -2504,6 +2505,8 @@ function openSeatMapForCard(btn) {
   // Lock class panel so class can't be changed after seat selection starts
   var panel = card ? card.querySelector('.class-panel') : null;
   if (panel) panel.classList.add('locked');
+  // Tågets slutstation om den inte är målet — visas som "fortsätter mot" i platskartan
+  _seatState.finalDestination = card ? (card.dataset.final || '') : '';
   openSeatModal(
     btn.getAttribute('data-train-id'),
     btn.getAttribute('data-layout'),
@@ -2554,7 +2557,8 @@ function openSeatModal(trainId, layout, model, depTime, price, destination, trai
         '</div>' +
       '</div>' +
       (trainImage ? '<img class="sjc-photo" src="' + esc(trainImage) + '" alt="' + esc(model) + '">' : '') +
-      '<div class="sjc-dest">🚉 Till: <strong>' + esc(destination) + '</strong></div>' +
+      '<div class="sjc-dest">🚉 Till: <strong>' + esc(destination) + '</strong>' +
+        (_seatState.finalDestination ? '<span class="sjc-mot"> · tåget fortsätter mot ' + esc(_seatState.finalDestination) + '</span>' : '') + '</div>' +
     '</div>';
   document.getElementById('seat-journey-card').innerHTML = cardHtml;
 
@@ -3093,6 +3097,7 @@ function buildDepList(deps, title, isReturn) {
         ' data-op="'          + esc(op.namn) + '"' +
         ' data-period="'      + dygnsdel(d.departureTime) + '"' +
         ' data-byte="'        + esc(d.transferStation || '') + '"' +
+        ' data-final="'       + esc(d.finalDestination || '') + '"' +
         ' data-pris="'        + prisTal + '"' +
         ' onclick="toggleClassPanel(this)">';
       html +=   '<div class="card-main">';
@@ -3115,7 +3120,8 @@ function buildDepList(deps, title, isReturn) {
       html +=           '<span class="op-badge" style="--op:' + op.farg + '">' + esc(op.namn) + '</span> ';
       html +=           '<span class="card-train-model">' + esc(d.trainModel || '') + '</span>';
       html +=           ' · tåg ' + esc(d.trainId) + (d.secondTrainId ? '+' + esc(d.secondTrainId) : '') +
-                        ' · ' + esc(travelInfo);
+                        ' · ' + esc(travelInfo) +
+                        (d.finalDestination ? ' · <span class="card-mot">tåget fortsätter mot ' + esc(d.finalDestination) + '</span>' : '');
       if (d.transfers > 0 && d.transferStation) {
         html += '<div class="card-transfer">🔁 Byte i <strong>' + esc(d.transferStation) + '</strong> ' +
                 esc(d.transferArrival || '') + ' → ' + esc(d.transferDeparture || '') + '</div>';
