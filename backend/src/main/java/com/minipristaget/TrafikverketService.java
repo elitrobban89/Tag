@@ -98,8 +98,23 @@ public class TrafikverketService {
 
     // ── Sök station på namn ───────────────────────────────────────
     public Optional<TrainStation> findStationByName(String name) throws Exception {
-        String lower = name.toLowerCase();
-        return getAllStations().stream()
+        return bestMatch(getAllStations(), name);
+    }
+
+    /**
+     * Exakt namn först, sedan stadens centralstation ("Göteborg" → "Göteborg C"), sist första
+     * station som innehåller texten. Förut vann den första som INNEHÖLL texten, i den ordning
+     * Trafikverket råkade lista stationerna — "Göteborg" kunde bli Olskroken eller Sävenäs.
+     */
+    static Optional<TrainStation> bestMatch(List<TrainStation> stations, String name) {
+        String lower = name.trim().toLowerCase();
+        Optional<TrainStation> exakt = stations.stream()
+            .filter(s -> s.getName().equalsIgnoreCase(lower)).findFirst();
+        if (exakt.isPresent()) return exakt;
+        Optional<TrainStation> central = stations.stream()
+            .filter(s -> s.getName().equalsIgnoreCase(lower + " c")).findFirst();
+        if (central.isPresent()) return central;
+        return stations.stream()
             .filter(s -> s.getName().toLowerCase().contains(lower))
             .findFirst();
     }
@@ -111,7 +126,11 @@ public class TrafikverketService {
         if (hit != null && System.currentTimeMillis() - hit.timestamp() < DEPARTURE_CACHE_TTL_MS)
             return hit.departures();
 
-        int limit = (toName == null || toName.isBlank()) ? 50 : 200;
+        boolean harMal = toName != null && !toName.isBlank();
+        // Med mål: hela dygnet. Taket låg på 200, och Stockholm C har fler avgångar än så
+        // (pendeltåg inräknade) — en sökning på ett annat datum än i dag tappade därför
+        // kvällens tåg utan att någon märkte det. Uppmätt 2026-09-27: 300 räckte till ~22.
+        int limit = harMal ? 1000 : 50;
         // Trafikverket times are in Swedish local time — use Stockholm timezone for comparison
         ZoneId stockholm = ZoneId.of("Europe/Stockholm");
         ZonedDateTime nowSweden = ZonedDateTime.now(stockholm);
@@ -165,10 +184,30 @@ public class TrafikverketService {
         JsonNode result        = callApi(xml);
         JsonNode announcements = result.path("RESPONSE").path("RESULT").get(0).path("TrainAnnouncement");
 
+        // ── Stannar tåget verkligen vid målet, och när är det framme? ──
+        // ToLocation är bara tågets SLUTstation, och restiden gissades förut ur fågelvägen och
+        // en snitthastighet per tågtyp. Det gav fel på två sätt: tåg som passerar målet utan
+        // att stanna (eller slutar före) kunde visas, och en SJ Regional via Västerås–Örebro
+        // (~4,5 h till Göteborg) fick snabbtågets restid. Trafikverket har ankomsten vid
+        // målstationen — samma tågnummer samma dag — så den hämtas i stället för att gissas.
+        TrainStation toSt = harMal ? findStationByName(toName).orElse(null) : null;
+        Map<String, List<String>> ankomster = toSt != null ? getArrivals(toSt.getSignature(), date) : Map.of();
+
         List<TrainDeparture> departures = new ArrayList<>();
+        Map<TrainDeparture, Integer> riktigRestid = new HashMap<>();
         if (announcements.isArray()) {
             for (JsonNode ann : announcements) {
-                if (toName == null || toName.isBlank() || matchesDestination(ann, toName)) {
+                if (!harMal) { departures.add(parseAnnouncement(ann)); continue; }
+                if (!ankomster.isEmpty()) {
+                    // Ankomsten är känd: tåget ska stanna vid målet EFTER avgången här.
+                    Integer min = firstTravelMinutes(ann.path("AdvertisedTimeAtLocation").asText(),
+                                                     ankomster.get(ann.path("AdvertisedTrainIdent").asText()));
+                    if (min == null) continue;
+                    TrainDeparture dep = parseAnnouncement(ann);
+                    departures.add(dep);
+                    riktigRestid.put(dep, min);
+                } else if (matchesDestination(ann, toName)) {
+                    // Ankomsterna gick inte att hämta — gamla slutstationsmatchningen som reserv
                     departures.add(parseAnnouncement(ann));
                 }
             }
@@ -186,12 +225,14 @@ public class TrafikverketService {
             dep.setTransfers(0);
 
             if (fromSt != null && dep.getDestinationSignature() != null && stationIndex != null) {
-                final String destSig = dep.getDestinationSignature();
-                TrainStation toSt = stationIndex.get(destSig.toUpperCase());
+                // Pris och CO2 räknas till stationen man SÖKT, inte till tågets slutstation —
+                // ett tåg som fortsätter förbi målet ska inte bli dyrare för det.
+                TrainStation prisMal = toSt != null && riktigRestid.containsKey(dep)
+                    ? toSt : stationIndex.get(dep.getDestinationSignature().toUpperCase());
 
-                if (toSt != null) {
+                if (prisMal != null) {
                     double dist = haversine(fromSt.getLat(), fromSt.getLon(),
-                                            toSt.getLat(),   toSt.getLon());
+                                            prisMal.getLat(), prisMal.getLon());
                     dep.setPrice(trainModelService.calculatePrice(dist, dep.getTrainId()));
                     dep.setPriceLugn(trainModelService.calculatePriceLugn(dist, dep.getTrainId()));
                     dep.setPrice1klass(trainModelService.calculatePrice1Klass(dist, dep.getTrainId()));
@@ -199,7 +240,9 @@ public class TrafikverketService {
                     dep.setSeatsLeft(trainModelService.calculateSeatsLeft(dep.getTrainId()));
                     dep.setHasSeatMap(model.hasSeatMap());
                     dep.setSeatLayout(model.seatLayout());
-                    dep.setTravelMinutes(trainModelService.estimateTravelMinutes(dist, model.avgSpeedKmh()));
+                    Integer riktig = riktigRestid.get(dep);
+                    dep.setTravelMinutes(riktig != null ? riktig
+                        : trainModelService.estimateTravelMinutes(dist, model.avgSpeedKmh()));
                     // CO2 savings: car ~110 g/km vs Swedish train ~6 g/km
                     double co2 = Math.round((110.0 - 6.0) * dist / 1000.0 * 10.0) / 10.0;
                     dep.setCo2SavedKg(co2);
@@ -209,6 +252,80 @@ public class TrafikverketService {
 
         departureCache.put(cacheKey, new DepartureCacheEntry(departures, System.currentTimeMillis()));
         return departures;
+    }
+
+    // ── Ankomster vid en station: tågnummer → annonserad ankomsttid (ISO) ──
+    // Fönstret går till 06:00 nästa dygn så att ett kvällståg som är framme efter midnatt
+    // inte faller bort. Misslyckas anropet blir kartan tom, och sökningen faller tillbaka på
+    // slutstationsmatchningen — en tom lista av ett nätverksfel vore värre än en gissad restid.
+    private Map<String, List<String>> getArrivals(String toSignature, LocalDate date) {
+        String xml = """
+            <REQUEST>
+              <LOGIN authenticationkey="%s"/>
+              <QUERY objecttype="TrainAnnouncement" namespace="rail.trafficinfo" schemaversion="2.0" limit="1000" orderby="AdvertisedTimeAtLocation">
+                <FILTER>
+                  <AND>
+                    <EQ name="LocationSignature" value="%s"/>
+                    <EQ name="ActivityType" value="Ankomst"/>
+                    <GT name="AdvertisedTimeAtLocation" value="%sT00:00:00"/>
+                    <LT name="AdvertisedTimeAtLocation" value="%sT06:00:00"/>
+                  </AND>
+                </FILTER>
+                <INCLUDE>AdvertisedTrainIdent</INCLUDE>
+                <INCLUDE>AdvertisedTimeAtLocation</INCLUDE>
+              </QUERY>
+            </REQUEST>
+            """.formatted(apiKey, toSignature, date, date.plusDays(1));
+        try {
+            return arrivalsByTrain(callApi(xml).path("RESPONSE").path("RESULT").get(0).path("TrainAnnouncement"));
+        } catch (Exception e) {
+            return Map.of();
+        }
+    }
+
+    /**
+     * Restid till den FÖRSTA ankomsten efter avgången. Ett tågnummer kan ha två ankomster i
+     * fönstret: tåg 451 (Stockholm 21:22) var framme i Göteborg 01:47 natten FÖRE — gårdagens
+     * tur — och 00:47 natten efter. Att ta den första i listan kastade tåget helt.
+     */
+    static Integer firstTravelMinutes(String departureIso, List<String> arrivals) {
+        if (arrivals == null) return null;
+        Integer best = null;
+        for (String arr : arrivals) {
+            Integer min = travelMinutes(departureIso, arr);
+            if (min != null && (best == null || min < best)) best = min;
+        }
+        return best;
+    }
+
+    /** Alla ankomster per tågnummer, i tidsordning. */
+    static Map<String, List<String>> arrivalsByTrain(JsonNode announcements) {
+        Map<String, List<String>> map = new HashMap<>();
+        if (announcements != null && announcements.isArray()) {
+            for (JsonNode a : announcements) {
+                String id = a.path("AdvertisedTrainIdent").asText("");
+                String t  = a.path("AdvertisedTimeAtLocation").asText("");
+                if (!id.isBlank() && !t.isBlank()) map.computeIfAbsent(id, k -> new ArrayList<>()).add(t);
+            }
+        }
+        return map;
+    }
+
+    /**
+     * Restid i minuter mellan avgång och ankomst, eller null om ankomsten saknas eller inte
+     * ligger EFTER avgången (då har tåget redan passerat målet, eller går åt andra hållet).
+     */
+    static Integer travelMinutes(String departureIso, String arrivalIso) {
+        if (departureIso == null || arrivalIso == null || departureIso.isBlank() || arrivalIso.isBlank())
+            return null;
+        try {
+            java.time.OffsetDateTime dep = java.time.OffsetDateTime.parse(departureIso);
+            java.time.OffsetDateTime arr = java.time.OffsetDateTime.parse(arrivalIso);
+            long min = java.time.Duration.between(dep, arr).toMinutes();
+            return min > 0 ? (int) min : null;
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     // ── Privata hjälpmetoder ──────────────────────────────────────

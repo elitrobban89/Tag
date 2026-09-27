@@ -20,7 +20,7 @@ class TrainModelServiceTest {
     void kandOperatorMappasSkiftlagesokansligt() {
         assertThat(service.getModel("SJ").name()).isEqualTo("SJ X2000");
         assertThat(service.getModel("sj").name()).isEqualTo("SJ X2000");
-        assertThat(service.getModel("  mtrx  ").name()).isEqualTo("X74");
+        assertThat(service.getModel("  mtrx  ").name()).isEqualTo("VR Snabbtåg X74");
     }
 
     @Test
@@ -121,7 +121,7 @@ class TrainModelServiceTest {
 
     @Test
     void destinationPaverkarBaraSj() {
-        assertThat(service.getModel("MTRX", "Sundsvall C").name()).isEqualTo("X74");
+        assertThat(service.getModel("MTRX", "Sundsvall C").name()).isEqualTo("VR Snabbtåg X74");
     }
 
     @Test

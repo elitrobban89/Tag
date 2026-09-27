@@ -58,6 +58,24 @@
     return lines.join("\n");
   }
 
+  // ── Snabbknapparna ────────────────────────────────────────────────────────
+  // Samma form som bilrådgivningens: varje knapp bär en egen ton (--ton, RGB-tripplett)
+  // och ikonen står i en rund bricka. Fyra likadana blå piller sa ingenting om vart de
+  // ledde; färgen bär information nu. Klicken fångas av delegeringen på #tc-quick.
+  function tcAttr(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+  }
+  function tcChip(ton, ik, label, q) {
+    return '<button class="tc-quick-btn" style="--ton:' + ton + '" data-q="' + tcAttr(q) + '">' +
+      '<span class="tc-quick-ik">' + ik + '</span><span>' + tcAttr(label) + '</span></button>';
+  }
+  function tcStartChips() {
+    return tcChip('251,191,36', '💰', 'Billigast', 'Vilken avgång är billigast?') +
+      tcChip('56,189,248', '⚡', 'Snabbast', 'Vilken avgång är snabbast?') +
+      tcChip('52,211,153', '🎫', 'Platser kvar', 'Vilka avgångar har MiniPris-platser kvar?') +
+      tcChip('167,139,250', '🤖', 'Ge råd', 'Ge mig råd om vilken avgång jag ska välja');
+  }
+
   function initTrainChat() {
     var style = document.createElement("style");
     style.textContent = `
@@ -169,12 +187,59 @@
         width:380px;
         max-height:min(540px, calc(100vh - 130px));
         max-height:min(540px, calc(100dvh - 130px));
-        background:linear-gradient(160deg,rgba(20,38,80,0.4),rgba(8,16,36,0.48));
-        backdrop-filter:blur(40px) saturate(160%);-webkit-backdrop-filter:blur(40px) saturate(160%);
-        border:1px solid rgba(125,211,252,0.28);border-radius:20px;
-        box-shadow:0 8px 48px rgba(0,0,0,.7),0 0 70px rgba(96,165,250,0.2),0 1px 0 rgba(255,255,255,0.14) inset;
+        /* Frostat glas som bilradgivningens chatt: basfargen ar nastan borta, det som gor
+           panelen lasbar ar blur/saturate plus att varje textbarande del har en egen tatare
+           bricka (ribba, bubblor, snabbknappar, inputrad). */
+        background:
+          linear-gradient(135deg,rgba(255,255,255,0.10),rgba(255,255,255,0) 46%),
+          radial-gradient(120% 60% at 100% 0%,rgba(59,130,246,0.24),transparent 62%),
+          radial-gradient(110% 55% at 0% 100%,rgba(13,110,132,0.26),transparent 68%),
+          linear-gradient(160deg,rgba(10,20,48,0.30),rgba(6,12,30,0.38));
+        backdrop-filter:blur(34px) saturate(180%);-webkit-backdrop-filter:blur(34px) saturate(180%);
+        border:1px solid rgba(147,197,253,0.28);border-radius:22px;
+        box-shadow:0 24px 64px rgba(0,0,0,.55),0 0 80px rgba(59,130,246,.30),
+          0 0 130px rgba(45,212,191,.16),
+          inset 0 1px 0 rgba(255,255,255,0.28),inset 0 0 0 1px rgba(255,255,255,0.06);
         display:none;flex-direction:column;overflow:hidden;
         font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+      }
+      /* Fargspel bakom glaset: fyra mjuka falt som langsamt driver runt i tagappens palett.
+         Bara transform animeras (komposit) — animerad background/filter pa ett element med
+         backdrop-filter tvingar om-filtrering varje bildruta och hackar. */
+      .tc-panel::before {
+        content:"";position:absolute;inset:-45%;z-index:0;pointer-events:none;
+        background:
+          radial-gradient(42% 42% at 26% 28%,rgba(59,130,246,0.85),transparent 72%),
+          radial-gradient(38% 38% at 76% 20%,rgba(34,211,238,0.62),transparent 72%),
+          radial-gradient(44% 44% at 64% 80%,rgba(99,102,241,0.66),transparent 72%),
+          radial-gradient(40% 40% at 18% 76%,rgba(45,212,191,0.52),transparent 72%);
+        opacity:.62;
+        animation:tc-aurora 24s ease-in-out infinite alternate;
+      }
+      @keyframes tc-aurora {
+        0%   { transform:translate3d(-14%,-10%,0) rotate(0deg)   scale(1.10); }
+        50%  { transform:translate3d(13%,9%,0)    rotate(16deg)  scale(1.34); }
+        100% { transform:translate3d(-9%,14%,0)   rotate(-13deg) scale(1.16); }
+      }
+      /* Fargen som vandrar runt kanten (gradient-border-tricket med mask-composite).
+         Utan @property star ringen still — da blir den bara en statisk fargkant. */
+      @property --tc-rim-ang { syntax:'<angle>'; initial-value:0deg; inherits:false; }
+      .tc-panel::after {
+        content:"";position:absolute;inset:0;z-index:0;pointer-events:none;
+        border-radius:inherit;padding:2px;
+        background:conic-gradient(from var(--tc-rim-ang),
+          #60a5fa,#22d3ee,#34d399,#818cf8,#fbbf24,#60a5fa);
+        -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+        mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+        -webkit-mask-composite:xor;mask-composite:exclude;
+        opacity:.85;
+        animation:tc-rim 9s linear infinite;
+      }
+      @keyframes tc-rim { to { --tc-rim-ang:360deg; } }
+      /* Innehallet over fargspelet — annars malas texten under pseudoelementen */
+      .tc-panel > * { position:relative;z-index:1; }
+      @media (prefers-reduced-motion:reduce){
+        .tc-panel::before,.tc-panel::after{ animation:none; }
       }
       /* Oppet/stangt bor i en klass pa body, inte i panelens inline style.
          Da kan FAB-regeln nedan uttrycka "expanderad OCH oppen" i ren CSS
@@ -192,6 +257,7 @@
         animation:tc-header-skift 16s ease-in-out infinite alternate;
         backdrop-filter:blur(10px) saturate(150%);-webkit-backdrop-filter:blur(10px) saturate(150%);
         border-bottom:1px solid rgba(125,211,252,0.25);
+        box-shadow:inset 0 1px 0 rgba(255,255,255,0.16);
         color:#fff;padding:13px 16px;
         display:flex;align-items:center;justify-content:space-between;
         font-weight:700;font-size:14px;flex-shrink:0;gap:8px;
@@ -225,8 +291,9 @@
       body.tc-chat-max .tc-header-expand svg{transform:rotate(180deg);}
       .tc-context-bar {
         padding:7px 14px;font-size:11px;font-weight:600;
-        color:rgba(147,197,253,0.8);letter-spacing:0.02em;
-        background:rgba(29,78,216,0.12);border-bottom:1px solid rgba(96,165,250,0.1);
+        color:rgba(191,219,254,0.88);letter-spacing:0.02em;
+        background:rgba(8,18,44,0.46);border-bottom:1px solid rgba(147,197,253,0.14);
+        backdrop-filter:blur(10px) saturate(140%);-webkit-backdrop-filter:blur(10px) saturate(140%);
         white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0;
       }
       .tc-messages {
@@ -241,47 +308,72 @@
         max-width:85%;padding:10px 13px;border-radius:14px;
         font-size:13px;line-height:1.6;word-break:break-word;
       }
+      /* Glasbricka med ett ljusstrak i overkanten, som bilradgivningens bubblor. Den gamla
+         blaa glorian runt varje bubbla (0 0 28px) gjorde att de flot ihop med varandra. */
       .tc-bubble.bot {
-        background:rgba(12,22,50,0.7);
-        backdrop-filter:blur(10px) saturate(150%);-webkit-backdrop-filter:blur(10px) saturate(150%);
-        border:1px solid rgba(125,211,252,0.28);
-        border-radius:4px 14px 14px 14px;align-self:flex-start;color:#eaf3ff;
-        box-shadow:0 2px 14px rgba(0,0,0,0.28),0 0 28px rgba(96,165,250,0.3),inset 0 1px 0 rgba(255,255,255,0.08);
+        background:linear-gradient(150deg,rgba(255,255,255,0.08),rgba(255,255,255,0) 55%),
+          rgba(12,24,58,0.58);
+        backdrop-filter:blur(14px) saturate(150%);-webkit-backdrop-filter:blur(14px) saturate(150%);
+        border:1px solid rgba(147,197,253,0.22);
+        border-radius:4px 14px 14px 14px;align-self:flex-start;color:#e6f0ff;
+        box-shadow:0 4px 18px -8px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.12);
       }
-      .tc-bubble.bot strong{color:#bfdbfe;text-shadow:0 0 10px rgba(96,165,250,0.55);}
+      .tc-bubble.bot strong{color:#bfdbfe;}
       .tc-bubble.bot ul{margin:6px 0 2px 16px;display:flex;flex-direction:column;gap:3px;}
       .tc-bubble.bot li{list-style:disc;}
       .tc-bubble.user {
-        background:linear-gradient(135deg,rgba(37,99,235,0.9),rgba(96,165,250,0.85));
-        backdrop-filter:blur(10px) saturate(150%);-webkit-backdrop-filter:blur(10px) saturate(150%);
-        border:1px solid rgba(147,197,253,0.4);
+        background:linear-gradient(135deg,rgba(29,78,216,0.76),rgba(59,130,246,0.66));
+        backdrop-filter:blur(14px) saturate(160%);-webkit-backdrop-filter:blur(14px) saturate(160%);
+        border:1px solid rgba(191,219,254,0.32);
         color:#fff;border-radius:14px 14px 4px 14px;align-self:flex-end;
-        text-shadow:0 1px 6px rgba(8,19,40,0.5);
-        box-shadow:0 2px 16px rgba(59,130,246,0.55),0 0 34px rgba(96,165,250,0.4),inset 0 1px 0 rgba(255,255,255,0.22);
+        box-shadow:0 4px 18px -8px rgba(29,78,216,0.9),inset 0 1px 0 rgba(255,255,255,0.20);
       }
       .tc-quick {
         padding:10px 12px 4px;display:flex;flex-wrap:wrap;gap:7px;flex-shrink:0;
-        background:rgba(7,13,31,0.5);border-top:1px solid rgba(96,165,250,0.1);
+        background:rgba(8,18,44,0.42);border-top:1px solid rgba(147,197,253,0.16);
+        backdrop-filter:blur(10px) saturate(140%);-webkit-backdrop-filter:blur(10px) saturate(140%);
       }
       /* JS-styrt lage: satts nar samtalet borjat sa att snabbknapparna forsvinner.
          Egen klass i stallet for inline display, annars kan CSS-reglerna nedan
          (platsbrist i liggande lage, expanderat lage) aldrig ta over. */
       .tc-quick.tc-quick-off{display:none;}
       .tc-quick-btn {
-        background:rgba(59,130,246,0.1);border:1px solid rgba(96,165,250,0.25);color:#93c5fd;
-        border-radius:20px;padding:5px 12px;font-size:12px;font-weight:600;
-        cursor:pointer;transition:all .15s;white-space:nowrap;
+        --ton:96,165,250;
+        display:inline-flex;align-items:center;gap:6px;
+        background:linear-gradient(145deg,rgba(var(--ton),0.20),rgba(var(--ton),0.09));
+        border:1px solid rgba(var(--ton),0.42);color:#eef5ff;
+        border-radius:20px;padding:6px 13px 6px 7px;font-size:12px;font-weight:600;
+        cursor:pointer;white-space:nowrap;letter-spacing:.1px;
+        box-shadow:0 2px 10px -6px rgba(var(--ton),0.9);
+        transition:transform .15s ease,box-shadow .15s ease,border-color .15s ease,background .15s ease;
+        backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
       }
-      .tc-quick-btn:hover{background:rgba(59,130,246,0.35);color:#fff;border-color:rgba(147,197,253,0.5);}
+      /* Ikonen i en egen bricka - annars drunknar den i texten bredvid. */
+      .tc-quick-ik {
+        display:inline-flex;align-items:center;justify-content:center;
+        width:20px;height:20px;border-radius:50%;flex-shrink:0;font-size:11px;
+        background:rgba(var(--ton),0.26);
+      }
+      .tc-quick-btn:hover{
+        background:linear-gradient(145deg,rgba(var(--ton),0.34),rgba(var(--ton),0.16));
+        border-color:rgba(var(--ton),0.75);color:#fff;
+        transform:translateY(-1px);box-shadow:0 6px 16px -7px rgba(var(--ton),1);
+      }
+      .tc-quick-btn:active{transform:translateY(0);}
+      .tc-quick-btn:focus-visible{outline:2px solid rgba(var(--ton),0.9);outline-offset:2px;}
+      @media(prefers-reduced-motion:reduce){.tc-quick-btn{transition:none;}.tc-quick-btn:hover{transform:none;}}
       .tc-input-row {
         display:flex;gap:8px;padding:10px 12px;
-        border-top:1px solid rgba(96,165,250,0.1);
-        background:rgba(7,13,31,0.5);flex-shrink:0;
+        border-top:1px solid rgba(147,197,253,0.16);
+        background:rgba(8,18,44,0.42);flex-shrink:0;
+        backdrop-filter:blur(10px) saturate(140%);-webkit-backdrop-filter:blur(10px) saturate(140%);
       }
       .tc-input {
-        flex:1;border:1px solid rgba(96,165,250,0.2);border-radius:22px;
+        flex:1;border:1px solid rgba(147,197,253,0.26);border-radius:22px;
         padding:8px 14px;font-size:13px;outline:none;
-        background:rgba(12,22,50,0.6);color:#dbeafe;transition:border-color .15s,box-shadow .15s;
+        background:rgba(12,24,58,0.42);color:#e6f0ff;transition:border-color .15s,box-shadow .15s;
+        box-shadow:inset 0 1px 0 rgba(255,255,255,0.10);
+        backdrop-filter:blur(10px) saturate(140%);-webkit-backdrop-filter:blur(10px) saturate(140%);
       }
       .tc-input::placeholder{color:rgba(147,197,253,0.35);}
       .tc-input:focus{border-color:rgba(147,197,253,0.5);box-shadow:0 0 0 3px rgba(59,130,246,0.12);}
@@ -336,8 +428,8 @@
       .tc-train-img{width:100%;max-height:130px;object-fit:cover;border-radius:10px;opacity:.88;transition:opacity .2s;}
       .tc-train-img:hover{opacity:1;}
       .tc-followup-chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px;}
-      .tc-followup-chip{background:rgba(96,165,250,.09);border:1px solid rgba(96,165,250,.22);color:rgba(147,197,253,.72);font-size:11px;padding:3px 10px;border-radius:20px;cursor:pointer;transition:all .15s;}
-      .tc-followup-chip:hover{background:rgba(96,165,250,.2);border-color:rgba(96,165,250,.45);color:#93c5fd;}
+      .tc-followup-chip{background:linear-gradient(145deg,rgba(96,165,250,.16),rgba(96,165,250,.06));border:1px solid rgba(147,197,253,.32);color:#dbeafe;font-size:11px;font-weight:600;padding:4px 11px;border-radius:20px;cursor:pointer;transition:all .15s;box-shadow:inset 0 1px 0 rgba(255,255,255,.08);}
+      .tc-followup-chip:hover{background:linear-gradient(145deg,rgba(96,165,250,.32),rgba(96,165,250,.14));border-color:rgba(147,197,253,.6);color:#fff;transform:translateY(-1px);}
       @keyframes tc-dep-flash{0%,100%{box-shadow:none}30%,70%{box-shadow:0 0 0 3px rgba(96,165,250,.6),0 0 20px rgba(96,165,250,.2)}}
       .tc-dep-highlight{animation:tc-dep-flash 2s ease;}
       @keyframes tc-chip-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
@@ -378,7 +470,8 @@
         .tc-messages{padding:11px 10px;gap:8px;}
         .tc-bubble{max-width:90%;padding:9px 11px;}
         .tc-quick{padding:8px 10px 3px;gap:6px;}
-        .tc-quick-btn{font-size:11px;padding:4px 10px;}
+        .tc-quick-btn{font-size:11px;padding:4px 10px 4px 5px;}
+        .tc-quick-ik{width:18px;height:18px;font-size:10px;}
         .tc-input-row{padding:8px 10px;}
         .tc-train-img{max-height:100px;}
         .tc-search-chip{right:10px;left:10px;bottom:70px;}
@@ -496,12 +589,7 @@
         </div>
         <div class="tc-context-bar" id="tc-context-bar" style="display:none;"></div>
         <div class="tc-messages" id="tc-messages"></div>
-        <div class="tc-quick" id="tc-quick">
-          <button class="tc-quick-btn" data-q="Vilken avgång är billigast?">💰 Billigast</button>
-          <button class="tc-quick-btn" data-q="Vilken avgång är snabbast?">⚡ Snabbast</button>
-          <button class="tc-quick-btn" data-q="Vilka avgångar har MiniPris-platser kvar?">🎫 Platser kvar</button>
-          <button class="tc-quick-btn" data-q="Ge mig råd om vilken avgång jag ska välja">🤖 Ge råd</button>
-        </div>
+        <div class="tc-quick" id="tc-quick">${tcStartChips()}</div>
         <div class="tc-input-row">
           <input class="tc-input" id="tc-input" type="text" placeholder="Fråga om avgångar, priser, platser…" autocomplete="off"/>
           <button class="tc-send" id="tc-send">➤</button>
@@ -794,11 +882,7 @@
     try { localStorage.removeItem("tc-chat"); } catch(e) {}
     document.getElementById("tc-messages").innerHTML = "";
     var quick = document.getElementById("tc-quick");
-    quick.innerHTML =
-      '<button class="tc-quick-btn" data-q="Vilken avgång är billigast?">💰 Billigast</button>' +
-      '<button class="tc-quick-btn" data-q="Vilken avgång är snabbast?">⚡ Snabbast</button>' +
-      '<button class="tc-quick-btn" data-q="Vilka avgångar har MiniPris-platser kvar?">🎫 Platser kvar</button>' +
-      '<button class="tc-quick-btn" data-q="Ge mig råd om vilken avgång jag ska välja">🤖 Ge råd</button>';
+    quick.innerHTML = tcStartChips();
     quick.classList.remove("tc-quick-off");
     updateContextBar();
     tcAppendBot("Hej! Jag hjälper dig hitta rätt tåg 🚂 Gör en sökning så kan jag svara på frågor om priser, platser och restider!", false);
@@ -1103,14 +1187,19 @@
     var quick = document.getElementById('tc-quick');
     if (quick) {
       quick.innerHTML =
-        '<button class="tc-quick-btn" data-q="Vilken reseklass passar bäst för denna avgång?">🪑 Vilken klass?</button>' +
-        '<button class="tc-quick-btn" data-q="Finns WiFi och 5G på ' + (model || 'detta tåg') + '?">🛜 WiFi & 5G</button>' +
-        '<button class="tc-quick-btn" data-q="Vad gäller för bagage på denna avgång?">🧳 Bagage</button>' +
-        '<button class="tc-quick-btn" data-q="Hur lång tid tar det från ' + toName + ' centralstation till centrum?">🗺 Till centrum</button>';
+        tcChip('167,139,250', '🪑', 'Vilken klass?', 'Vilken reseklass passar bäst för denna avgång?') +
+        tcChip('56,189,248', '🛜', 'WiFi & 5G', 'Finns WiFi och 5G på ' + (model || 'detta tåg') + '?') +
+        tcChip('251,146,60', '🧳', 'Bagage', 'Vad gäller för bagage på denna avgång?') +
+        tcChip('52,211,153', '🗺', 'Till centrum', 'Hur lång tid tar det från ' + toName + ' centralstation till centrum?');
       quick.classList.remove('tc-quick-off');
     }
 
-    if (!tcIsOpen()) tcSetOpen(true);
+    // På telefon öppnas chatten INTE av sig själv: bottenkortet täckte klassvalet och
+    // platsknappen man just fällt ut, och fokus i rutan fällde upp tangentbordet över
+    // resten. Samtalet förbereds ändå (kontextbar, snabbknappar, hälsning) så det står
+    // klart när man själv trycker på chattknappen. Samma brytpunkt som panelens mobilläge.
+    var telefon = window.matchMedia && window.matchMedia('(max-width:640px)').matches;
+    if (!telefon && !tcIsOpen()) tcSetOpen(true);
 
     var seatsMsg = seatsLeft > 0
       ? ' Det finns **' + seatsLeft + ' MiniPris-platser kvar**.'
@@ -1128,7 +1217,7 @@
     var inp = document.getElementById('tc-input');
     if (inp) {
       inp.placeholder = 'Fråga om tåget ' + timeRange + '…';
-      inp.focus();
+      if (!telefon) inp.focus();
     }
   };
 

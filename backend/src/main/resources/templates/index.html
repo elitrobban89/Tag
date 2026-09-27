@@ -11,43 +11,70 @@
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #081328;
+      background: linear-gradient(180deg, #071a33 0%, #0b2c55 50%, #07203a 100%);
       min-height: 100vh;
     }
 
-    /* Animerad bakgrund med rörliga glödbubblor (ljusare himmelsblått + långsam nyansdrift → skiftar) */
+    /* ── Skiftande blå bakgrund: ljusblått, petrol och blått ──
+       Två lager färgfält som driver åt var sitt håll, så blandningen hela tiden ändras.
+       Förut skiftades nyansen med en animerad hue-rotate över hela skärmen — ett filter
+       som räknas om varje bildruta. Nu rör sig BARA transform och opacity (kompositorn),
+       vilket i de andra apparna mättes till i praktiken noll kostnad. Lagren är större än
+       skärmen (inset -25 %) så kanterna aldrig syns när de glider. */
     body::before {
       content: '';
-      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      position: fixed; inset: -25%; z-index: 0; pointer-events: none;
       background:
-        radial-gradient(ellipse at 12% 36%, rgba(56,160,255,.32) 0%, transparent 56%),
-        radial-gradient(ellipse at 88% 10%, rgba(99,140,255,.24) 0%, transparent 50%),
-        radial-gradient(ellipse at 55% 94%, rgba(45,200,255,.20) 0%, transparent 54%),
-        linear-gradient(180deg, #081328 0%, #103160 50%, #081328 100%);
-      animation: bgdrift 12s ease-in-out infinite alternate, bgHue 26s linear infinite;
+        radial-gradient(34% 30% at 20% 30%, rgba(125,211,252,.42) 0%, transparent 70%),   /* ljusblått */
+        radial-gradient(36% 32% at 78% 22%, rgba(37,99,235,.45) 0%, transparent 70%),     /* blått */
+        radial-gradient(40% 34% at 62% 78%, rgba(14,116,144,.55) 0%, transparent 70%),    /* petrol */
+        radial-gradient(30% 28% at 24% 80%, rgba(56,189,248,.30) 0%, transparent 70%);
+      animation: bgDrift 30s ease-in-out infinite alternate;
+      will-change: transform;
     }
-    @keyframes bgdrift {
-      0%   { opacity: 1; transform: scale(1); }
-      100% { opacity: .9; transform: scale(1.05) translateY(-8px); }
-    }
-    /* Nyansen vandrar mellan cyan-azur och indigo → "färgerna skiftar lite" */
-    @keyframes bgHue {
-      0%   { filter: hue-rotate(-10deg) saturate(1.08); }
-      50%  { filter: hue-rotate(14deg)  saturate(1.2);  }
-      100% { filter: hue-rotate(-10deg) saturate(1.08); }
+    @keyframes bgDrift {
+      0%   { transform: translate3d(-6%, -4%, 0) rotate(0deg)   scale(1.00); }
+      50%  { transform: translate3d(5%,  4%, 0)  rotate(10deg)  scale(1.10); }
+      100% { transform: translate3d(-3%, 6%, 0)  rotate(-8deg)  scale(1.04); }
     }
 
-    /* Skiftande ljusblått lager: pulserar in ovanpå ::before så helheten andas ljusblått */
+    /* Andra lagret: petrol och ljusblått åt motsatt håll, och det andas in och ut */
     body::after {
-      content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      content: ''; position: fixed; inset: -25%; z-index: 0; pointer-events: none;
       background:
-        radial-gradient(ellipse at 22% 28%, rgba(125,211,252,.30) 0%, transparent 56%),
-        radial-gradient(ellipse at 82% 72%, rgba(147,197,253,.24) 0%, transparent 54%),
-        radial-gradient(ellipse at 50% 50%, rgba(94,234,255,.10) 0%, transparent 60%),
-        linear-gradient(180deg, #0c2350 0%, #185ea6 55%, #0c2350 100%);
-      opacity: .18; animation: bgShift 15s ease-in-out infinite alternate;
+        radial-gradient(32% 30% at 70% 60%, rgba(13,148,136,.40) 0%, transparent 70%),   /* petrol/teal */
+        radial-gradient(30% 26% at 30% 55%, rgba(147,197,253,.30) 0%, transparent 70%),  /* ljusblått */
+        radial-gradient(34% 30% at 85% 90%, rgba(29,78,216,.38) 0%, transparent 70%);    /* blått */
+      opacity: .55;
+      animation: bgDrift2 22s ease-in-out infinite alternate, bgAndas 11s ease-in-out infinite alternate;
+      will-change: transform, opacity;
     }
-    @keyframes bgShift { 0% { opacity: .18; } 100% { opacity: .58; } }
+    @keyframes bgDrift2 {
+      0%   { transform: translate3d(6%, 3%, 0)   rotate(0deg); }
+      100% { transform: translate3d(-6%, -5%, 0) rotate(-14deg); }
+    }
+    @keyframes bgAndas { 0% { opacity: .35; } 100% { opacity: .85; } }
+    @media (prefers-reduced-motion: reduce) {
+      body::before, body::after { animation: none; }
+    }
+
+    /* ── Logotypen lever: svävar, lutar sig lite och får ett ljusstråk över sig ── */
+    .header-icon { overflow: hidden; border-radius: 10px; animation: logoSvav 4.5s ease-in-out infinite; }
+    @keyframes logoSvav {
+      0%, 100% { transform: translateY(0) rotate(0deg); }
+      25%      { transform: translateY(-3px) rotate(-3deg); }
+      75%      { transform: translateY(2px) rotate(2.5deg); }
+    }
+    .header-icon::after {
+      content: ''; position: absolute; top: -20%; left: -80%; width: 45%; height: 140%;
+      background: linear-gradient(100deg, transparent, rgba(255,255,255,.55), transparent);
+      transform: skewX(-18deg); pointer-events: none;
+      animation: logoGlans 5s ease-in-out infinite;
+    }
+    @keyframes logoGlans { 0%, 60% { left: -80%; } 85%, 100% { left: 140%; } }
+    @media (prefers-reduced-motion: reduce) {
+      .header-icon, .header-icon::after { animation: none; }
+    }
 
     /* Groq-brickan — SAMMA officiella logotyp som bilrådgivningen, elbilsappen och
        väderappen använder, på exakt samma plats som textbrickan låg. Bilden serveras av
@@ -444,6 +471,12 @@
       padding: 2px 9px; border-radius: 20px; white-space: nowrap;
     }
     .cls-2    { background:rgba(100,116,139,.3); color:#cbd5e1; border:1px solid rgba(148,163,184,.25); }
+    /* Samma röda märke som på avgångskortet — priset man ser där ÄR 2 klass-priset */
+    .class-mp-badge {
+      font-size:.6rem; font-weight:800; letter-spacing:.04em; text-transform:uppercase;
+      padding:2px 8px; border-radius:20px; white-space:nowrap; color:#fff;
+      background:linear-gradient(135deg,#dc2626,#b91c1c); box-shadow:0 2px 8px rgba(220,38,38,.35);
+    }
     .cls-lugn { background:rgba(139,92,246,.2);  color:#c4b5fd; border:1px solid rgba(167,139,250,.3); }
     .cls-1    { background:rgba(234,179,8,.17);  color:#fde68a; border:1px solid rgba(234,179,8,.3); }
     .class-price-lbl {
@@ -454,28 +487,15 @@
       font-size: .70rem; color: rgba(255,255,255,.4); line-height: 1.55;
       padding-left: 2px;
     }
+    .dep-share-row {
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      margin-top: 8px;
+    }
     .card-expand-hint {
       font-size: .62rem; color: rgba(255,255,255,.2);
-      margin-top: 6px; text-align: right;
     }
 
-    /* ── Mobilanpassning avgångskort ── */
-    @media (max-width: 540px) {
-      .dep-card { padding: 14px 14px 12px; }
-      .card-time-range { font-size: 1.3rem; }
-      .card-travel-info { font-size: .75rem; }
-      .card-train-photo { width: 90px; height: 42px; }
-      .card-train-label { font-size: .72rem; }
-      .card-right { min-width: 78px; }
-      .card-price-amt { font-size: 1.3rem; }
-      .card-price-fr  { font-size: .68rem; }
-      .card-price-original { font-size: .60rem; }
-      .card-price-model { font-size: .60rem; }
-      .minipris-badge { font-size: .58rem; padding: 2px 6px; }
-      .seats-badge { font-size: .60rem; padding: 2px 6px; }
-      .co2-badge { font-size: .60rem; padding: 2px 6px; }
-      .dep-badge { font-size: .58rem; padding: 2px 6px; }
-    }
+    /* Mobilreglerna för avgångskorten står i slutet av stilblocket — se "Mobil" där. */
 
     .card-main { display:flex; align-items:flex-start; gap:14px; }
     .card-left { flex:1; min-width:0; }
@@ -602,17 +622,20 @@
     /* ── Seat map modal ── */
     .seat-overlay {
       display:none; position:fixed; inset:0; z-index:1200;
-      background:rgba(7,13,31,.97);
+      /* Samma glas som Mina bokningar — platskartan var den enda rutan som var massiv */
+      background:rgba(8,19,40,.72);
+      backdrop-filter:blur(16px) saturate(140%); -webkit-backdrop-filter:blur(16px) saturate(140%);
       align-items:flex-start; justify-content:center;
       padding:16px; overflow-y:auto;
     }
     .seat-overlay.open { display:flex; }
     .seat-modal {
-      background:linear-gradient(160deg,rgba(10,20,50,.97),rgba(5,10,30,.99));
-      border:1px solid rgba(96,165,250,.25);
+      background:linear-gradient(160deg,rgba(28,54,110,.72),rgba(10,22,52,.84));
+      backdrop-filter:blur(28px) saturate(155%); -webkit-backdrop-filter:blur(28px) saturate(155%);
+      border:1px solid rgba(125,211,252,.3);
       border-radius:20px; width:100%; max-width:520px;
       max-height:90vh; overflow-y:auto;
-      box-shadow:0 20px 60px rgba(0,0,0,.6);
+      box-shadow:0 20px 60px rgba(0,0,0,.6), 0 0 70px rgba(96,165,250,.18), inset 0 1px 0 rgba(255,255,255,.14);
     }
     .seat-modal-head {
       display:flex; align-items:center; gap:10px;
@@ -836,15 +859,21 @@
       transition:opacity .15s;
     }
     .seat-confirm-btn:disabled { opacity:.35; cursor:not-allowed; }
+    /* Nästa steg i bokningen, inte en sidoknapp: den ska se ut som det man trycker på härnäst.
+       Den gamla ljusblå konturknappen ("Välj sittplats") lästes som ett tillval bredvid klassvalet. */
     .open-seatmap-btn {
-      display:inline-flex; align-items:center; gap:6px;
-      background:rgba(59,130,246,.15); border:1px solid rgba(96,165,250,.3);
-      color:#93c5fd; font-size:.74rem; font-weight:700;
-      padding:7px 14px; border-radius:10px; cursor:pointer;
-      margin-top:8px; width:100%; justify-content:center;
-      transition:background .15s;
+      display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
+      background:linear-gradient(135deg,#2563eb 0%,#3b82f6 55%,#60a5fa 100%);
+      border:1px solid rgba(191,219,254,.45);
+      color:#fff; font-size:.92rem; font-weight:800;
+      padding:11px 14px; border-radius:12px; cursor:pointer;
+      margin-top:10px; width:100%;
+      box-shadow:0 4px 18px rgba(59,130,246,.45), inset 0 1px 0 rgba(255,255,255,.25);
+      transition:filter .15s, transform .1s;
     }
-    .open-seatmap-btn:hover { background:rgba(59,130,246,.28); }
+    .open-seatmap-btn:hover { filter:brightness(1.08); }
+    .open-seatmap-btn:active { transform:scale(.98); }
+    .open-seatmap-sub { font-size:.68rem; font-weight:600; color:rgba(255,255,255,.8); }
     .no-seatmap-note {
       font-size:.68rem; color:rgba(255,255,255,.25);
       margin-top:8px; text-align:center; font-style:italic;
@@ -1130,6 +1159,177 @@
       .mpt-loco { animation: none; } .mpt-puff { display: none; } .mpt-sun { animation: none; }
       .mpt-intro { animation: mptOut .4s ease 2.2s forwards; }
     }
+
+    /* ── Platskartans fot: alltid synlig ──
+       Vald plats och Betala-knappen låg sist i modalen och rullade ur bild så fort man
+       bläddrade i vagnen — man valde en plats och fick sedan leta efter knappen. */
+    .seat-footer {
+      position:sticky; bottom:0; z-index:2;
+      background:linear-gradient(180deg, rgba(8,16,42,.96), rgba(5,10,30,.99));
+      box-shadow:0 -10px 24px rgba(0,0,0,.35);
+    }
+
+    /* ── Demolappen ──
+       Samma post it som BilUthyrnings inloggning, men Tåg har inget konto: lappen bär en
+       provresa i stället, och ett klick fyller i den och söker. Under sökknappen på smal
+       skärm, klistrad bredvid kortet när det finns plats för den. */
+    #form-card { position:relative; }
+    .mpt-postit {
+      position:relative; display:block; width:218px; margin:22px auto 4px;
+      padding:15px 16px 11px; border-radius:2px 2px 3px 3px; cursor:pointer;
+      color:#4a3a10; text-align:left;
+      background:linear-gradient(170deg,#fef3a3 0%,#fde96f 62%,#f8dd55 100%);
+      box-shadow:0 12px 26px rgba(0,0,0,.38), inset 0 1px 0 rgba(255,255,255,.5);
+      transform:rotate(-3deg); transition:transform .2s ease, box-shadow .2s ease;
+      font-family:'Segoe Script','Bradley Hand','Comic Sans MS','Chalkboard SE',cursive;
+      border:none;
+    }
+    .mpt-postit:hover, .mpt-postit:focus-visible {
+      transform:rotate(-1deg) scale(1.03); outline:none;
+      box-shadow:0 16px 32px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.5);
+    }
+    /* Tejpen sitter i överkanten och rör aldrig texten (en yta över texten tvättar ur den). */
+    .mpt-postit-tejp {
+      position:absolute; top:-11px; left:50%; width:74px; height:22px;
+      transform:translateX(-50%) rotate(-2deg);
+      background:rgba(255,255,255,.42); box-shadow:0 1px 3px rgba(0,0,0,.18);
+      border-left:1px solid rgba(255,255,255,.55); border-right:1px solid rgba(255,255,255,.55);
+    }
+    .mpt-postit-rubrik {
+      font-size:16px; font-weight:700; text-align:center; margin-bottom:6px; color:#3d2f08;
+      text-decoration:underline; text-decoration-color:rgba(61,47,8,.35); text-underline-offset:3px;
+    }
+    .mpt-postit-rad { display:flex; justify-content:space-between; gap:8px; font-size:13.5px; line-height:1.8; }
+    .mpt-postit-rad b { font-weight:700; color:#1f1a05; }
+    .mpt-postit-hint { margin-top:6px; font-size:11px; text-align:center; color:rgba(61,47,8,.7); }
+    @media (min-width:1380px) {
+      .mpt-postit { position:absolute; top:40px; left:100%; margin:0 0 0 18px; transform:rotate(4deg); }
+      .mpt-postit:hover, .mpt-postit:focus-visible { transform:rotate(2deg) scale(1.03); }
+    }
+
+    /* ── Dator/surfplatta: kompakt ──
+       Allt stod staplat i en kolumn även på en laptop: sidhuvudet var ~340 px högt och
+       formuläret ~800, så logotypen och Sök-knappen fick aldrig plats på samma skärm.
+       Sidhuvudet blir EN rad och formuläret ett rutnät (Från ⇄ Till på samma rad). */
+    @media (min-width:541px) {
+      .header { display:flex; align-items:center; gap:14px; text-align:left; padding:14px 20px; }
+      .header-icon, .header-icon img { width:54px; height:54px; }
+      .header-icon { margin:0; flex-shrink:0; }
+      .header-text { flex:1; min-width:0; }
+      .header h1 { font-size:1.45rem; margin:0; }
+      .header p { font-size:.84rem; }
+      .groq-badge { order:4; margin-top:0; flex-shrink:0; padding:4px 11px; }
+      .groq-badge img { width:44px; height:26px; }
+      .bookings-btn { order:5; position:static !important; margin:0 !important; flex-shrink:0; }
+
+      .card { padding:18px 24px 18px; }
+      input[type=text], input[type=date], .gps-btn { height:48px; }
+      input[type=text], input[type=date] { font-size:1rem; }
+      .search-btn { height:52px; margin-top:4px; }
+
+      .res-header { padding:14px 20px 16px; }
+      .dep-list { padding:10px 12px 12px; }
+      .dep-card { padding:16px 20px 14px; margin-bottom:10px; }
+      .card-time-range { font-size:1.5rem; }
+      .card-travel-info { margin-bottom:9px; }
+      .card-train-photo { width:128px; height:46px; }
+      .card-price-amt { font-size:1.6rem; }
+      .card-price-model { display:none; } /* samma modellnamn står redan bredvid fotot */
+    }
+    @media (min-width:700px) {
+      #search-form {
+        display:grid; grid-template-columns:1fr 40px 1fr; column-gap:10px; align-items:start;
+      }
+      #search-form > .field, #search-form > .date-row { margin-bottom:12px; }
+      #search-form > .date-row { grid-column:2 / 4; }
+      #search-form > .search-btn,
+      #search-form > .fav-section,
+      #search-form > .cat-section { grid-column:1 / -1; }
+      /* Bytknappen står mellan fälten: pilarna pekar åt sidan och den sitter i höjd med rutorna */
+      .swap-btn { margin:26px 0 0; transform:rotate(90deg); }
+      .swap-btn:active { transform:rotate(270deg) scale(.93); }
+    }
+
+    /* ── Mobil ──
+       Står SIST i stilblocket med flit. Den förra mobilregeln för avgångskorten stod före
+       basreglerna den skulle skriva över, så basreglerna vann och den gjorde ingenting: på
+       en telefon var tågfotot 170 px brett och varje kort nästan en hel skärm högt. */
+    @media (max-width: 540px) {
+      /* Sidhuvudet: EN rad (logga, namn, Groq, bokningar) — från ~250 px till ~64. Det
+         står kvar ovanför resultaten också. Bokningsknappen visar bara biljetten här. */
+      .header { display:flex; align-items:center; gap:9px; text-align:left; padding:10px 12px; }
+      .header-icon, .header-icon img { width:40px; height:40px; }
+      .header-icon { margin:0; flex-shrink:0; }
+      .header-text { flex:1; min-width:0; }
+      .header h1 { font-size:1.12rem; margin:0; white-space:nowrap; }
+      .header p { display:none; }
+      .groq-badge { order:4; margin-top:0; padding:2px 8px; flex-shrink:0; }
+      .groq-badge img { width:36px; height:22px; }
+      .bookings-btn { order:5; position:static !important; margin:0 !important; padding:6px 10px; font-size:.9rem; flex-shrink:0; }
+      .bookings-txt { display:none; }
+
+      /* Sökformuläret */
+      .card { padding:16px 16px 14px; }
+      .field { margin-bottom:10px; }
+      .label { margin-bottom:5px; font-size:.7rem; }
+      input[type=text], input[type=date], .gps-btn { height:48px; }
+      input[type=text], input[type=date] { font-size:1rem; }
+      .swap-btn { width:32px; height:32px; margin:0 auto; }
+      .hint:empty { min-height:0; margin:0; }
+      .date-row { margin-bottom:10px; }
+      .search-btn { height:52px; margin-top:12px; }
+
+      /* Resultaten */
+      .res-header { padding:12px 16px 14px; }
+      .res-station { font-size:1.02rem; }
+      .dep-list { padding:8px 8px 10px; }
+      .list-header { padding:2px 4px 8px; }
+      .dep-card { padding:13px 13px 11px; margin-bottom:10px; }
+      .card-main { gap:10px; }
+      .card-time-range { font-size:1.35rem; }
+      .card-travel-info { font-size:.74rem; margin-bottom:8px; }
+      .card-train-row { gap:8px; }
+      .card-train-photo { width:88px; height:40px; }
+      .card-train-label { font-size:.72rem; line-height:1.4; }
+      .card-right { min-width:0; }
+      .card-price-amt { font-size:1.4rem; }
+      .card-price-fr { font-size:.66rem; }
+      .card-price-original { font-size:.6rem; margin-bottom:0; }
+      .card-price-model { display:none; } /* samma modellnamn står redan under fotot */
+      .minipris-badge { font-size:.56rem; padding:2px 7px; margin-bottom:3px; }
+      .seats-badge, .co2-badge { font-size:.6rem; padding:2px 6px; margin:3px 0 0; }
+      .dep-badge { font-size:.58rem; padding:2px 7px; margin-top:3px; }
+      .dep-share-row { margin-top:6px; }
+      .card-expand-hint { font-size:.6rem; }
+      /* Luft under sista kortet så chattknappen nere till höger inte ligger över priset */
+      .wrap { padding-bottom:84px; }
+      .class-option { padding:8px 10px; }
+      .class-perks { font-size:.66rem; line-height:1.45; }
+
+      /* Platskartan tar hela skärmen: EN scrollyta i stället för en ruta som rullar
+         inuti en annan som också rullar */
+      .seat-overlay { padding:0; }
+      .seat-modal { border-radius:0; border:none; max-height:100vh; max-height:100dvh; min-height:100vh; min-height:100dvh; }
+      .seat-modal-head { padding:10px 14px 8px; }
+      #seat-journey-card { padding:10px 10px 0 !important; }
+      .seat-journey-card { margin:0; padding:10px 12px; }
+      .sjc-timerange { font-size:1.2rem; }
+      .sjc-photo { display:none; }
+      .sjc-dest { margin-top:4px; }
+      .seat-legend { flex-wrap:wrap; gap:6px 12px; padding:8px 14px; }
+      .seat-footer { padding:10px 14px calc(12px + env(safe-area-inset-bottom)); }
+      .seat-selected-lbl { margin-bottom:8px; }
+      .seat-confirm-btn, .seat-return-btn { padding:12px 10px; }
+
+      .mpt-postit { margin-top:18px; }
+
+      /* Chattknappen låg ovanpå "Betala med Swish" i platskartans fot. Medan en modal är
+         öppen får modalen hela skärmen; chatten nås igen så fort den stängs. */
+      body:has(.seat-overlay.open) .tc-fab-wrap,
+      body:has(.swish-overlay.open) .tc-fab-wrap,
+      body:has(.bookings-overlay.open) .tc-fab-wrap,
+      body:has(.return-overlay.open) .tc-fab-wrap { display:none; }
+    }
   </style>
 </head>
 <body>
@@ -1386,13 +1586,15 @@
 
   <!-- ── App header ── -->
   <div class="header" id="app-header" style="position:relative">
-    <button class="bookings-btn" onclick="openBookingsModal()" style="position:absolute;top:14px;right:16px;margin:0;z-index:2">
-      🎫 Mina bokningar
+    <button class="bookings-btn" onclick="openBookingsModal()" aria-label="Mina bokningar" style="position:absolute;top:14px;right:16px;margin:0;z-index:2">
+      🎫<span class="bookings-txt"> Mina bokningar</span>
       <span class="bookings-badge" id="bookings-badge"></span>
     </button>
     <div class="header-icon"><img src="/images/logo.png" alt="MiniPrisTåget"></div>
-    <h1>MiniPrisTåget</h1>
-    <p>Sök tågresor med riktiga avgångstider</p>
+    <div class="header-text">
+      <h1>MiniPrisTåget</h1>
+      <p>Sök tågresor med riktiga avgångstider</p>
+    </div>
     <a class="groq-badge" href="https://groq.com" target="_blank" rel="noopener noreferrer">
       <img src="https://caradvice.onrender.com/powered-by-groq-dark.svg"
            alt="Powered by Groq for fast inference." width="53" height="32">
@@ -1486,6 +1688,15 @@
 
     </form>
     <div id="form-error" class="error-box" style="display:none;"></div>
+
+    <!-- Demolapp: en färdig provresa för den som bara vill se appen. Klick fyller i och söker. -->
+    <button type="button" class="mpt-postit" id="mpt-postit" onclick="kordemoResa()">
+      <span class="mpt-postit-tejp" aria-hidden="true"></span>
+      <span class="mpt-postit-rubrik" style="display:block">Demo-resa</span>
+      <span class="mpt-postit-rad"><span>Från:</span><b>Stockholm C</b></span>
+      <span class="mpt-postit-rad"><span>Till:</span><b>Göteborg C</b></span>
+      <span class="mpt-postit-hint" style="display:block">klicka på lappen så söks resan</span>
+    </button>
   </div>
 
   <!-- ── Results ── -->
@@ -1652,6 +1863,19 @@ function doSearch() {
     showForm();
     showFormError('Kunde inte söka avgångar. Kontrollera att du har angett stationer korrekt.');
   });
+}
+
+// ── Demolappen ────────────────────────────────────────────────────
+// Enkelresa i dag. Sent på kvällen byter servern själv till i morgon (autoTomorrow),
+// så lappen ger avgångar oavsett när den trycks.
+function kordemoResa() {
+  document.getElementById('from').value = 'Stockholm C';
+  document.getElementById('to').value = 'Göteborg C';
+  document.getElementById('btn-enkel').click();
+  var idag = new Date();
+  idag.setMinutes(idag.getMinutes() - idag.getTimezoneOffset());
+  document.getElementById('dep-date').value = idag.toISOString().slice(0, 10);
+  doSearch();
 }
 
 // ── Visa sökformulär igen ─────────────────────────────────────────
@@ -2197,9 +2421,9 @@ function openSeatModal(trainId, layout, model, depTime, price, destination, trai
           '<div class="sjc-class-badge">' + esc(classLabel || '2 klass') + '</div>' +
         '</div>' +
         '<div class="sjc-right">' +
-          (priceOriginal ? '<div class="sjc-price-orig">' + esc(priceOriginal) + ' kr</div>' : '') +
+          (priceOriginal && arMiniPris(classLabel) ? '<div class="sjc-price-orig">' + esc(priceOriginal) + ' kr</div>' : '') +
           '<div class="sjc-price">' + esc(price).replace('från ','') + '</div>' +
-          '<div class="sjc-minipris">🏷 MiniPris</div>' +
+          (arMiniPris(classLabel) ? '<div class="sjc-minipris">🏷 Exklusivt MiniPris</div>' : '') +
         '</div>' +
       '</div>' +
       (trainImage ? '<img class="sjc-photo" src="' + esc(trainImage) + '" alt="' + esc(model) + '">' : '') +
@@ -2474,7 +2698,7 @@ function openSwishModal() {
     document.getElementById('swish-journey-box').innerHTML =
       '<strong>' + esc(s.destination || 'Destination') + '</strong><br>' +
       'Tåg ' + esc(s.trainId) + ' · ' + esc(s.model) + ' · avg ' + esc(s.depTime) + '<br>' +
-      esc(s.seatLabel || '') + ' · ' + esc(s.selectedClass || '2 klass') + ' MiniPris';
+      esc(s.seatLabel || '') + ' · ' + esc(s.selectedClass || '2 klass') + (arMiniPris(s.selectedClass) ? ' · Exklusivt MiniPris' : '');
     var amtNum = (s.price || '').replace(/[^0-9]/g,'');
     document.getElementById('swish-amount-val').textContent = (amtNum || '—') + ' kr';
     document.getElementById('swish-ticket-box').innerHTML =
@@ -2581,6 +2805,19 @@ function selectClassOption(optEl) {
   var panel = optEl.closest('.class-panel');
   panel.querySelectorAll('.class-option').forEach(function(o) { o.classList.remove('selected'); });
   optEl.classList.add('selected');
+  // Bokningsknappen säger vilken klass den bokar, så valet syns där man trycker härnäst.
+  var sub = panel.querySelector('.open-seatmap-sub');
+  if (sub) sub.textContent = seatBtnSub(optEl.dataset.className, optEl.dataset.price);
+}
+
+// MiniPris är 2 klass-erbjudandet: Lugn och 1 klass säljs till eget pris och får varken
+// märket eller det överstrukna ordinariepriset. Saknad klass = standardvalet 2 klass.
+function arMiniPris(className) {
+  return !className || className === '2 klass';
+}
+
+function seatBtnSub(className, price) {
+  return (className || '') + (arMiniPris(className) ? ' · Exklusivt MiniPris' : '') + (price ? ' · ' + price : '');
 }
 
 // ── Bygg avgångslista HTML (SJ-stil) ─────────────────────────────
@@ -2646,7 +2883,7 @@ function buildDepList(deps, title, isReturn) {
 
       // Höger: pris + badges
       html +=     '<div class="card-right">';
-      html += '<div class="minipris-badge">🏷 MiniPris</div>';
+      html += '<div class="minipris-badge">🏷 Exklusivt MiniPris</div>';
       if (priceAmt) {
         if (d.priceOriginal > 0) {
           html += '<div class="card-price-original">' + d.priceOriginal + ' kr</div>';
@@ -2673,13 +2910,13 @@ function buildDepList(deps, title, isReturn) {
 
       html +=   '</div>'; // card-main
 
-      // Dela-knapp
-      html += '<div style="display:flex;justify-content:flex-end;padding:2px 6px 0" onclick="event.stopPropagation()">';
+      // Expand-tips + Dela-knapp på SAMMA rad — var för sig åt de en rad var i varje kort
+      html += '<div class="dep-share-row">';
+      html += '<div class="card-expand-hint">Klicka för att välja reseklass ↓</div>';
       html += '<button class="dep-share-btn" data-dep="' + esc(d.departureTime || '') + '" onclick="event.stopPropagation();shareDepRef(this)">🔗 Dela avgång</button>';
       html += '</div>';
 
-      // Expand hint + class panel
-      html += '<div class="card-expand-hint">Klicka för att välja reseklass ↓</div>';
+      // Class panel
       html += '<div class="class-panel" onclick="event.stopPropagation()">';
       html +=   '<div class="class-panel-title">Välj reseklass</div>';
 
@@ -2687,7 +2924,7 @@ function buildDepList(deps, title, isReturn) {
       var p2 = d.price || '';
       html +=   '<div class="class-option selected" data-price="' + esc(p2) + '" data-class-name="2 klass" onclick="selectClassOption(this)">';
       html +=     '<div class="class-opt-top">';
-      html +=       '<span class="class-badge cls-2">2 klass</span>';
+      html +=       '<span class="class-badge cls-2">2 klass</span><span class="class-mp-badge">🏷 Exklusivt MiniPris</span>';
       html +=       '<span class="class-price-lbl">' + esc(p2) + '</span>';
       html +=     '</div>';
       html +=     '<div class="class-perks">Res bekvämt till ett bra pris &middot; Mat kan förbeställas och hämtas i bistron</div>';
@@ -2737,7 +2974,10 @@ function buildDepList(deps, title, isReturn) {
           ' data-travel-minutes="' + minsEsc    + '"' +
           ' data-price-original="' + origEsc    + '"' +
           ' data-seats-left="'     + slEsc      + '"' +
-          ' onclick="openSeatMapForCard(this)">🪑 Välj sittplats</button>';
+          ' onclick="openSeatMapForCard(this)">' +
+            '<span>🪑 Välj en sittplats och boka →</span>' +
+            '<span class="open-seatmap-sub">' + esc(seatBtnSub('2 klass', p2)) + '</span>' +
+          '</button>';
       } else {
         html += '<div class="no-seatmap-note">Öppen placering – välj valfri ledig plats ombord</div>';
       }
