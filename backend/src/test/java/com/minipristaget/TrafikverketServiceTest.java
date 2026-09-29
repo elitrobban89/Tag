@@ -221,4 +221,31 @@ class TrafikverketServiceTest {
         assertThat(TrafikverketService.aliasSuggestions("Ka")).isEmpty();
         assertThat(TrafikverketService.aliasSuggestions("Kas")).containsExactly("Copenhagen Airport");
     }
+
+    // --- trafikläget till uppstartsskärmen ---
+
+    @Test
+    void trafiklagetRaknarTagBolagPunktlighetOchInstallda() throws Exception {
+        java.time.ZonedDateTime nu = java.time.ZonedDateTime.parse("2026-09-29T10:00:00+02:00");
+        JsonNode anns = new ObjectMapper().readTree("""
+            [
+              {"AdvertisedTrainIdent":"421","TrainOwner":"SJ","AdvertisedTimeAtLocation":"2026-09-29T09:50:00.000+02:00",
+               "TimeAtLocation":"2026-09-29T09:53:00.000+02:00"},
+              {"AdvertisedTrainIdent":"421","TrainOwner":"SJ","AdvertisedTimeAtLocation":"2026-09-29T10:20:00.000+02:00"},
+              {"AdvertisedTrainIdent":"1055","TrainOwner":"SKANE","AdvertisedTimeAtLocation":"2026-09-29T09:40:00.000+02:00",
+               "TimeAtLocation":"2026-09-29T09:52:00.000+02:00"},
+              {"AdvertisedTrainIdent":"77","TrainOwner":"MTR","AdvertisedTimeAtLocation":"2026-09-29T10:50:00.000+02:00"},
+              {"AdvertisedTrainIdent":"99","TrainOwner":"SJ","AdvertisedTimeAtLocation":"2026-09-29T10:05:00.000+02:00","Canceled":true}
+            ]""");
+
+        TrafikverketService.TrafikLage t = TrafikverketService.summeraTrafik(anns, nu);
+
+        assertThat(t.tagITrafik()).isEqualTo(2);          // 421 och 1055; 77 går om 50 min, 99 inställt
+        assertThat(t.bolag()).isEqualTo(2);               // SJ, SKANE
+        assertThat(t.avgangarNastaTimme()).isEqualTo(2);  // 10:20 och 10:50
+        assertThat(t.avgangnaSenaste()).isEqualTo(2);
+        assertThat(t.iTid()).isEqualTo(1);                // +3 min i tid, +12 min försenad
+        assertThat(t.punktlighetProcent()).isEqualTo(50);
+        assertThat(t.installda()).isEqualTo(1);
+    }
 }

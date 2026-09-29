@@ -1176,7 +1176,10 @@
       background:
         radial-gradient(120% 75% at 50% 74%, rgba(255,178,70,.4), transparent 55%),
         linear-gradient(180deg, #0a1230 0%, #16294f 40%, #395887 60%, #8a6f8f 70%, #d18a55 78%, #f4ab5e 86%);
-      animation: mptOut .6s cubic-bezier(.6,0,.8,1) 5.2s forwards; }
+    }
+    /* Lyftet styrs av mpt-splash.js (när raderna tickat klart och Trafikverket svarat),
+       inte av en fast tid — då kunde scenen lyfta mitt i en rad. */
+    .mpt-intro.mpt-ut { animation: mptOut .6s cubic-bezier(.6,0,.8,1) forwards; }
     @keyframes mptOut { to { transform: translateY(-100%); opacity: 0; visibility: hidden; } }
     .mpt-intro-inner { position: absolute; top: 19%; left: 0; right: 0; text-align: center; padding: 0 18px; z-index: 5; }
     .mpt-welcome { font-size: 13px; letter-spacing: 5px; text-transform: uppercase; color: rgba(147,197,253,.7); animation: mptFade .5s ease both; }
@@ -1219,7 +1222,7 @@
       box-shadow: 0 0 7px rgba(160,190,230,.5); }
     /* Långt tåg (lok + många vagnar) rusar förbi stationen */
     .mpt-runner { position: absolute; bottom: calc(27% - 4px); left: 0; white-space: nowrap; z-index: 4;
-      will-change: transform; animation: mptRun 4.6s cubic-bezier(.28,.32,.5,1) .3s both; }
+      will-change: transform; animation: mptRun 4.8s cubic-bezier(.28,.32,.5,1) .3s infinite both; }
     @keyframes mptRun { from { transform: translateX(-116%); } to { transform: translateX(102vw); } }
     .mpt-loco-wrap { position: relative; display: inline-block; vertical-align: bottom; }
     .mpt-loco, .mpt-wagon { display: inline-block; vertical-align: bottom; margin-left: -2px; filter: drop-shadow(0 4px 7px rgba(0,0,0,.45)); }
@@ -1233,7 +1236,7 @@
     @media (prefers-reduced-motion: reduce) {
       .mpt-runner { animation: mptRun 1.8s linear .1s both; }
       .mpt-loco { animation: none; } .mpt-puff { display: none; } .mpt-sun { animation: none; }
-      .mpt-intro { animation: mptOut .4s ease 2.2s forwards; }
+      .mpt-intro.mpt-ut { animation: mptOut .4s ease forwards; }
     }
 
     /* ── Platskartans fot: alltid synlig ──
@@ -1423,7 +1426,8 @@
 <body>
 
 <!-- ── Välkomstsplash (visas en gång per flik-session) ── -->
-<div id="mpt-intro" class="mpt-intro">
+<div id="mpt-intro" class="mpt-intro"
+     th:attr="data-java=${javaVersion},data-boot=${springBoot},data-model=${groqModel}">
   <div class="mpt-sun"></div>
   <div class="mpt-haze"></div>
   <div class="mpt-intro-inner">
@@ -1510,7 +1514,7 @@
     if (!intro) return;
     // Redan visad denna flik-session? Ta bort direkt (körs under parsning → ingen blink).
     try {
-      if (sessionStorage.getItem('mpt_welcomed')) {
+      if (sessionStorage.getItem('mpt_welcomed') && !/[?&]splash=1/.test(location.search)) {
         intro.parentNode.removeChild(intro);
         return;
       }
@@ -1554,15 +1558,16 @@
       runner.innerHTML = cars + LOCO;
     }
     document.documentElement.style.overflow = 'hidden';
-    var mptReduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    // När scenen lyfter bestämmer mpt-splash.js (raderna + Trafikverkets svar, tak 9 s).
+    // Det här är bara nödutgången om skriptet aldrig laddas: ingen ska fastna bakom scenen.
+    // Ingen rullning här: sidan står redan vid appen sedan 250 ms in.
     setTimeout(function () {
       if (intro.parentNode) intro.parentNode.removeChild(intro);
       document.documentElement.style.overflow = '';
-      // Ingen rullning här: sidan står redan vid appen sedan 250 ms in, och att rycka i den
-      // en andra gång skulle dessutom slänga tillbaka den som rullat vidare under splashen.
-    }, mptReduce ? 2700 : 5700);
+    }, 14000);
   })();
 </script>
+<script src="/mpt-splash.js"></script>
 
 <!-- ── Seat map modal ── -->
 <div class="seat-overlay" id="seat-overlay">

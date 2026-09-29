@@ -921,6 +921,93 @@ public class TrafikverketService {
         return mapper.readTree(response.body());
     }
 
+    // ── Trafikläget i hela landet (uppstartsskärmens live-rader) ──────────────
+    //
+    // En enda fråga: alla avgångar i Sverige från 30 min bakåt till 60 min framåt. Ur den
+    // räknas tåg i trafik, kommande avgångar, bolag, punktlighet och inställda. Svaret är
+    // stort (tusentals rader, pendeltågen stannar ofta), därför cachas det en minut — splashen
+    // visas för varje ny besökare och ska inte bli en fråga mot Trafikverket per sidladdning.
+
+    /** Siffrorna till splashen. Punktlighet är andelen avgångna inom 5 min (Trafikverkets mått). */
+    public record TrafikLage(int tagITrafik, int avgangarNastaTimme, int bolag,
+                             int avgangnaSenaste, int iTid, int installda) {
+        public Integer punktlighetProcent() {
+            return avgangnaSenaste == 0 ? null : (int) Math.round(100.0 * iTid / avgangnaSenaste);
+        }
+    }
+
+    private static final long TRAFIKLAGE_TTL_MS = 60_000L;
+    private volatile TrafikLage trafikLage;
+    private volatile long trafikLageTid;
+
+    /** Trafikläget just nu, cachat en minut. Null när Trafikverket inte svarar. */
+    public synchronized TrafikLage getTrafikLage() {
+        long nu = System.currentTimeMillis();
+        if (trafikLage != null && nu - trafikLageTid < TRAFIKLAGE_TTL_MS) return trafikLage;
+
+        ZonedDateTime tid = ZonedDateTime.now(ZoneId.of("Europe/Stockholm"));
+        DateTimeFormatter f = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
+        String xml = """
+            <REQUEST>
+              <LOGIN authenticationkey="%s"/>
+              <QUERY objecttype="TrainAnnouncement" namespace="rail.trafficinfo" schemaversion="2.0" limit="20000">
+                <FILTER>
+                  <AND>
+                    <EQ name="ActivityType" value="Avgang"/>
+                    <EQ name="Advertised" value="true"/>
+                    <GT name="AdvertisedTimeAtLocation" value="%s"/>
+                    <LT name="AdvertisedTimeAtLocation" value="%s"/>
+                  </AND>
+                </FILTER>
+                <INCLUDE>AdvertisedTrainIdent</INCLUDE>
+                <INCLUDE>AdvertisedTimeAtLocation</INCLUDE>
+                <INCLUDE>TimeAtLocation</INCLUDE>
+                <INCLUDE>TrainOwner</INCLUDE>
+                <INCLUDE>Canceled</INCLUDE>
+              </QUERY>
+            </REQUEST>
+            """.formatted(apiKey, tid.minusMinutes(30).format(f), tid.plusMinutes(60).format(f));
+        try {
+            JsonNode anns = callApi(xml).path("RESPONSE").path("RESULT").get(0).path("TrainAnnouncement");
+            if (!anns.isArray()) return trafikLage;
+            trafikLage = summeraTrafik(anns, tid);
+            trafikLageTid = nu;
+        } catch (Exception e) {
+            // Gammalt läge (eller null) hellre än ett fel — splashen visar raden utan siffror.
+        }
+        return trafikLage;
+    }
+
+    static TrafikLage summeraTrafik(JsonNode anns, ZonedDateTime nu) {
+        java.util.Set<String> tag = new java.util.HashSet<>();
+        java.util.Set<String> bolag = new java.util.HashSet<>();
+        int kommande = 0, avgangna = 0, iTid = 0, installda = 0;
+        for (JsonNode a : anns) {
+            ZonedDateTime plan = parseTid(a.path("AdvertisedTimeAtLocation").asText(""));
+            if (plan == null) continue;
+            if (a.path("Canceled").asBoolean(false)) { installda++; continue; }
+            String id = a.path("AdvertisedTrainIdent").asText("");
+            String agare = a.path("TrainOwner").asText("");
+            // "I trafik" = har en avgång inom en halvtimme åt något håll från nu.
+            if (!id.isBlank() && Math.abs(java.time.Duration.between(nu, plan).toMinutes()) <= 30) {
+                tag.add(id);
+                if (!agare.isBlank()) bolag.add(agare);
+            }
+            if (!plan.isBefore(nu)) kommande++;
+            ZonedDateTime faktisk = parseTid(a.path("TimeAtLocation").asText(""));
+            if (faktisk != null) {
+                avgangna++;
+                if (java.time.Duration.between(plan, faktisk).toSeconds() <= 5 * 60 + 59) iTid++;
+            }
+        }
+        return new TrafikLage(tag.size(), kommande, bolag.size(), avgangna, iTid, installda);
+    }
+
+    private static ZonedDateTime parseTid(String iso) {
+        if (iso == null || iso.isBlank()) return null;
+        try { return ZonedDateTime.parse(iso); } catch (Exception e) { return null; }
+    }
+
     private double haversine(double lat1, double lon1, double lat2, double lon2) {
         return haversineStatic(lat1, lon1, lat2, lon2);
     }

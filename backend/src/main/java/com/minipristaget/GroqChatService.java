@@ -113,6 +113,11 @@ public class GroqChatService {
         return apiKey != null && !apiKey.isBlank();
     }
 
+    /** Modellen som faktiskt körs — uppstartsskärmen visar den i stället för en avskriven sträng. */
+    public String modelName() {
+        return model;
+    }
+
     List<Map<String, String>> buildMsgList(List<Map<String, String>> history, String departureContext) {
         String sysContent = departureContext != null && !departureContext.isBlank()
             ? SYSTEM_PROMPT + "\n\nAktuell sökning:\n" + departureContext
