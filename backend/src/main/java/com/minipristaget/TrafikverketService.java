@@ -970,6 +970,65 @@ public class TrafikverketService {
     }
 
     /**
+     * Antal stopp PÅ VÄGEN (start och mål oräknade) för flera tåg i en och samma fråga.
+     *
+     * <p>Avgångslistan skrev "direkt" på en X2000 som stannar fyra gånger — sant i betydelsen
+     * inget byte, men det läses som non-stop. Listan har ett tjugotal tåg, och en fråga per tåg
+     * hade blivit tjugo anrop mot Trafikverket per sökning; här går alla i EN fråga med IN.
+     * Tåg som inte går att slå upp saknas i svaret, och kortet står då kvar på "inget byte".
+     */
+    public Map<String, Integer> getStoppAntal(List<String> tagnummer, LocalDate datum, String fran, String till) {
+        List<String> giltiga = tagnummer.stream().map(String::trim).filter(t -> t.matches("\\d{1,6}"))
+                .distinct().limit(60).toList();
+        if (giltiga.isEmpty()) return Map.of();
+        String xml = """
+            <REQUEST>
+              <LOGIN authenticationkey="%s"/>
+              <QUERY objecttype="TrainAnnouncement" namespace="rail.trafficinfo" schemaversion="2.0" limit="6000" orderby="AdvertisedTimeAtLocation">
+                <FILTER>
+                  <AND>
+                    <IN name="AdvertisedTrainIdent" value="%s"/>
+                    <EQ name="Advertised" value="true"/>
+                    <GT name="AdvertisedTimeAtLocation" value="%sT00:00:00"/>
+                    <LT name="AdvertisedTimeAtLocation" value="%sT12:00:00"/>
+                  </AND>
+                </FILTER>
+                <INCLUDE>AdvertisedTrainIdent</INCLUDE>
+                <INCLUDE>LocationSignature</INCLUDE>
+                <INCLUDE>ActivityType</INCLUDE>
+                <INCLUDE>AdvertisedTimeAtLocation</INCLUDE>
+              </QUERY>
+            </REQUEST>
+            """.formatted(apiKey, String.join(",", giltiga), datum, datum.plusDays(1));
+        try {
+            getAllStations();
+            JsonNode anns = callApi(xml).path("RESPONSE").path("RESULT").get(0).path("TrainAnnouncement");
+            return raknaStopp(anns, stationIndex == null ? Map.of() : stationIndex, fran, till);
+        } catch (Exception e) {
+            return Map.of();
+        }
+    }
+
+    /** Delar upp raderna per tåg, bygger stoppen och räknar dem mellan resenärens stationer. */
+    static Map<String, Integer> raknaStopp(JsonNode anns, Map<String, TrainStation> index, String fran, String till) {
+        Map<String, com.fasterxml.jackson.databind.node.ArrayNode> perTag = new java.util.LinkedHashMap<>();
+        if (anns == null || !anns.isArray()) return Map.of();
+        for (JsonNode a : anns)
+            perTag.computeIfAbsent(a.path("AdvertisedTrainIdent").asText(""),
+                    k -> new ObjectMapper().createArrayNode()).add(a);
+        Map<String, Integer> ut = new java.util.LinkedHashMap<>();
+        perTag.forEach((tag, rader) -> {
+            List<Stopp> alla = byggStopp(rader, index);
+            List<Stopp> del = delstracka(alla, fran, till);
+            // Hittades inte både start och mål är talet inte resenärens — hellre inget tal än fel tal.
+            if (del.size() >= 2 && sammaStation(del.get(0).namn(), fran)
+                    && sammaStation(del.get(del.size() - 1).namn(), till))
+                ut.put(tag, del.size() - 2);
+        });
+        return ut;
+    }
+
+    /**
      * Slår ihop Trafikverkets rader (en per aktivitet och plats) till ett stopp per station i
      * tidsordning. Ankomst och avgång på samma plats blir ETT stopp med båda tiderna. En
      * signatur som inte finns i stationsindexet hoppas över — den har inga koordinater att rita.

@@ -447,6 +447,8 @@
       .tc-seat-pick:hover{background:rgba(52,211,153,.32);color:#ecfdf5;}
       .tc-sketch-src{opacity:.8;}
       .tc-train-imgs{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+      .tc-train-fig{margin:0;width:100%;}
+      .tc-train-fig figcaption{font-size:9.5px;color:rgba(191,219,254,.55);text-align:right;margin-top:2px;}
       .tc-train-img{width:100%;max-height:130px;object-fit:cover;border-radius:10px;opacity:.88;transition:opacity .2s;}
       .tc-train-img:hover{opacity:1;}
       /* Resekartan i chatten */
@@ -843,8 +845,15 @@
   var TC_TRAIN_IMAGES = [
     // SJ 3000 före x2000 i listan: "SJ 3000 (X55)" innehåller inte "x2000", men båda
     // nämns ofta i samma svar och då ska den specifika träffen komma först.
-    { keys: ['sj 3000', 'sj3000', 'x55'],   src: '/images/train-sj-3000.jpg',     alt: 'SJ 3000 (X55) · Foto: SJ AB, CC BY 3.0' },
+    { keys: ['sj 3000', 'sj3000', 'x55'],   src: '/images/train-sj-3000.jpg',     alt: 'SJ 3000 (X55)',
+      kredit: 'Foto: SJ AB, Wikimedia Commons, CC BY 3.0' },
     { keys: ['x2000'],                      src: '/images/train-sj-x2000.jpg',    alt: 'SJ X2000' },
+    // SJ Regional och InterCity (2026-09-29): samma foton som avgångskorten, med krediten synlig
+    // under bilden — CC BY och CC BY-SA kräver att fotografen anges där bilden visas.
+    { keys: ['sj regional', 'x40', 'dubbeldäckare'], src: '/images/train-sj-x40.jpg', alt: 'SJ Regional X40',
+      kredit: 'Foto: AleWi, Wikimedia Commons, CC BY-SA 4.0' },
+    { keys: ['sj intercity', 'intercity', 'rc6'], src: '/images/train-sj-rc6-regional.jpg', alt: 'SJ Rc6 med vagnar',
+      kredit: 'Foto: G och J, Wikimedia Commons, CC BY 4.0' },
     { keys: ['x74', 'mtrx'],               src: '/images/train-vy.jpg',           alt: 'MTRX X74' },
     { keys: ['öresundståg', 'x31'],        src: '/images/train-oresundstag.jpg',  alt: 'Öresundståg X31' },
     { keys: ['snälltåget', 'snälltåg'],    src: '/images/train-sj-fast.png',     alt: 'Snälltåget' },
@@ -869,15 +878,25 @@
     if (matches.length === 0) return;
     var wrap = document.createElement('div');
     wrap.className = 'tc-train-imgs';
-    matches.forEach(function(entry) {
-      var img = document.createElement('img');
-      img.className = 'tc-train-img';
-      img.src = entry.src;
-      img.alt = entry.alt;
-      img.title = entry.alt;
-      wrap.appendChild(img);
-    });
+    matches.forEach(function(entry) { wrap.appendChild(tcTagBild(entry.src, entry.alt, entry.kredit)); });
     outer.appendChild(wrap);
+  }
+
+  function tcTagBild(src, alt, kredit) {
+    var fig = document.createElement('figure');
+    fig.className = 'tc-train-fig';
+    var img = document.createElement('img');
+    img.className = 'tc-train-img';
+    img.src = src;
+    img.alt = alt;
+    img.title = alt + (kredit ? ' · ' + kredit : '');
+    fig.appendChild(img);
+    if (kredit) {
+      var cap = document.createElement('figcaption');
+      cap.textContent = kredit;
+      fig.appendChild(cap);
+    }
+    return fig;
   }
 
   function tcAddFollowupChips(text, outer) {
@@ -1377,6 +1396,9 @@
     var bytesstopp = (btn.getAttribute('data-byte') || '').split('|').filter(Boolean);
     var byte       = bytesstopp.join(' och ');
     var slutstation = btn.getAttribute('data-final') || '';
+    // Antal stopp på vägen, ifyllt av fyllStoppAntal() i index.html när Trafikverket svarat
+    var kortet = btn.closest && btn.closest('.dep-card');
+    var stoppPaVagen = kortet && kortet.dataset.stopp ? kortet.dataset.stopp : '';
     var fromName = (window._trainSearchData && window._trainSearchData.fromName) || '';
     var toName   = (window._trainSearchData && window._trainSearchData.toName)   || dest;
     var date     = (window._trainSearchData && window._trainSearchData.date)     || '';
@@ -1394,7 +1416,7 @@
       'Sträcka: ' + fromName + ' → ' + toName + '\n' +
       'Datum: ' + date + '\n' +
       'Avgångstid: ' + depTime + (arrTime ? ', ankomst: ' + arrTime : '') + '\n' +
-      (dur ? 'Restid: ' + dur + ' · ' + (byte ? bytesstopp.length + (bytesstopp.length > 1 ? ' byten i ' : ' byte i ') + byte : 'direkttåg, 0 byten') + '\n' : '') +
+      (dur ? 'Restid: ' + dur + ' · ' + (byte ? bytesstopp.length + (bytesstopp.length > 1 ? ' byten i ' : ' byte i ') + byte : 'inget byte' + (stoppPaVagen ? ', ' + stoppPaVagen + ' stopp på vägen' : '')) + '\n' : '') +
       'Tåg: ' + trainId + (model ? ' (' + model + ')' : '') + '\n' +
       (slutstation ? 'Tåget fortsätter mot ' + slutstation + ' — resenären kliver av i ' + toName + '\n' : '') +
       'Pris: ' + price + '\n' +
@@ -1439,6 +1461,15 @@
       seatsMsg +
       '\n\nVad vill du veta mer om denna resa?';
     var introBubbla = tcAppendBot(introText, false);
+    // Samma bild som avgångskortet visar. Känner tcInjectTrainImages redan igen modellen
+    // ligger bilden där; annars (Mälartåg, Krösatåg …) tas kortets egen bild.
+    var kortBild = kortet && kortet.querySelector('.card-train-photo');
+    if (kortBild && !introBubbla.querySelector('.tc-train-imgs')) {
+      var bw = document.createElement('div');
+      bw.className = 'tc-train-imgs';
+      bw.appendChild(tcTagBild(kortBild.getAttribute('src'), kortBild.alt || model, (kortBild.title || '').indexOf('Foto:') === 0 ? kortBild.title : ''));
+      introBubbla.appendChild(bw);
+    }
     var fokus = _focusedDep;
     tcAppendRouteMap(introBubbla, [fromName].concat(bytesstopp, [toName]), bytesstopp.length ? null : {
       train: trainId, date: date,

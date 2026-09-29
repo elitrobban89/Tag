@@ -32,13 +32,24 @@
     'Halmstad C': [56.669, 12.864], 'Varberg C': [57.105, 12.253], 'Göteborg C': [57.709, 11.973],
     'Skövde C': [58.390, 13.847], 'Falköping C': [58.175, 13.553], 'Herrljunga C': [58.078, 13.024],
     'Trollhättan': [58.283, 12.285], 'Uddevalla C': [58.349, 11.936], 'Borås C': [57.720, 12.938],
-    'Oslo': [59.911, 10.753], 'Köpenhamn H': [55.673, 12.565]
+    'Oslo': [59.911, 10.753], 'Köpenhamn H': [55.673, 12.565],
+    // SJ Regional via Västerås (2026-09-29): koordinaterna ur Trafikverkets stationsregister
+    'Sundbyberg': [59.361, 17.972], 'Bålsta': [59.569, 17.532], 'Enköping': [59.645, 17.089],
+    'Köping': [59.506, 16.007], 'Arboga': [59.397, 15.841], 'Örebro S': [59.270, 15.202],
+    'Kumla': [59.128, 15.141], 'Laxå': [58.989, 14.615], 'Töreboda': [58.705, 14.127],
+    'Floby': [58.139, 13.332], 'Vårgårda': [58.031, 12.809], 'Alingsås': [57.927, 12.532]
   };
 
   // Linjer: bolag + stationerna i ordning. Färgerna är desamma som märkena i avgångslistan.
   var LINJER = [
     { bolag: 'SJ', namn: 'Stockholm – Göteborg (Snabbtåg)',
       via: ['Stockholm C', 'Södertälje Syd', 'Katrineholm C', 'Hallsberg', 'Skövde C', 'Falköping C', 'Herrljunga C', 'Göteborg C'] },
+    // SJ Regional 177 m.fl.: stoppen avlästa ur Trafikverkets data 2026-09-29 (/api/train-stops).
+    // Därför tar direkttåget 5 h 16 min — tjugo stopp, och en halvtimme i Örebro C.
+    { bolag: 'SJ', namn: 'Stockholm – Västerås – Örebro – Göteborg (SJ Regional)',
+      via: ['Stockholm C', 'Sundbyberg', 'Bålsta', 'Enköping', 'Västerås C', 'Köping', 'Arboga', 'Örebro C', 'Örebro S',
+            'Kumla', 'Hallsberg', 'Laxå', 'Töreboda', 'Skövde C', 'Falköping C', 'Floby', 'Herrljunga C', 'Vårgårda',
+            'Alingsås', 'Göteborg C'] },
     { bolag: 'VR', namn: 'Stockholm – Göteborg (VR Snabbtåg)',
       via: ['Stockholm C', 'Södertälje Syd', 'Skövde C', 'Göteborg C'] },
     { bolag: 'SJ', namn: 'Stockholm – Malmö – Köpenhamn',

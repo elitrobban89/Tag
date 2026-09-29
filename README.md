@@ -77,7 +77,10 @@ Bytet till 2.0 gjordes efter att svaren jämförts fält för fält mot 1.8 på 
 - **Kontextkänslig chatbot** – läser automatiskt av din sökning och vet exakt vilka avgångar som visas: operatör, avgångstid, pris, restid och platser kvar. Söker du Göteborg C → Stockholm C ser AI:n alla avgångar och kan direkt svara "avgång 07:45 MTRX är snabbast men har inga platser — nästa med MiniPris är 09:15"
 - **Avgångsfokuserad kontext** – klickar du på ett avgångskort för att expandera det fokuseras chatboten automatiskt på just den avgången. Kontextbaren uppdateras till t.ex. "🚂 15:05 – 19:15 · 4h 10min · Göteborg → Stockholm", snabbchipsen byts till avgångsspecifika (🪑 Vilken klass?, 🛜 WiFi & 5G, 🧳 Bagage, 🗺 Till centrum) och en intro-bubbla visas med tider, pris och platser kvar. Väljer du ett annat kort uppdateras kontexten direkt.
 - **Tågassistent** – hjälper med billigaste biljett, snabbaste avgång och var det finns platser kvar just nu
-- **Glassmorphism-design** – blå/mörkblå panel med `backdrop-filter: blur(24px)` och färgglad svg-tågikon (teal + orange vagnar + blå lokomotiv med räls)
+- **Glassmorphism-design** – blå/mörkblå panel med `backdrop-filter: blur(24px)`
+- **Chattikonen är ett Rc-ellok i 3D** – Tågabs Rm 1261 i silver och rött (Bo'Bo', hytt i båda ändar, strömavtagare). Hjulen snurrar, strömavtagaren slår gnistor mot kontaktledningen, loket vrider sig i perspektiv och hela knappen svävar. Knappen sitter **uppe till höger**: bredvid appkortet på bred skärm och i sidhuvudets hörn när skärmen är smalare än kortet. Förut satt den i underkanten, som i den 850 px höga iframen på elitrobban.se hamnade under vikkanten
+- **"4 stopp · inget byte" i stället för "direkt"** – ordet direkt lästes som non-stop på en X2000 som stannar fyra gånger. Avgångskorten hämtar antalet stopp på vägen för hela listan med EN Trafikverket-fråga (`/api/stop-counts`, `IN` på tågnumren) och skriver "inget byte" tills svaret kommit. Chatten får samma tal
+- **Resekartan följer tågets verkliga stopp** – för ett direkttåg hämtas tågets alla annonserade stopp ur Trafikverket (`/api/train-stops`). Linjen ritas genom dem, mellanstationerna blir prickar med namn och tid, och under kartan finns "Visa alla stopp". AI:n får också stopplistan och kan svara på "stannar tåget i Skövde?". Exempel: SJ Regional 177 Stockholm–Göteborg, 5 h 16 min, stannar på 18 stationer via Västerås och Örebro och står en halvtimme i Örebro C
 - **Snabbknappar** – 💰 Billigast, ⚡ Snabbast, 🎫 Platser kvar, 🤖 Ge råd (byts till avgångsspecifika vid expanderat kort)
 - **Kontext-bar** – visar aktuell rutt + antal avgångar vid sökning, eller specifik avgångstid vid fokuserat kort
 - **Markdown** – svarar med **fetstil** och `- listor` som renderas till HTML
@@ -86,7 +89,7 @@ Bytet till 2.0 gjordes efter att svaren jämförts fält för fält mot 1.8 på 
 - **Klassbaserat chattillstånd** – chattens tillstånd bor i klasser, aldrig i inline `style.display`. Öppet/stängt är `body.tc-chat-open`, expanderat är `body.tc-chat-max`, och snabbknappsraden döljs med `.tc-quick-off` när samtalet börjat. Poängen är att CSS då kan uttrycka villkor som JS annars måste hålla synkade: `body.tc-chat-open.tc-chat-max .tc-fab-wrap { display: none }` döljer flytknappen exakt när panelen är både expanderad och öppen, och `body.tc-chat-max .tc-quick:not(.tc-quick-off)` tar tillbaka snabbknapparna i liggande expanderat läge utan att krocka med JS-tillståndet. Inline `display` vinner över hela cascaden, så varje CSS-regel på samma element hade blivit tyst verkningslös — det var den buggen som gjorde att snabbknapparna dök upp igen i liggande läge efter en rensning. Enda vägen in i öppet-läget är `tcIsOpen()` / `tcSetOpen()`
 - **Mobilanpassad panel** – chatten är ett bottenkort som lämnar sidan bakom synlig, inte en fullskärmsöverlagring: höjdtaket är `min(440px, 58dvh)` (`dvh` så att mobilens adressfält inte spräcker höjden) och panelen spänner `left/right: 10px` i stället för fast bredd. Medvetet val — chatten highlightar avgångskort och väljer platser i sidan bakom sig, och fullskärm hade dolt exakt det. I liggande läge sänks taket till `min(300px, 70dvh)` och snabbknapparna döljs
 - **Tåginformation** – AI:n känner till tågtyper (X2000, SJ 3000/X55, MTRX, Öresundståg m.fl.), WiFi/5G och satellituppkoppling ombord, vilka tåg som går var, och restider för topp 5-rutter
-- **Tågbilder** – när AI:n nämner en tågtyp (X2000, SJ 3000, MTRX X74, Öresundståg, Snälltåget, MTR Express, Västtåg X61) visas motsvarande tågfoto automatiskt under svaret
+- **Tågbilder** – när AI:n nämner en tågtyp (X2000, SJ 3000, MTRX X74, Öresundståg, Snälltåget, MTR Express, Västtåg X61) visas motsvarande tågfoto automatiskt under svaret. SJ Regional visar X40-dubbeldäckaren och SJ InterCity Rc6 med vagnar, riktiga foton från Wikimedia Commons med fotokredit under bilden. Väljer man en avgång visar chatten samma bild som avgångskortet
 - **Var finns toaletten?** – frågor om toalett, bistro eller närmaste plats besvaras med vagn och radnummer ur vagnsskissen, och skissen ritas upp under svaret med källhänvisning (`vagnskiss://<id>`). Har du valt plats är avstånden redan uträknade: "närmaste toalett i vagn 2, ≈1 rad bort; bistron i vagn 3, ≈4 rader"
 - **Föreslår ledig plats** – "föreslå en ledig fönsterplats närmast bistron" ger ett konkret förslag plus klickbara knappar som öppnar platskartan och väljer platsen direkt. Filter finns för fönster-, gång- och bordsplats. Beläggningen bor i platskartan och skickas med frågan, så servern aldrig gissar vilka platser som är bokade — och prompten får bara rekommendera ur den listan
 - **Streaming-svar** – svaret strömmar direkt token för token från Groq till chatbubblan utan att vänta på hela svaret, via `/api/chat/stream` (SSE); automatisk fallback till `/api/chat` om webbläsaren saknar ReadableStream-stöd
@@ -100,6 +103,8 @@ Bytet till 2.0 gjordes efter att svaren jämförts fält för fält mot 1.8 på 
 - **Skeleton loader** – animerade shimmer-platshållare visas omedelbart när sökning startar, ersätts av riktiga avgångskort när svaret kommer
 - **Favoritresor** – hjärtknapp i sökresultatet sparar aktuell rutt (Från → Till) i webbläsaren; sparade rutter syns som snabbknappar under sökformuläret; max 5 favoriter, enkelt att ta bort
 - **Dela avgång** – 🔗-knapp på varje avgångskort genererar en delbar länk med från/till/datum som URL-parametrar; `navigator.share` på mobil, kopierar till urklipp på desktop; sidan auto-söker direkt om URL-parametrar finns vid sidladdning
+- **Uppstartsskärm** – glaskort framför tåget i soluppgångsscenen med tekniken och live-trafiken: Java- och Spring Boot-versionen ur den körande JVM:en, Groq-modellen, antal stationer, tåg i trafik just nu, avgångar kommande timmen och punktlighet (`/api/splash`, Trafikverket, cachat en minut). Foten visar autodeployens branch och commit från Render. En uppgradering till Java 28 syns av sig själv. CarAdvice nattrutin kontrollerar varje natt att uppgifterna stämmer (splash-vakten)
+- **Linjekartan** – stationsnamn vid prickarna (knutpunkter alltid, övriga vid inzoomning) och klickbara linjer som listar sina stationer i ordning. SJ Regional Stockholm–Västerås–Örebro–Göteborg har tågets riktiga stopp
 - **AI-förslag** – tre kategoriknappar (Storstad / Natur / Strand) via Groq AI
 - **CO2-besparing** – visar kg CO2 sparat jämfört med bilresa
 - **Mobilanpassad** – responsiv layout med media queries för smala skärmar; chattpanelens brytpunkt ligger på 640 px så att även bredare telefoner (Pixel 412 px, iPhone Pro Max 430 px) träffas, plus en egen regel för liggande läge (`max-height: 480px`)
@@ -111,6 +116,10 @@ Bytet till 2.0 gjordes efter att svaren jämförts fält för fält mot 1.8 på 
 | Bild | Källa | Licens |
 |---|---|---|
 | `train-sj-3000.jpg` | [SJ X55 på Wikimedia Commons](https://commons.wikimedia.org/wiki/File:SJ_X55.jpg) (foto: SJ AB) | CC BY 3.0 |
+| `train-sj-x40.jpg` | [SJ X40 på Örebro C, Wikimedia Commons](https://commons.wikimedia.org/wiki/File:SJ_X40,_%C3%96rebro_Central_-_20260411_-_25.jpg) (foto: AleWi) | CC BY-SA 4.0 |
+| `train-sj-rc6-regional.jpg` | [SJ Rc6 1407 i Göteborg, Wikimedia Commons](https://commons.wikimedia.org/wiki/File:2011-06-23_0283_SJ_Rc6_1407_i_G%C3%B6teborg.jpg) (foto: G och J) | CC BY 4.0 |
+
+Krediten visas i appen: som hovertext på avgångskortets miniatyr och som rad under bilden i platsväljaren.
 
 ## Teknikstack
 
@@ -120,7 +129,7 @@ Bytet till 2.0 gjordes efter att svaren jämförts fält för fält mot 1.8 på 
 | Avgångsdata | Trafikverket Open Data API — `TrainAnnouncement` i namespace `rail.trafficinfo`, schemaversion 2.0 |
 | AI-chatbot | Groq API (`openai/gpt-oss-120b`, `reasoning_effort: low`), avgångskontextuell, max 8 meddelanden historik |
 | AI-förslag | Groq API (`openai/gpt-oss-120b`, `reasoning_effort: low`), cache 2 h per (from+kategori) |
-| Deploy | Render (Docker, free tier) |
+| Deploy | Render (Docker, free tier), autodeploy från `master` |
 | Frontend | Inbyggd via `<iframe>` i WordPress/Gutenberg |
 
 > **Java 27 sedan 2026-09-22** (GA 15 september). Provat på riktigt innan det byttes: ren ombyggnad på JDK 27+35, klassfilsversion **71** och gröna tester — varken Mockito eller Byte Buddy behövde röras.
@@ -187,6 +196,10 @@ backend/
 | GET | `/` | Startsida med sökformulär |
 | GET | `/api/stations?q=xxx` | Stationsautocomplete – returnerar upp till 8 matchande stationer (JSON) |
 | GET | `/nearest-station?lat=X&lon=Y` | Närmaste tågstation (JSON) |
+| GET | `/api/train-stops?train=177&date=YYYY-MM-DD&from=…&to=…` | Tågets annonserade stopp i ordning med ankomst/avgång och koordinater, klippta till resenärens del (Trafikverket, cachat 10 min) |
+| GET | `/api/station-coords?names=A|B` | Koordinater för stationer (chattens resekarta) |
+| GET | `/api/stop-counts?trains=177,437&date=…&from=…&to=…` | Antal stopp på vägen per tåg, `{"177":18,"437":4}` — en Trafikverket-fråga för hela listan |
+| GET | `/api/splash` | Uppstartsskärmens uppgifter: Java, Spring Boot, Groq-modell, stationer, tåg i trafik, avgångar kommande timmen, punktlighet, deploy-commit |
 | POST | `/api/search` | Sök avgångar (JSON) – returnerar `autoTomorrow: true` vid auto-datumbyte |
 | POST | `/api/chat` | AI-chatbot med avgångskontext (JSON) – rate limited (10/min per IP) |
 | POST | `/api/chat/stream` | AI-chatbot streaming (SSE) – returnerar svar token för token – rate limited (10/min per IP) |

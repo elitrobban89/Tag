@@ -105,6 +105,19 @@ public class WebController {
         return ResponseEntity.ok(TrafikverketService.delstracka(alla, from, to));
     }
 
+    // ── Antal stopp på vägen för hela avgångslistan ───────────────
+    // trains=177,429,2027 → {"177":18,"429":4}. Avgångskorten skriver "4 stopp · inget byte"
+    // i stället för "direkt", som lästes som non-stop. En enda fråga mot Trafikverket.
+    @GetMapping("/api/stop-counts")
+    @ResponseBody
+    public ResponseEntity<?> stopCounts(@RequestParam(defaultValue = "") String trains,
+                                        @RequestParam(defaultValue = "") String date,
+                                        @RequestParam(defaultValue = "") String from,
+                                        @RequestParam(defaultValue = "") String to) {
+        List<String> lista = java.util.Arrays.asList(trains.split(","));
+        return ResponseEntity.ok(trafikverketService.getStoppAntal(lista, parseDate(date), from, to));
+    }
+
     // ── Koordinater för stationer (chattens resekarta) ────────────
     // names = "Stockholm C|Linköping C|Kalmar C". Okända namn hoppas över i stället för att
     // fälla hela svaret — kartan ritar det som finns.

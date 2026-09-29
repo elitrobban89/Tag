@@ -2858,9 +2858,11 @@ function searchReturnTrip() {
     if (data.autoTomorrow) {
       html += '<div class="tomorrow-notice">🌙 Inga fler tåg – visar avgångar för nästa dag (' + esc(data.date) + ')</div>';
     }
-    html += buildDepList(data.departures, (data.fromName || fromCity) + ' → ' + (data.toName || toCity), true);
+    html += buildDepList(data.departures, (data.fromName || fromCity) + ' → ' + (data.toName || toCity), true,
+                         { from: data.fromName || fromCity, to: data.toName || toCity, date: data.date || date });
     wrap.innerHTML = html;
     wrap.querySelectorAll('.dep-list').forEach(depApply);
+    fyllStoppAntal(wrap);
   })
   .catch(function() {
     wrap.innerHTML = '<div class="return-error">Kunde inte hämta avgångar, försök igen.</div>';
@@ -3127,9 +3129,39 @@ function depSort(sel) {
 }
 
 // ── Bygg avgångslista HTML (SJ-stil) ─────────────────────────────
-function buildDepList(deps, title, isReturn) {
+// rutt = { from, to, date }: följer med listan så att fyllStoppAntal() vet vilken del av
+// tågens väg som är resenärens.
+/**
+ * Fyller i antalet stopp på vägen för direkttågen i varje lista ("4 stopp · inget byte"),
+ * med EN fråga per lista (/api/stop-counts). Svarar inte servern står "inget byte" kvar —
+ * sant, bara mindre precist.
+ */
+function fyllStoppAntal(rot) {
+  rot.querySelectorAll('.dep-list[data-fran]').forEach(function (lista) {
+    var platser = lista.querySelectorAll('.stopp-antal[data-tag]');
+    var tag = [];
+    platser.forEach(function (p) { if (p.dataset.tag && tag.indexOf(p.dataset.tag) < 0) tag.push(p.dataset.tag); });
+    if (!tag.length) return;
+    fetch('/api/stop-counts?trains=' + encodeURIComponent(tag.join(',')) + '&date=' + encodeURIComponent(lista.dataset.datum) +
+          '&from=' + encodeURIComponent(lista.dataset.fran) + '&to=' + encodeURIComponent(lista.dataset.till))
+      .then(function (r) { return r.json(); })
+      .then(function (antal) {
+        platser.forEach(function (p) {
+          var n = antal[p.dataset.tag];
+          if (n == null) return;
+          p.textContent = n === 0 ? 'utan stopp' : n + (n === 1 ? ' stopp' : ' stopp') + ' · inget byte';
+          var kort = p.closest('.dep-card');
+          if (kort) kort.dataset.stopp = String(n);
+        });
+      })
+      .catch(function () {});
+  });
+}
+
+function buildDepList(deps, title, isReturn, rutt) {
   var cls = 'dep-list' + (isReturn ? ' return-dep-list' : '');
-  var html = '<div class="' + cls + '">';
+  var html = '<div class="' + cls + '"' + (rutt ? ' data-fran="' + esc(rutt.from || '') + '" data-till="' + esc(rutt.to || '') +
+    '" data-datum="' + esc(rutt.date || '') + '"' : '') + '>';
   html += '<div class="list-header"><div class="list-dot"></div>' + esc(title) + '</div>';
   if (deps && deps.length > 4) html += buildDepTools(deps);
 
@@ -3153,7 +3185,11 @@ function buildDepList(deps, title, isReturn) {
 
       // Restid + byten
       var dur = formatDuration(d.travelMinutes);
-      var travelInfo = (dur ? dur + ' · ' : '') + (d.transfers > 1 ? d.transfers + ' byten' : d.transfers > 0 ? '1 byte' : 'direkt');
+      // "direkt" lästes som non-stop på en X2000 som stannar fyra gånger. Direkttåg skriver
+      // "inget byte" tills fyllStoppAntal() hunnit hämta antalet stopp på vägen.
+      var bytesText = d.transfers > 1 ? d.transfers + ' byten' : d.transfers > 0 ? '1 byte' : '';
+      var travelHtml = esc(dur ? dur + ' · ' : '') + (bytesText ? esc(bytesText)
+        : '<span class="stopp-antal" data-tag="' + esc(d.trainId || '') + '">inget byte</span>');
       var op = opLabel(d);
       var prisTal = parseInt(String(d.price || '').replace(/[^0-9]/g, ''), 10) || 0;
 
@@ -3199,7 +3235,7 @@ function buildDepList(deps, title, isReturn) {
       html +=           '<span class="op-badge" style="--op:' + op.farg + '">' + esc(op.namn) + '</span> ';
       html +=           '<span class="card-train-model">' + esc(d.trainModel || '') + '</span>';
       html +=           ' · tåg ' + esc(d.trainId) + (d.secondTrainId ? '+' + esc(d.secondTrainId) : '') +
-                        ' · ' + esc(travelInfo) +
+                        ' · ' + travelHtml +
                         (d.finalDestination ? ' · <span class="card-mot">tåget fortsätter mot ' + esc(d.finalDestination) + '</span>' : '');
       if (d.transfers > 0 && d.transferDetails && d.transferDetails.length) {
         // Ett eller två byten: "Stockholm C 08:20 → 08:40 · Sundsvall C 12:10 → 12:50"
@@ -3389,7 +3425,7 @@ function renderResults(data) {
   }
 
   // Outbound departures
-  html += buildDepList(data.departures, 'Avgångar', false);
+  html += buildDepList(data.departures, 'Avgångar', false, { from: data.fromName, to: data.toName, date: data.date });
 
   // Return
   if (data.returnDepartures) {
@@ -3403,13 +3439,14 @@ function renderResults(data) {
     html +=     '</div>';
     html +=     '<div class="return-meta">📅 ' + esc(data.returnDate) + '</div>';
     html +=   '</div>';
-    html += buildDepList(data.returnDepartures, 'Returavgångar', true);
+    html += buildDepList(data.returnDepartures, 'Returavgångar', true, { from: data.returnFromName, to: data.fromName, date: data.returnDate });
     html += '</div>';
   }
 
   var section = document.getElementById('results-section');
   section.innerHTML = html;
   section.querySelectorAll('.dep-list').forEach(depApply);
+  fyllStoppAntal(section);
   section.style.display = 'block';
   document.getElementById('form-card').style.display = 'none';
   // Remove bottom border radius from app header since results section follows it

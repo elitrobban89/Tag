@@ -268,6 +268,28 @@ class TrafikverketServiceTest {
         assertThat(TrafikverketService.delstracka(alla, "Stockholm C", "Malmö C")).hasSize(4);
     }
 
+    @Test
+    void stoppenRaknasPerTagMellanResenarensStationer() throws Exception {
+        // X2000 437 Stockholm → Örebro → Göteborg (1 stopp på vägen) och regionaltåget 177 som
+        // stannar i Västerås och Örebro (2). Tåg 999 går inte till Göteborg: inget tal alls.
+        JsonNode anns = new ObjectMapper().readTree("""
+            [
+              {"AdvertisedTrainIdent":"437","LocationSignature":"Cst","ActivityType":"Avgang","AdvertisedTimeAtLocation":"2026-09-29T14:16:00.000+02:00"},
+              {"AdvertisedTrainIdent":"177","LocationSignature":"Cst","ActivityType":"Avgang","AdvertisedTimeAtLocation":"2026-09-29T14:14:00.000+02:00"},
+              {"AdvertisedTrainIdent":"177","LocationSignature":"Vå","ActivityType":"Avgang","AdvertisedTimeAtLocation":"2026-09-29T15:11:00.000+02:00"},
+              {"AdvertisedTrainIdent":"437","LocationSignature":"Ör","ActivityType":"Avgang","AdvertisedTimeAtLocation":"2026-09-29T15:40:00.000+02:00"},
+              {"AdvertisedTrainIdent":"177","LocationSignature":"Ör","ActivityType":"Avgang","AdvertisedTimeAtLocation":"2026-09-29T16:32:00.000+02:00"},
+              {"AdvertisedTrainIdent":"437","LocationSignature":"G","ActivityType":"Ankomst","AdvertisedTimeAtLocation":"2026-09-29T17:27:00.000+02:00"},
+              {"AdvertisedTrainIdent":"177","LocationSignature":"G","ActivityType":"Ankomst","AdvertisedTimeAtLocation":"2026-09-29T19:30:00.000+02:00"},
+              {"AdvertisedTrainIdent":"999","LocationSignature":"Cst","ActivityType":"Avgang","AdvertisedTimeAtLocation":"2026-09-29T09:00:00.000+02:00"},
+              {"AdvertisedTrainIdent":"999","LocationSignature":"Vå","ActivityType":"Ankomst","AdvertisedTimeAtLocation":"2026-09-29T10:00:00.000+02:00"}
+            ]""");
+
+        Map<String, Integer> antal = TrafikverketService.raknaStopp(anns, INDEX, "Stockholm C", "Göteborg C");
+
+        assertThat(antal).containsEntry("437", 1).containsEntry("177", 2).doesNotContainKey("999");
+    }
+
     // --- trafikläget till uppstartsskärmen ---
 
     @Test
