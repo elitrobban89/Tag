@@ -91,6 +91,20 @@ public class WebController {
         }
     }
 
+    // ── Tågets stopp längs resan (chattens resekarta) ─────────────
+    // train=177&date=2026-09-29&from=Stockholm C&to=Göteborg C → stoppen i ordning, bara
+    // resenärens del. Tom lista när tåget inte går att slå upp — kartan faller då tillbaka
+    // på start, byten och mål.
+    @GetMapping("/api/train-stops")
+    @ResponseBody
+    public ResponseEntity<?> trainStops(@RequestParam String train,
+                                        @RequestParam(defaultValue = "") String date,
+                                        @RequestParam(defaultValue = "") String from,
+                                        @RequestParam(defaultValue = "") String to) {
+        List<TrafikverketService.Stopp> alla = trafikverketService.getStopp(train, parseDate(date));
+        return ResponseEntity.ok(TrafikverketService.delstracka(alla, from, to));
+    }
+
     // ── Koordinater för stationer (chattens resekarta) ────────────
     // names = "Stockholm C|Linköping C|Kalmar C". Okända namn hoppas över i stället för att
     // fälla hela svaret — kartan ritar det som finns.

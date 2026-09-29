@@ -222,6 +222,52 @@ class TrafikverketServiceTest {
         assertThat(TrafikverketService.aliasSuggestions("Kas")).containsExactly("Copenhagen Airport");
     }
 
+    // --- tågets stopp (chattens resekarta) ---
+
+    private static final Map<String, TrainStation> INDEX = Map.of(
+        "CST", new TrainStation("Cst", "Stockholm C", 59.33, 18.06),
+        "VÅ",  new TrainStation("Vå", "Västerås C", 59.61, 16.55),
+        "ÖR",  new TrainStation("Ör", "Örebro C", 59.27, 15.21),
+        "G",   new TrainStation("G", "Göteborg C", 57.71, 11.97));
+
+    @Test
+    void ankomstOchAvgangPaSammaStationBlirEttStopp() throws Exception {
+        JsonNode anns = new ObjectMapper().readTree("""
+            [
+              {"LocationSignature":"Cst","ActivityType":"Avgang","AdvertisedTimeAtLocation":"2026-09-29T14:14:00.000+02:00"},
+              {"LocationSignature":"Vå","ActivityType":"Ankomst","AdvertisedTimeAtLocation":"2026-09-29T15:08:00.000+02:00"},
+              {"LocationSignature":"Vå","ActivityType":"Avgang","AdvertisedTimeAtLocation":"2026-09-29T15:10:00.000+02:00"},
+              {"LocationSignature":"Okänd","ActivityType":"Avgang","AdvertisedTimeAtLocation":"2026-09-29T15:30:00.000+02:00"},
+              {"LocationSignature":"Ör","ActivityType":"Ankomst","AdvertisedTimeAtLocation":"2026-09-29T16:05:00.000+02:00"},
+              {"LocationSignature":"Ör","ActivityType":"Avgang","AdvertisedTimeAtLocation":"2026-09-29T16:08:00.000+02:00"},
+              {"LocationSignature":"G","ActivityType":"Ankomst","AdvertisedTimeAtLocation":"2026-09-29T19:30:00.000+02:00"}
+            ]""");
+
+        List<TrafikverketService.Stopp> stopp = TrafikverketService.byggStopp(anns, INDEX);
+
+        assertThat(stopp).extracting(TrafikverketService.Stopp::namn)
+            .containsExactly("Stockholm C", "Västerås C", "Örebro C", "Göteborg C");  // okänd signatur hoppas över
+        assertThat(stopp.get(1).ankomst()).isEqualTo("15:08");
+        assertThat(stopp.get(1).avgang()).isEqualTo("15:10");
+        assertThat(stopp.get(0).ankomst()).isEmpty();
+        assertThat(stopp.get(3).avgang()).isEmpty();
+    }
+
+    @Test
+    void delstrackanKlipperUtResenarensDel() {
+        var alla = List.of(
+            new TrafikverketService.Stopp("Stockholm C", "Cst", 0, 0, "", "14:14"),
+            new TrafikverketService.Stopp("Västerås C", "Vå", 0, 0, "15:08", "15:10"),
+            new TrafikverketService.Stopp("Örebro C", "Ör", 0, 0, "16:05", "16:08"),
+            new TrafikverketService.Stopp("Göteborg C", "G", 0, 0, "19:30", ""));
+        assertThat(TrafikverketService.delstracka(alla, "Västerås C", "Örebro C"))
+            .extracting(TrafikverketService.Stopp::namn).containsExactly("Västerås C", "Örebro C");
+        // stadsnamn utan "C" matchar centralstationen
+        assertThat(TrafikverketService.delstracka(alla, "Stockholm", "Göteborg")).hasSize(4);
+        // okänt mål: hellre hela vägen än en tom karta
+        assertThat(TrafikverketService.delstracka(alla, "Stockholm C", "Malmö C")).hasSize(4);
+    }
+
     // --- trafikläget till uppstartsskärmen ---
 
     @Test

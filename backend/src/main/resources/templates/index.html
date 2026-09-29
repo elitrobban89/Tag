@@ -510,6 +510,7 @@
     .card-travel-info  { font-size:.84rem; color:rgba(255,255,255,.45); margin-bottom:13px; }
 
     .card-train-row { display:flex; align-items:center; gap:12px; }
+    .sjc-foto-kredit { font-size:10px; color:rgba(191,219,254,.6); margin:3px 0 0; text-align:right; }
     .card-train-photo {
       width:170px; height:58px;
       object-fit:cover; object-position:center 60%;
@@ -2549,6 +2550,17 @@ function resaFran(card) {
   return { stad: _searchFromName, datum: _searchDate };
 }
 
+/**
+ * Fotokrediter för bilderna från Wikimedia Commons. CC BY och CC BY-SA kräver att fotografen
+ * och licensen anges där bilden visas — förut stod det bara i en kodkommentar.
+ */
+var FOTO_KREDIT = {
+  '/images/train-sj-x40.jpg': 'Foto: AleWi, Wikimedia Commons, CC BY-SA 4.0',
+  '/images/train-sj-rc6-regional.jpg': 'Foto: G och J, Wikimedia Commons, CC BY 4.0',
+  '/images/train-sj-3000.jpg': 'Foto: SJ AB, Wikimedia Commons, CC BY 3.0'
+};
+function fotoKredit(src) { return FOTO_KREDIT[src] || ''; }
+
 function openSeatModal(trainId, layout, model, depTime, price, destination, trainImage, travelMinutes, priceOriginal, seatsLeft, classLabel) {
   _seatState.trainId       = trainId;
   _seatState.layout        = layout;
@@ -2583,7 +2595,8 @@ function openSeatModal(trainId, layout, model, depTime, price, destination, trai
           (arMiniPris(classLabel) ? '<div class="sjc-minipris">🏷 Exklusivt MiniPris</div>' : '') +
         '</div>' +
       '</div>' +
-      (trainImage ? '<img class="sjc-photo" src="' + esc(trainImage) + '" alt="' + esc(model) + '">' : '') +
+      (trainImage ? '<img class="sjc-photo" src="' + esc(trainImage) + '" alt="' + esc(model) + '">' +
+        (fotoKredit(trainImage) ? '<div class="sjc-foto-kredit">' + esc(fotoKredit(trainImage)) + '</div>' : '') : '') +
       '<div class="sjc-dest">🚉 Till: <strong>' + esc(destination) + '</strong>' +
         (_seatState.finalDestination ? '<span class="sjc-mot"> · tåget fortsätter mot ' + esc(_seatState.finalDestination) + '</span>' : '') + '</div>' +
     '</div>';
@@ -3180,7 +3193,7 @@ function buildDepList(deps, title, isReturn) {
       // staplade i högerspalten och varje kort blev 200+ px högt med tom yta till vänster.
       html +=       '<div class="card-train-row">';
       if (d.trainImage) {
-        html += '<img class="card-train-photo" src="' + esc(d.trainImage) + '" alt="' + esc(d.trainModel || '') + '">';
+        html += '<img class="card-train-photo" src="' + esc(d.trainImage) + '" alt="' + esc(d.trainModel || '') + '" title="' + esc(fotoKredit(d.trainImage)) + '">';
       }
       html +=         '<div class="card-train-label">';
       html +=           '<span class="op-badge" style="--op:' + op.farg + '">' + esc(op.namn) + '</span> ';

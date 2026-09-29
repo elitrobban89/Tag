@@ -921,6 +921,98 @@ public class TrafikverketService {
         return mapper.readTree(response.body());
     }
 
+    // ── Tågets stopp längs vägen (chattens resekarta) ──────────────────────────
+    //
+    // "SJ Regional 177, 5 h 16 min, direkt?" — ja, men den stannar på ett tjugotal orter via
+    // Västerås och Örebro. Utan stoppen såg en lång direktresa ut som ett fel. Här hämtas
+    // tågets ALLA annonserade stopp för dagen, i ordning, med tider och koordinater.
+
+    /** Ett stopp: tider som "HH:mm" (tom när tåget bara ankommer eller bara avgår där). */
+    public record Stopp(String namn, String signatur, double lat, double lon, String ankomst, String avgang) {}
+
+    private record StoppCache(List<Stopp> stopp, long tid) {}
+    private final ConcurrentHashMap<String, StoppCache> stoppCache = new ConcurrentHashMap<>();
+    private static final long STOPP_TTL_MS = 10 * 60 * 1000L;
+
+    /** Tågets stopp en viss dag, i tidsordning. Tom lista när tåget inte finns eller källan inte svarar. */
+    public List<Stopp> getStopp(String tagnummer, LocalDate datum) {
+        if (tagnummer == null || !tagnummer.trim().matches("\\d{1,6}")) return List.of();
+        String nyckel = tagnummer.trim() + "|" + datum;
+        StoppCache hit = stoppCache.get(nyckel);
+        if (hit != null && System.currentTimeMillis() - hit.tid() < STOPP_TTL_MS) return hit.stopp();
+        String xml = """
+            <REQUEST>
+              <LOGIN authenticationkey="%s"/>
+              <QUERY objecttype="TrainAnnouncement" namespace="rail.trafficinfo" schemaversion="2.0" limit="400" orderby="AdvertisedTimeAtLocation">
+                <FILTER>
+                  <AND>
+                    <EQ name="AdvertisedTrainIdent" value="%s"/>
+                    <EQ name="Advertised" value="true"/>
+                    <GT name="AdvertisedTimeAtLocation" value="%sT00:00:00"/>
+                    <LT name="AdvertisedTimeAtLocation" value="%sT12:00:00"/>
+                  </AND>
+                </FILTER>
+                <INCLUDE>LocationSignature</INCLUDE>
+                <INCLUDE>ActivityType</INCLUDE>
+                <INCLUDE>AdvertisedTimeAtLocation</INCLUDE>
+              </QUERY>
+            </REQUEST>
+            """.formatted(apiKey, tagnummer.trim(), datum, datum.plusDays(1));
+        try {
+            getAllStations(); // stationsindexet behövs för namn och koordinater
+            JsonNode anns = callApi(xml).path("RESPONSE").path("RESULT").get(0).path("TrainAnnouncement");
+            List<Stopp> stopp = byggStopp(anns, stationIndex == null ? Map.of() : stationIndex);
+            if (!stopp.isEmpty()) stoppCache.put(nyckel, new StoppCache(stopp, System.currentTimeMillis()));
+            return stopp;
+        } catch (Exception e) {
+            return List.of();
+        }
+    }
+
+    /**
+     * Slår ihop Trafikverkets rader (en per aktivitet och plats) till ett stopp per station i
+     * tidsordning. Ankomst och avgång på samma plats blir ETT stopp med båda tiderna. En
+     * signatur som inte finns i stationsindexet hoppas över — den har inga koordinater att rita.
+     */
+    static List<Stopp> byggStopp(JsonNode anns, Map<String, TrainStation> index) {
+        java.util.LinkedHashMap<String, String[]> perPlats = new java.util.LinkedHashMap<>();
+        if (anns == null || !anns.isArray()) return List.of();
+        for (JsonNode a : anns) {
+            String sig = a.path("LocationSignature").asText("").toUpperCase();
+            if (sig.isBlank() || !index.containsKey(sig)) continue;
+            String tid = parseTid(a.path("AdvertisedTimeAtLocation").asText("")) == null ? ""
+                    : a.path("AdvertisedTimeAtLocation").asText("").substring(11, 16);
+            String[] t = perPlats.computeIfAbsent(sig, k -> new String[]{"", ""});
+            if ("Ankomst".equalsIgnoreCase(a.path("ActivityType").asText())) t[0] = tid; else t[1] = tid;
+        }
+        List<Stopp> ut = new ArrayList<>();
+        perPlats.forEach((sig, t) -> {
+            TrainStation s = index.get(sig);
+            ut.add(new Stopp(s.getName(), sig, s.getLat(), s.getLon(), t[0], t[1]));
+        });
+        return ut;
+    }
+
+    /**
+     * Klipper ut resenärens del: från första stoppet som heter som påstigningen till det
+     * första därefter som heter som målet. Hittas inte båda returneras hela listan — hellre
+     * tågets hela väg än en tom karta.
+     */
+    static List<Stopp> delstracka(List<Stopp> alla, String fran, String till) {
+        int a = -1, b = -1;
+        for (int i = 0; i < alla.size(); i++) {
+            if (a < 0 && sammaStation(alla.get(i).namn(), fran)) a = i;
+            else if (a >= 0 && sammaStation(alla.get(i).namn(), till)) { b = i; break; }
+        }
+        return a >= 0 && b > a ? alla.subList(a, b + 1) : alla;
+    }
+
+    private static boolean sammaStation(String namn, String sokt) {
+        if (namn == null || sokt == null || sokt.isBlank()) return false;
+        String n = namn.toLowerCase(), s = sokt.toLowerCase().trim();
+        return n.equals(s) || n.startsWith(s + " ") || s.startsWith(n + " ");
+    }
+
     // ── Trafikläget i hela landet (uppstartsskärmens live-rader) ──────────────
     //
     // En enda fråga: alla avgångar i Sverige från 30 min bakåt till 60 min framåt. Ur den

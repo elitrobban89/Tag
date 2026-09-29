@@ -125,7 +125,12 @@
       var linje = L.polyline(pts.map(function (p) { return [p[0] + skift, p[1] + skift]; }), {
         color: FARG[l.bolag] || '#94a3b8', weight: 4, opacity: .88, lineCap: 'round',
         dashArray: l.bolag === 'Nattåg' ? '2 8' : null
-      }).bindTooltip('<b>' + l.bolag + '</b> · ' + l.namn, { sticky: true });
+      }).bindTooltip('<b>' + l.bolag + '</b> · ' + l.namn + '<br><small>Klicka för stationerna</small>', { sticky: true })
+        // Stationerna längs linjen, i ordning — samma fråga som i chattens resekarta: var stannar den?
+        .bindPopup('<div class="lk-linje"><b>' + l.namn + '</b><span>' + l.bolag + ' · ' + l.via.length + ' stationer</span><ol>' +
+          l.via.map(function (n) { return '<li>' + n + '</li>'; }).join('') + '</ol></div>', { maxWidth: 260 });
+      linje.on('mouseover', function () { linje.setStyle({ weight: 7, opacity: 1 }); });
+      linje.on('mouseout', function () { linje.setStyle({ weight: 4, opacity: .88 }); });
       (lager[l.bolag] = lager[l.bolag] || []).push(linje);
       linje.addTo(karta);
     });
@@ -133,18 +138,35 @@
     // Stationer: prick + popup med "Res härifrån" / "Res hit"
     var medLinje = {};
     LINJER.forEach(function (l) { l.via.forEach(function (n) { medLinje[n] = (medLinje[n] || 0) + 1; }); });
+    var namnlappar = [];
     Object.keys(ST).forEach(function (namn) {
       var stor = medLinje[namn] >= 3;
-      L.circleMarker(ST[namn], {
+      var prick = L.circleMarker(ST[namn], {
         radius: stor ? 6 : 4, color: '#fff', weight: 2, fillColor: stor ? '#60a5fa' : '#1e3a8a', fillOpacity: 1
-      }).bindPopup(
+      });
+      // Namnet står vid pricken. Knutpunkterna (tre linjer eller fler) syns redan i Sverigevyn,
+      // övriga när man zoomat in — alla sextio samtidigt hade blivit en textklump över Mälardalen.
+      prick.bindTooltip(namn.replace(/ C$/, ''), { permanent: true, direction: 'right', offset: [6, 0],
+                                                     className: 'lk-namn' + (stor ? ' lk-nav' : '') });
+      namnlappar.push({ prick: prick, stor: stor });
+      prick.bindPopup(
         '<div class="lk-pop"><b>' + namn + '</b>' +
         '<button type="button" data-fran="' + namn + '">Res härifrån</button>' +
         '<button type="button" data-till="' + namn + '">Res hit</button></div>'
       ).addTo(karta);
     });
+    function visaNamn() {
+      var z = karta.getZoom();
+      namnlappar.forEach(function (n) {
+        var el = n.prick.getTooltip() && n.prick.getTooltip().getElement();
+        if (el) el.style.display = (n.stor ? z >= 4.5 : z >= 6.5) ? '' : 'none';
+      });
+    }
+    karta.on('zoomend', visaNamn);
+    setTimeout(visaNamn, 0);
     karta.on('popupopen', function (e) {
       var el = e.popup.getElement();
+      if (!el) return;
       el.querySelectorAll('button').forEach(function (b) {
         b.onclick = function () {
           if (b.dataset.fran) document.getElementById('from').value = b.dataset.fran;
@@ -218,6 +240,13 @@
       '.lk-pop{display:flex;flex-direction:column;gap:6px;min-width:130px;font-family:inherit;}' +
       '.lk-pop button{padding:6px 10px;border-radius:8px;border:none;cursor:pointer;font-weight:700;' +
         'background:linear-gradient(135deg,#2563eb,#60a5fa);color:#fff;}' +
+      '.leaflet-tooltip.lk-namn{background:transparent;border:none;box-shadow:none;padding:0;color:rgba(219,234,254,.85);' +
+        'font-size:10.5px;font-weight:600;text-shadow:0 1px 3px #000,0 0 6px #000;}' +
+      '.leaflet-tooltip.lk-namn::before{display:none;}' +
+      '.leaflet-tooltip.lk-namn.lk-nav{color:#fff;font-size:11.5px;font-weight:800;}' +
+      '.lk-linje{font-family:inherit;min-width:180px;}' +
+      '.lk-linje span{display:block;font-size:11px;color:#64748b;margin:2px 0 6px;}' +
+      '.lk-linje ol{margin:0;padding-left:20px;max-height:220px;overflow-y:auto;font-size:12.5px;line-height:1.55;}' +
       '.lk-fel{padding:30px;text-align:center;color:rgba(255,255,255,.7);}' +
       '.lk-oppna{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;margin-top:10px;' +
         'padding:10px;border-radius:12px;cursor:pointer;font-size:.86rem;font-weight:700;color:#dbeafe;' +
@@ -234,7 +263,7 @@
       '<div class="lk-overlay" id="lk-overlay">' +
         '<div class="lk-modal" role="dialog" aria-label="Våra linjer">' +
           '<div class="lk-head"><div class="lk-titel">🗺️ Våra linjer' +
-            '<small>Huvudlinjerna — sökningen täcker alla tåg i Trafikverkets data. Tryck på en station.</small></div>' +
+            '<small>Huvudlinjerna — sökningen täcker alla tåg i Trafikverkets data. Tryck på en linje för dess stationer, eller på en station.</small></div>' +
             '<button type="button" class="lk-stang" aria-label="Stäng">✕</button></div>' +
           '<div id="lk-karta"></div>' +
           '<div class="lk-forklaring" id="lk-forklaring"></div>' +

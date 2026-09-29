@@ -457,6 +457,11 @@
       .tc-routemap-cap{padding:6px 10px;font-size:11px;font-weight:700;color:#dbeafe;
         border-top:1px solid rgba(147,197,253,0.18);}
       .tc-routemap .leaflet-control-attribution{font-size:8px;}
+      /* Stoppen längs vägen, under kartan: en rad per station med tid, rullbar när de är många */
+      .tc-routemap-stopp{padding:4px 10px 8px;font-size:11px;line-height:1.5;color:rgba(219,234,254,.82);max-height:120px;overflow-y:auto;}
+      .tc-routemap-stopp summary{cursor:pointer;font-weight:700;color:#bfdbfe;padding:2px 0;}
+      .tc-routemap-stopp ol{margin:4px 0 0;padding-left:18px;}
+      .tc-routemap-stopp li b{font-variant-numeric:tabular-nums;color:#fff;font-weight:600;margin-right:6px;}
       .leaflet-tooltip.tc-rm-tip{background:rgba(8,18,44,0.88);color:#fff;border:1px solid rgba(147,197,253,0.4);
         border-radius:6px;font-size:10.5px;font-weight:700;padding:1px 6px;box-shadow:none;}
       .leaflet-tooltip.tc-rm-tip::before{display:none;}
@@ -493,7 +498,7 @@
           border-radius:15px 15px 15px 4px;transform:translateY(10px) scale(.92);transform-origin:100% 0;}
         .tc-wave{border-radius:15px;}
         .tc-fab{width:48px;height:48px;border-radius:15px;}
-        .tc-fab svg{width:40px;height:22px;}
+        .tc-fab svg{width:42px;height:29px;}
         .tc-fab-label{font-size:10px;padding:2px 8px;}
         .tc-spark{font-size:11px;}
         .tc-spark:nth-child(2){top:14px;left:-14px;}
@@ -515,7 +520,7 @@
         .tc-quick{display:none;}
         .tc-fab-label{display:none;}
         .tc-fab{width:44px;height:44px;}
-        .tc-fab svg{width:36px;height:20px;}
+        .tc-fab svg{width:38px;height:27px;}
       }
       /* Expanderat lage. Klassen sitter pa body sa att aven .tc-fab-wrap gar att na,
          och sa att specificiteten (0,2,1) slar bade bas- och mediaregler ovan. */
@@ -533,6 +538,71 @@
         body.tc-chat-open.tc-chat-max .tc-fab-wrap{display:none;}
         body.tc-chat-max .tc-quick:not(.tc-quick-off){display:flex;}
       }
+
+      /* ── Rc-loket i knappen (2026-09-29) ──────────────────────────────────────
+         Hjulen snurrar kring sin egen mittpunkt (transform-box: fill-box), strömavtagaren
+         slår gnistor mot ledningen i ojämn takt, och hela loket vrider sig lite i perspektiv
+         så att lådformen läser som 3D. Bara transform och opacity animeras. */
+      .tc-hjul{transform-box:fill-box;transform-origin:center;animation:tc-hjul-rull .9s linear infinite;}
+      @keyframes tc-hjul-rull{to{transform:rotate(360deg);}}
+      .tc-gnista{transform-box:fill-box;transform-origin:center;opacity:0;animation:tc-gnista-slag 1.7s steps(1,end) infinite;}
+      .tc-gnista.g2{animation-duration:2.3s;animation-delay:.5s;}
+      .tc-gnista.g3{animation:tc-gnista-glod 1.7s ease-out infinite;}
+      @keyframes tc-gnista-slag{0%{opacity:0;}8%{opacity:1;transform:scale(1.2);}14%{opacity:0;}38%{opacity:1;transform:scale(.9);}44%{opacity:0;}100%{opacity:0;}}
+      @keyframes tc-gnista-glod{0%,100%{opacity:.15;transform:scale(.6);}8%{opacity:.95;transform:scale(1.4);}20%{opacity:.2;transform:scale(.8);}38%{opacity:.8;transform:scale(1.2);}}
+      .tc-fab{perspective:160px;}
+      .tc-fab svg{transform-origin:50% 70%;
+        filter:drop-shadow(0 2px 1.5px rgba(8,20,60,.5)) drop-shadow(0 0 5px rgba(125,211,252,.35));
+        animation:tc-lok-3d 6.5s ease-in-out infinite;}
+      @keyframes tc-lok-3d{0%,100%{transform:rotateY(-18deg) rotateX(5deg);}50%{transform:rotateY(14deg) rotateX(-2deg);}}
+      /* Gnistorna runt knappen är el nu, med blåvit glöd i stället för biljetter */
+      .tc-spark{filter:drop-shadow(0 0 4px rgba(125,211,252,.9)) drop-shadow(0 0 8px rgba(250,204,21,.5));}
+      /* Svävar mjukt upp och ner så att man lägger märke till den */
+      .tc-fab-ring{animation:tc-lok-svav 3.4s ease-in-out infinite;will-change:transform;}
+      @keyframes tc-lok-svav{0%,100%{transform:translateY(0);}50%{transform:translateY(-7px);}}
+
+      /* ── Placering: uppe till höger (2026-09-29) ────────────────────────────────
+         Appen ligger i en 850 px hög iframe på elitrobban.se. Med bottom:24px hamnade knappen
+         i iframens underkant — under vikkanten på en laptop, så ingen såg den när de kom in.
+         Nu sitter den under sidhuvudet vid högerkanten, och panelen fäller ut NEDÅT från den. */
+      .tc-fab-wrap{top:104px;bottom:auto;right:18px;}
+      .tc-panel{top:196px;bottom:auto;max-height:min(540px, calc(100vh - 212px));max-height:min(540px, calc(100dvh - 212px));}
+      .tc-chat-hej{bottom:auto;top:30px;border-radius:15px 4px 15px 15px;transform-origin:100% 0;}
+      .tc-search-chip{bottom:auto;top:196px;}
+      @media(max-width:640px){
+        .tc-fab-wrap{top:92px;right:12px;bottom:auto;}
+        .tc-panel{top:170px;bottom:auto;max-height:min(440px, calc(100dvh - 184px));}
+        .tc-chat-hej{bottom:auto;top:64px;right:0;}
+        .tc-search-chip{top:170px;bottom:auto;}
+      }
+      @media(max-width:900px) and (max-height:480px){ .tc-panel{top:140px;bottom:auto;max-height:calc(100dvh - 150px);} }
+      body.tc-chat-max .tc-panel{max-height:calc(100vh - 212px);max-height:calc(100dvh - 212px);}
+      @media(max-width:640px),(max-height:480px){ body.tc-chat-max .tc-panel{top:8px;bottom:8px;max-height:none;} }
+      /* Smalare än appkortet (900 px + luft): då finns ingen plats bredvid kortet, och knappen
+         låg över Från-fältet och GPS-knappen. Den flyttar in i sidhuvudets högra hörn, som får
+         lika mycket extra luft till höger — bokningsknappen och Groq-brickan flyttar in av sig
+         själva eftersom huvudet är en flexrad. Etiketten ryms inte där och döljs. */
+      @media(max-width:979px){
+        #app-header{padding-right:76px !important;}
+        .tc-fab-wrap{top:17px;right:max(12px, calc(50vw - 450px + 12px));}
+        .tc-fab-label{display:none;}
+        .tc-fab{width:48px;height:48px;border-radius:15px;}
+        .tc-fab svg{width:42px;height:29px;}
+        .tc-chat-hej{top:58px;right:0;}
+        .tc-panel{top:80px;max-height:min(540px, calc(100dvh - 96px));}
+        .tc-search-chip{top:80px;}
+      }
+      @media(max-width:540px){
+        #app-header{padding-right:62px !important;}
+        .tc-fab-wrap{top:12px;right:10px;}
+        .tc-fab{width:42px;height:42px;border-radius:13px;}
+        .tc-fab svg{width:38px;height:27px;}
+        .tc-spark{font-size:10px;}
+        .tc-chat-hej{top:52px;}
+        .tc-panel{top:70px;max-height:min(440px, calc(100dvh - 84px));}
+        .tc-search-chip{top:70px;}
+      }
+      @media (prefers-reduced-motion:reduce){ .tc-hjul,.tc-fab svg,.tc-fab-ring{animation:none;} .tc-gnista{animation:none;opacity:.8;} }
     `;
     document.head.appendChild(style);
 
@@ -541,65 +611,73 @@
       <div class="tc-fab-wrap">
         <span class="tc-fab-label">🚂 Fråga AI</span>
         <div class="tc-fab-ring">
-          <span class="tc-spark">🎫</span>
           <span class="tc-spark">⚡</span>
-          <span class="tc-spark">🎫</span>
+          <span class="tc-spark">⚡</span>
+          <span class="tc-spark">⚡</span>
           <button class="tc-fab" id="tc-fab" title="Fråga tågassistenten">
-            <svg viewBox="0 0 88 42" width="48" height="26" xmlns="http://www.w3.org/2000/svg">
+            <!-- RC-LOKET (2026-09-29): Tågabs Rm 1261 i silver och rött, Bo'Bo', hytt i båda
+                 ändar och strömavtagare på taket. 3D-illusionen är ett lådperspektiv: taket och
+                 gaveln är egna ytor snett bakåt, glans uppe och skugga nere. Hjulen snurrar och
+                 strömavtagaren slår gnistor mot kontaktledningen - ett ellok, alltså ingen ånga. -->
+            <svg viewBox="0 0 66 46" width="50" height="35" xmlns="http://www.w3.org/2000/svg">
               <defs>
-                <linearGradient id="g-loco" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#60a5fa"/><stop offset="100%" stop-color="#1d4ed8"/></linearGradient>
-                <linearGradient id="g-w1"   x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#fb923c"/><stop offset="100%" stop-color="#c2410c"/></linearGradient>
-                <linearGradient id="g-w2"   x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#34d399"/><stop offset="100%" stop-color="#047857"/></linearGradient>
+                <linearGradient id="rcSilver" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ffffff"/><stop offset="45%" stop-color="#dfe6ee"/><stop offset="100%" stop-color="#9aa8b8"/></linearGradient>
+                <linearGradient id="rcRod" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f87171"/><stop offset="55%" stop-color="#dc2626"/><stop offset="100%" stop-color="#991b1b"/></linearGradient>
+                <linearGradient id="rcTak" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#e2e8f0"/><stop offset="100%" stop-color="#94a3b8"/></linearGradient>
+                <linearGradient id="rcGavel" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#b91c1c"/><stop offset="100%" stop-color="#7f1d1d"/></linearGradient>
+                <linearGradient id="rcGlas" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#bfdbfe"/><stop offset="55%" stop-color="#1e3a8a"/><stop offset="100%" stop-color="#0b1a44"/></linearGradient>
+                <radialGradient id="rcGolv" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#000" stop-opacity=".5"/><stop offset="100%" stop-color="#000" stop-opacity="0"/></radialGradient>
               </defs>
-              <!-- vagn 2 (teal) -->
-              <rect x="2" y="7" width="26" height="19" rx="3" fill="url(#g-w2)" stroke="rgba(52,211,153,0.6)" stroke-width="0.8"/>
-              <rect x="6"  y="11" width="7" height="5" rx="1.5" fill="rgba(255,255,255,0.3)"/>
-              <rect x="17" y="11" width="7" height="5" rx="1.5" fill="rgba(255,255,255,0.3)"/>
-              <line x1="2" y1="21" x2="28" y2="21" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"/>
-              <!-- koppling -->
-              <rect x="28" y="15" width="4" height="3" rx="1" fill="rgba(200,220,255,0.35)"/>
-              <!-- vagn 1 (orange) -->
-              <rect x="32" y="7" width="24" height="19" rx="2" fill="url(#g-w1)" stroke="rgba(251,146,60,0.6)" stroke-width="0.8"/>
-              <rect x="36" y="11" width="7" height="5" rx="1.5" fill="rgba(255,255,255,0.3)"/>
-              <rect x="46" y="11" width="7" height="5" rx="1.5" fill="rgba(255,255,255,0.3)"/>
-              <line x1="32" y1="21" x2="56" y2="21" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"/>
-              <!-- koppling -->
-              <rect x="56" y="15" width="4" height="3" rx="1" fill="rgba(200,220,255,0.35)"/>
-              <!-- lokomotiv (blå, spetsig nos) -->
-              <path d="M 60 7 L 82 7 L 88 16.5 L 82 26 L 60 26 Z" fill="url(#g-loco)" stroke="rgba(147,197,253,0.55)" stroke-width="0.8"/>
-              <!-- förarhyttsfönster -->
-              <path d="M 82 11 L 87 16.5 L 82 22" fill="rgba(186,230,253,0.4)" stroke="rgba(186,230,253,0.5)" stroke-width="0.6"/>
-              <!-- sidofönster loko -->
-              <rect x="64" y="11" width="7" height="5" rx="1.5" fill="rgba(255,255,255,0.3)"/>
-              <rect x="74" y="11" width="6" height="5" rx="1.5" fill="rgba(255,255,255,0.3)"/>
+              <!-- kontaktledning -->
+              <line x1="2" y1="2.2" x2="64" y2="2.2" stroke="rgba(203,213,225,.75)" stroke-width=".8"/>
+              <!-- skugga och räls -->
+              <ellipse cx="33" cy="42.6" rx="27" ry="2.2" fill="url(#rcGolv)"/>
+              <line x1="1" y1="41.3" x2="65" y2="41.3" stroke="rgba(147,197,253,.75)" stroke-width="1.4" stroke-linecap="round"/>
+              <!-- strömavtagaren: sax från taket upp till ledningen -->
+              <g stroke="#475569" stroke-width="1" stroke-linecap="round" fill="none">
+                <path d="M26 11.4 L32 6 L27 2.8"/><path d="M38 11.4 L32 6 L37 2.8"/>
+              </g>
+              <line x1="25.5" y1="2.8" x2="38.5" y2="2.8" stroke="#334155" stroke-width="1.3" stroke-linecap="round"/>
+              <!-- gnistorna där bygeln möter ledningen -->
+              <g class="tc-gnistor">
+                <path class="tc-gnista" d="M29.4 0.2 L28 2.6 L29.4 2.4 L28.4 4.6 L30.8 1.8 L29.5 2 Z" fill="#e0f2fe"/>
+                <path class="tc-gnista g2" d="M35.2 0 L34 2.2 L35.3 2 L34.6 4 L36.8 1.4 L35.4 1.6 Z" fill="#fef9c3"/>
+                <circle class="tc-gnista g3" cx="32" cy="2.4" r="1.6" fill="#7dd3fc"/>
+              </g>
+              <!-- taket (övre ytan snett bakåt = djupet) -->
+              <path d="M6 12 L9.5 9.2 L60.5 9.2 L57 12 Z" fill="url(#rcTak)" stroke="#64748b" stroke-width=".5"/>
+              <!-- gaveln (högra änden, i skugga) -->
+              <path d="M57 12 L60.5 9.2 L60.5 29.4 L57 32.4 Z" fill="url(#rcGavel)"/>
+              <!-- lådan: silver överdel, röd underdel -->
+              <rect x="6" y="12" width="51" height="13" fill="url(#rcSilver)"/>
+              <rect x="6" y="25" width="51" height="7.4" fill="url(#rcRod)"/>
+              <rect x="6" y="12" width="51" height="20.4" fill="none" stroke="#475569" stroke-width=".6"/>
+              <!-- glansstrimma längs taket -->
+              <rect x="8" y="12.8" width="47" height="1.1" rx=".5" fill="#fff" opacity=".9"/>
+              <!-- förarhytternas fönster i båda ändar -->
+              <rect x="7.6" y="14.4" width="6.8" height="6.4" rx="1" fill="url(#rcGlas)"/>
+              <rect x="48.6" y="14.4" width="6.8" height="6.4" rx="1" fill="url(#rcGlas)"/>
+              <!-- galler på sidan -->
+              <g stroke="#94a3b8" stroke-width=".7">
+                <line x1="19" y1="15" x2="19" y2="22"/><line x1="21.4" y1="15" x2="21.4" y2="22"/><line x1="23.8" y1="15" x2="23.8" y2="22"/>
+                <line x1="39.2" y1="15" x2="39.2" y2="22"/><line x1="41.6" y1="15" x2="41.6" y2="22"/><line x1="44" y1="15" x2="44" y2="22"/>
+              </g>
+              <!-- dörrar -->
+              <rect x="15.4" y="14.4" width="2.4" height="10" rx=".4" fill="none" stroke="#94a3b8" stroke-width=".6"/>
+              <rect x="45.4" y="14.4" width="2.4" height="10" rx=".4" fill="none" stroke="#94a3b8" stroke-width=".6"/>
+              <!-- nummer, som på loket -->
+              <text x="31.5" y="30.4" font-size="4.2" font-weight="700" fill="#fee2e2" text-anchor="middle" font-family="Arial,sans-serif">Rm 1261</text>
               <!-- strålkastare -->
-              <ellipse class="tc-lampa" cx="87.5" cy="16.5" rx="1.8" ry="1.3" fill="#fef08a"/>
-              <ellipse cx="87.5" cy="16.5" rx="0.8" ry="0.6" fill="#fff"/>
-              <line x1="60" y1="21" x2="82" y2="21" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"/>
-              <!-- hjul (färgade per vagn) -->
-              <circle cx="10"  cy="30" r="3.5" fill="#082f1f" stroke="#34d399" stroke-width="1.3"/><circle cx="10"  cy="30" r="1.4" fill="rgba(52,211,153,0.5)"/>
-              <circle cx="22"  cy="30" r="3.5" fill="#082f1f" stroke="#34d399" stroke-width="1.3"/><circle cx="22"  cy="30" r="1.4" fill="rgba(52,211,153,0.5)"/>
-              <circle cx="40"  cy="30" r="3.5" fill="#1c0a00" stroke="#fb923c" stroke-width="1.3"/><circle cx="40"  cy="30" r="1.4" fill="rgba(251,146,60,0.5)"/>
-              <circle cx="52"  cy="30" r="3.5" fill="#1c0a00" stroke="#fb923c" stroke-width="1.3"/><circle cx="52"  cy="30" r="1.4" fill="rgba(251,146,60,0.5)"/>
-              <circle cx="68"  cy="30" r="3.5" fill="#060d1f" stroke="#60a5fa" stroke-width="1.3"/><circle cx="68"  cy="30" r="1.4" fill="rgba(96,165,250,0.5)"/>
-              <circle cx="80"  cy="30" r="3.5" fill="#060d1f" stroke="#60a5fa" stroke-width="1.3"/><circle cx="80"  cy="30" r="1.4" fill="rgba(96,165,250,0.5)"/>
-              <!-- sliprar -->
-              <rect x="0"  y="33.5" width="4" height="5" rx="0.7" fill="rgba(100,140,200,0.22)"/>
-              <rect x="7"  y="33.5" width="4" height="5" rx="0.7" fill="rgba(100,140,200,0.22)"/>
-              <rect x="14" y="33.5" width="4" height="5" rx="0.7" fill="rgba(100,140,200,0.22)"/>
-              <rect x="21" y="33.5" width="4" height="5" rx="0.7" fill="rgba(100,140,200,0.22)"/>
-              <rect x="28" y="33.5" width="4" height="5" rx="0.7" fill="rgba(100,140,200,0.22)"/>
-              <rect x="35" y="33.5" width="4" height="5" rx="0.7" fill="rgba(100,140,200,0.22)"/>
-              <rect x="42" y="33.5" width="4" height="5" rx="0.7" fill="rgba(100,140,200,0.22)"/>
-              <rect x="49" y="33.5" width="4" height="5" rx="0.7" fill="rgba(100,140,200,0.22)"/>
-              <rect x="56" y="33.5" width="4" height="5" rx="0.7" fill="rgba(100,140,200,0.22)"/>
-              <rect x="63" y="33.5" width="4" height="5" rx="0.7" fill="rgba(100,140,200,0.22)"/>
-              <rect x="70" y="33.5" width="4" height="5" rx="0.7" fill="rgba(100,140,200,0.22)"/>
-              <rect x="77" y="33.5" width="4" height="5" rx="0.7" fill="rgba(100,140,200,0.22)"/>
-              <rect x="84" y="33.5" width="4" height="5" rx="0.7" fill="rgba(100,140,200,0.22)"/>
-              <!-- räls -->
-              <line x1="0" y1="33.5" x2="88" y2="33.5" stroke="rgba(147,197,253,0.7)" stroke-width="1.8" stroke-linecap="round"/>
-              <line x1="0" y1="37.5" x2="88" y2="37.5" stroke="rgba(147,197,253,0.7)" stroke-width="1.8" stroke-linecap="round"/>
+              <circle class="tc-lampa" cx="58.8" cy="28.6" r="1.3" fill="#fef08a"/>
+              <circle cx="58.8" cy="23" r=".9" fill="#fef9c3"/>
+              <!-- boggierna -->
+              <rect x="9" y="32.4" width="17" height="3.4" rx="1.2" fill="#1f2937"/>
+              <rect x="37" y="32.4" width="17" height="3.4" rx="1.2" fill="#1f2937"/>
+              <!-- hjulen, Bo'Bo': fyra axlar som snurrar -->
+              <g class="tc-hjul"><circle cx="13" cy="37.6" r="3.3" fill="#0f172a" stroke="#94a3b8" stroke-width="1"/><path d="M13 34.6 V40.6 M10 37.6 H16" stroke="#cbd5e1" stroke-width=".8"/></g>
+              <g class="tc-hjul"><circle cx="22" cy="37.6" r="3.3" fill="#0f172a" stroke="#94a3b8" stroke-width="1"/><path d="M22 34.6 V40.6 M19 37.6 H25" stroke="#cbd5e1" stroke-width=".8"/></g>
+              <g class="tc-hjul"><circle cx="41" cy="37.6" r="3.3" fill="#0f172a" stroke="#94a3b8" stroke-width="1"/><path d="M41 34.6 V40.6 M38 37.6 H44" stroke="#cbd5e1" stroke-width=".8"/></g>
+              <g class="tc-hjul"><circle cx="50" cy="37.6" r="3.3" fill="#0f172a" stroke="#94a3b8" stroke-width="1"/><path d="M50 34.6 V40.6 M47 37.6 H53" stroke="#cbd5e1" stroke-width=".8"/></g>
             </svg>
           </button>
           <span class="tc-halo"></span>
@@ -896,7 +974,10 @@
   // (/api/station-coords), så kartan fungerar för alla stationer, inte bara linjekartans.
   var _tcKartor = [];
 
-  function tcAppendRouteMap(outer, stopp) {
+  // tag = { train, date, onStopp } för ett direkttåg: då hämtas tågets VERKLIGA stopp
+  // (/api/train-stops) och ritas ut längs vägen. Saknas det, eller svarar inte källan, ritas
+  // som förut bara start, byten och mål.
+  function tcAppendRouteMap(outer, stopp, tag) {
     stopp = stopp.filter(Boolean);
     if (!outer || stopp.length < 2 || !window.mptLaddaLeaflet) return;
     var box = document.createElement("div");
@@ -905,31 +986,68 @@
       '<div class="tc-routemap-cap">🗺 ' + stopp.map(tcEsc).join(' → ') + '</div>';
     outer.appendChild(box);
     var el = box.querySelector(".tc-routemap-karta");
+    var cap = box.querySelector(".tc-routemap-cap");
 
-    fetch('/api/station-coords?names=' + encodeURIComponent(stopp.join('|')))
+    function reserv() {
+      fetch('/api/station-coords?names=' + encodeURIComponent(stopp.join('|')))
+        .then(function (r) { return r.json(); })
+        .then(function (pts) {
+          if (!pts || pts.length < 2) { box.remove(); return; }
+          window.mptLaddaLeaflet(function () { tcRitaRuttkarta(el, pts, false); });
+        })
+        .catch(function () { box.remove(); });
+    }
+    if (!tag || !tag.train) return reserv();
+
+    var enc = encodeURIComponent;
+    fetch('/api/train-stops?train=' + enc(tag.train) + '&date=' + enc(tag.date || '') +
+          '&from=' + enc(stopp[0]) + '&to=' + enc(stopp[stopp.length - 1]))
       .then(function (r) { return r.json(); })
-      .then(function (pts) {
-        if (!pts || pts.length < 2) { box.remove(); return; }
-        window.mptLaddaLeaflet(function () { tcRitaRuttkarta(el, pts); });
+      .then(function (st) {
+        if (!st || st.length < 2) return reserv();
+        var pts = st.map(function (x) {
+          return { name: x.namn, lat: x.lat, lon: x.lon, ank: x.ankomst || '', avg: x.avgang || '' };
+        });
+        var mellan = pts.slice(1, -1);
+        cap.innerHTML = '🗺 ' + tcEsc(pts[0].name) + ' → ' + tcEsc(pts[pts.length - 1].name) +
+          (mellan.length ? ' · stannar på ' + mellan.length + (mellan.length === 1 ? ' station' : ' stationer') + ' på vägen'
+                         : ' · inga stopp på vägen');
+        var lista = document.createElement('details');
+        lista.className = 'tc-routemap-stopp';
+        lista.innerHTML = '<summary>Visa alla stopp</summary><ol>' + pts.map(function (p) {
+          return '<li><b>' + tcEsc(p.avg || p.ank) + '</b>' + tcEsc(p.name) + '</li>';
+        }).join('') + '</ol>';
+        box.appendChild(lista);
+        if (tag.onStopp) tag.onStopp(pts);
+        window.mptLaddaLeaflet(function () { tcRitaRuttkarta(el, pts, true); });
       })
-      .catch(function () { box.remove(); });
+      .catch(reserv);
   }
 
-  function tcRitaRuttkarta(el, pts) {
+  function tcRitaRuttkarta(el, pts, verkligaStopp) {
     var karta = L.map(el, { zoomControl: false, scrollWheelZoom: false, attributionControl: true,
                             zoomSnap: 0.25, doubleClickZoom: false });
     if (window.mptKartbilder) window.mptKartbilder(karta);
     // Spåret: följ linjekartans mellanstationer per delsträcka när sådana finns
     var linje = [];
-    for (var i = 0; i < pts.length - 1; i++) {
+    for (var i = 0; i < pts.length - 1 && !verkligaStopp; i++) {
       var del = window.mptRuttPunkter && window.mptRuttPunkter(pts[i].name, pts[i + 1].name);
       var bit = del || [[pts[i].lat, pts[i].lon], [pts[i + 1].lat, pts[i + 1].lon]];
       linje = linje.concat(i === 0 ? bit : bit.slice(1));
     }
+    if (verkligaStopp) linje = pts.map(function (p) { return [p.lat, p.lon]; });
     L.polyline(linje, { color: '#60a5fa', weight: 9, opacity: .25, lineCap: 'round' }).addTo(karta);
     L.polyline(linje, { color: '#93c5fd', weight: 4, opacity: .95, lineCap: 'round' }).addTo(karta);
     pts.forEach(function (p, i) {
       var sist = i === pts.length - 1, forst = i === 0;
+      // Mellanstationerna på ett direkttåg: små prickar, namn och tid när man pekar på dem.
+      // Tjugo permanenta etiketter hade täckt hela kartan.
+      if (verkligaStopp && !forst && !sist) {
+        L.circleMarker([p.lat, p.lon], { radius: 3.5, color: '#fff', weight: 1.2, fillOpacity: 1, fillColor: '#93c5fd' })
+          .bindTooltip(p.name + (p.ank || p.avg ? ' · ' + (p.ank || p.avg) : ''), { direction: 'top', className: 'tc-rm-tip' })
+          .addTo(karta);
+        return;
+      }
       L.circleMarker([p.lat, p.lon], {
         radius: forst || sist ? 7 : 6, color: '#fff', weight: 2, fillOpacity: 1,
         fillColor: forst ? '#34d399' : sist ? '#f87171' : '#fbbf24'
@@ -1321,7 +1439,17 @@
       seatsMsg +
       '\n\nVad vill du veta mer om denna resa?';
     var introBubbla = tcAppendBot(introText, false);
-    tcAppendRouteMap(introBubbla, [fromName].concat(bytesstopp, [toName]));
+    var fokus = _focusedDep;
+    tcAppendRouteMap(introBubbla, [fromName].concat(bytesstopp, [toName]), bytesstopp.length ? null : {
+      train: trainId, date: date,
+      // Stoppen till AI:n, så att den kan svara på 'stannar tåget i Skövde?'. Vakten: har
+      // användaren hunnit välja en annan avgång ska det gamla tågets stopp inte hamna där.
+      onStopp: function (pts) {
+        if (_focusedDep !== fokus) return;
+        _focusedDepContext += '\nTåget stannar på (i ordning, med tid): ' +
+          pts.map(function (p) { return p.name + ' ' + (p.avg || p.ank); }).join(', ') + '\n';
+      }
+    });
 
     var inp = document.getElementById('tc-input');
     if (inp) {

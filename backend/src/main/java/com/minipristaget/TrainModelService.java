@@ -173,8 +173,9 @@ public class TrainModelService {
     // Mälartåg (474 avgångar/dygn), SL Pendeltåg, Pågatåg och Västtåg. Fordonsbeteckning
     // (X60, X61 …) anges BARA där bolaget kör en enda typ; annars bara produktnamnet, eftersom
     // Trafikverket aldrig säger vilket fordon som går.
+    // Bild: SJ Rc6 1407 med regionaltågsvagnar i Göteborg, Wikimedia Commons, foto G och J, CC BY 4.0.
     static final TrainModelInfo INTERCITY = new TrainModelInfo("SJ InterCity", "#CC0000", 140,
-        "Lok + vagnar, 160 km/h", "/images/train-sj-regional.png", false, "none");
+        "Rc6-lok + vagnar, 160 km/h", "/images/train-sj-rc6-regional.jpg", false, "none");
     static final TrainModelInfo NATTAG = new TrainModelInfo("SJ Nattåg", "#7c3aed", 105,
         "Sovvagn och liggvagn", "/images/train-sj-fast.png", false, "none");
     static final TrainModelInfo MALARTAG = new TrainModelInfo("Mälartåg", "#0d9488", 125,
@@ -287,9 +288,13 @@ public class TrainModelService {
         return base;
     }
 
+    // Bild (2026-09-29): SJ X40 på Örebro C, en station på SJ Regional Stockholm–Göteborg.
+    // Wikimedia Commons, foto AleWi, CC BY-SA 4.0. Trafikverket anger aldrig fordonet, och SJ
+    // kör linjen både med X40-dubbeldäckare och Rc6-lok med 1980-talsvagnar — därför står
+    // båda i beskrivningen och ingen av dem i namnet.
     private static final TrainModelInfo REGIONAL_SJ =
-        new TrainModelInfo("SJ Regional", "#CC0000", 120, "Regionaltåg",
-                           "/images/train-sj-regional.png", false, "none");
+        new TrainModelInfo("SJ Regional", "#CC0000", 120, "X40-dubbeldäckare eller Rc6-loktåg · 160 km/h",
+                           "/images/train-sj-x40.jpg", false, "none");
 
     private static int roundToX9(double v) {
         int p = Math.max(19, Math.min(2499, (int) v));
