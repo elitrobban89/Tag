@@ -1,7 +1,7 @@
 package com.minipristaget;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -161,7 +161,7 @@ public class GroqChatService {
             throw new RuntimeException("AI-tjänsten svarade med fel " + response.statusCode() + ". Försök igen om en stund.");
 
         JsonNode json = mapper.readTree(response.body());
-        return json.at("/choices/0/message/content").asText("Inget svar.");
+        return json.at("/choices/0/message/content").asString("Inget svar.");
     }
 
     public InputStream chatStream(List<Map<String, String>> messages, String departureContext) throws Exception {

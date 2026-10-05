@@ -1,7 +1,7 @@
 package com.minipristaget;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -71,9 +71,9 @@ public class TrafikverketService {
         List<TrainStation> list = new ArrayList<>();
         if (stations.isArray()) {
             for (JsonNode s : stations) {
-                String sig  = s.path("LocationSignature").asText();
-                String name = s.path("AdvertisedLocationName").asText();
-                String wgs  = s.path("Geometry").path("WGS84").asText();
+                String sig  = s.path("LocationSignature").asString();
+                String name = s.path("AdvertisedLocationName").asString();
+                String wgs  = s.path("Geometry").path("WGS84").asString();
                 Matcher m   = WGS84_PATTERN.matcher(wgs);
                 if (m.find()) {
                     double lon = Double.parseDouble(m.group(1));
@@ -256,8 +256,8 @@ public class TrafikverketService {
                 if (!harMal) { departures.add(parseAnnouncement(ann)); continue; }
                 if (!ankomster.isEmpty()) {
                     // Ankomsten är känd: tåget ska stanna vid målet EFTER avgången här.
-                    String depIso = ann.path("AdvertisedTimeAtLocation").asText();
-                    Ankomst a = firstArrivalAfter(depIso, ankomster.get(ann.path("AdvertisedTrainIdent").asText()));
+                    String depIso = ann.path("AdvertisedTimeAtLocation").asString();
+                    Ankomst a = firstArrivalAfter(depIso, ankomster.get(ann.path("AdvertisedTrainIdent").asString()));
                     if (a == null) {
                         // Slutstation utan ankomstpost: stationer utanför det svenska nätet
                         // (Oslo) annonseras som mål men aldrig med en ankomst. Vy:s direkttåg
@@ -565,8 +565,8 @@ public class TrafikverketService {
         if (anns == null || !anns.isArray() || ankomster.isEmpty()) return legs;
         for (JsonNode ann : anns) {
             if (ann.path("Canceled").asBoolean(false)) continue;
-            String id  = ann.path("AdvertisedTrainIdent").asText("");
-            String dep = ann.path("AdvertisedTimeAtLocation").asText("");
+            String id  = ann.path("AdvertisedTrainIdent").asString("");
+            String dep = ann.path("AdvertisedTimeAtLocation").asString("");
             Ankomst a = firstArrivalAfter(dep, ankomster.get(id));
             if (a != null) legs.add(new Leg(id, dep, a.planerad(), ann, a));
         }
@@ -707,7 +707,7 @@ public class TrafikverketService {
                 JsonNode lista = a.path(f);
                 if (!lista.isArray()) continue;
                 for (JsonNode l : lista) {
-                    String sig = l.path("LocationName").asText("");
+                    String sig = l.path("LocationName").asString("");
                     if (!sig.isBlank()) ut.add(sig.toUpperCase());
                 }
             }
@@ -766,9 +766,9 @@ public class TrafikverketService {
         Map<String, List<Ankomst>> map = new HashMap<>();
         if (announcements != null && announcements.isArray()) {
             for (JsonNode a : announcements) {
-                String id  = a.path("AdvertisedTrainIdent").asText("");
-                String t   = a.path("AdvertisedTimeAtLocation").asText("");
-                String est = a.path("EstimatedTimeAtLocation").asText("");
+                String id  = a.path("AdvertisedTrainIdent").asString("");
+                String t   = a.path("AdvertisedTimeAtLocation").asString("");
+                String est = a.path("EstimatedTimeAtLocation").asString("");
                 if (!id.isBlank() && !t.isBlank())
                     map.computeIfAbsent(id, k -> new ArrayList<>()).add(new Ankomst(t, est));
             }
@@ -798,12 +798,12 @@ public class TrafikverketService {
      * Pågatåg — de når aldrig Kastrup och får inte räknas som att de gör det.
      */
     static JsonNode tillDanmark(JsonNode anns) {
-        com.fasterxml.jackson.databind.node.ArrayNode ut = new ObjectMapper().createArrayNode();
+        tools.jackson.databind.node.ArrayNode ut = new ObjectMapper().createArrayNode();
         if (anns == null || !anns.isArray()) return ut;
         for (JsonNode a : anns) {
             JsonNode to = a.path("ToLocation");
             if (to.isArray() && to.size() > 0
-                    && to.get(to.size() - 1).path("LocationName").asText("").toUpperCase().startsWith("DK.")) ut.add(a);
+                    && to.get(to.size() - 1).path("LocationName").asString("").toUpperCase().startsWith("DK.")) ut.add(a);
         }
         return ut;
     }
@@ -831,7 +831,7 @@ public class TrafikverketService {
     static boolean slutarVid(JsonNode ann, String signatur) {
         JsonNode locs = ann.path("ToLocation");
         return locs.isArray() && locs.size() > 0
-            && locs.get(locs.size() - 1).path("LocationName").asText("").equalsIgnoreCase(signatur);
+            && locs.get(locs.size() - 1).path("LocationName").asString("").equalsIgnoreCase(signatur);
     }
 
     // ── Privata hjälpmetoder ──────────────────────────────────────
@@ -841,7 +841,7 @@ public class TrafikverketService {
         String lower = toName.toLowerCase();
 
         for (JsonNode loc : locs) {
-            String sig = loc.path("LocationName").asText();
+            String sig = loc.path("LocationName").asString();
 
             if (sig.toLowerCase().startsWith(lower.substring(0, Math.min(3, lower.length())))) return true;
 
@@ -855,21 +855,21 @@ public class TrafikverketService {
 
     private TrainDeparture parseAnnouncement(JsonNode ann) {
         TrainDeparture dep = new TrainDeparture();
-        dep.setTrainId(ann.path("AdvertisedTrainIdent").asText());
+        dep.setTrainId(ann.path("AdvertisedTrainIdent").asString());
 
-        String adv = ann.path("AdvertisedTimeAtLocation").asText();
-        String est = ann.path("EstimatedTimeAtLocation").asText();
+        String adv = ann.path("AdvertisedTimeAtLocation").asString();
+        String est = ann.path("EstimatedTimeAtLocation").asString();
         dep.setDepartureTime(formatTime(adv));
         if (!est.isBlank() && !est.equals(adv)) dep.setEstimatedTime(formatTime(est));
 
-        dep.setOperator(ann.path("TrainOwner").asText());
+        dep.setOperator(ann.path("TrainOwner").asString());
         dep.setCanceled(ann.path("Canceled").asBoolean(false));
         dep.setProductInformation(readProductInformation(ann));
         dep.setTypeOfTraffic(readTypeOfTraffic(ann));
 
         JsonNode locs = ann.path("ToLocation");
         if (locs.isArray() && locs.size() > 0) {
-            String lastSig = locs.get(locs.size() - 1).path("LocationName").asText();
+            String lastSig = locs.get(locs.size() - 1).path("LocationName").asString();
             dep.setDestinationSignature(lastSig);
             String friendlyName = lastSig;
             if (stationIndex != null) {
@@ -885,10 +885,10 @@ public class TrafikverketService {
     /** "Tåg", "Pendeltåg" eller "Buss" — samma form som ProductInformation. */
     private String readTypeOfTraffic(JsonNode ann) {
         JsonNode t = ann.path("TypeOfTraffic");
-        if (t.isTextual()) return t.asText();
+        if (t.isString()) return t.asString();
         if (t.isArray() && t.size() > 0) {
             JsonNode f = t.get(0);
-            return f.isTextual() ? f.asText() : f.path("Description").asText("");
+            return f.isString() ? f.asString() : f.path("Description").asString("");
         }
         return "";
     }
@@ -896,12 +896,12 @@ public class TrafikverketService {
     private String readProductInformation(JsonNode ann) {
         JsonNode pi = ann.path("ProductInformation");
         if (pi.isMissingNode() || pi.isNull()) return "";
-        if (pi.isTextual()) return pi.asText();
+        if (pi.isString()) return pi.asString();
         if (pi.isArray() && pi.size() > 0) {
             JsonNode first = pi.get(0);
-            if (first.isTextual()) return first.asText();
-            String desc = first.path("Description").asText("");
-            return desc.isBlank() ? first.path("Code").asText("") : desc;
+            if (first.isString()) return first.asString();
+            String desc = first.path("Description").asString("");
+            return desc.isBlank() ? first.path("Code").asString("") : desc;
         }
         return "";
     }
@@ -1011,10 +1011,10 @@ public class TrafikverketService {
 
     /** Delar upp raderna per tåg, bygger stoppen och räknar dem mellan resenärens stationer. */
     static Map<String, Integer> raknaStopp(JsonNode anns, Map<String, TrainStation> index, String fran, String till) {
-        Map<String, com.fasterxml.jackson.databind.node.ArrayNode> perTag = new java.util.LinkedHashMap<>();
+        Map<String, tools.jackson.databind.node.ArrayNode> perTag = new java.util.LinkedHashMap<>();
         if (anns == null || !anns.isArray()) return Map.of();
         for (JsonNode a : anns)
-            perTag.computeIfAbsent(a.path("AdvertisedTrainIdent").asText(""),
+            perTag.computeIfAbsent(a.path("AdvertisedTrainIdent").asString(""),
                     k -> new ObjectMapper().createArrayNode()).add(a);
         Map<String, Integer> ut = new java.util.LinkedHashMap<>();
         perTag.forEach((tag, rader) -> {
@@ -1037,12 +1037,12 @@ public class TrafikverketService {
         java.util.LinkedHashMap<String, String[]> perPlats = new java.util.LinkedHashMap<>();
         if (anns == null || !anns.isArray()) return List.of();
         for (JsonNode a : anns) {
-            String sig = a.path("LocationSignature").asText("").toUpperCase();
+            String sig = a.path("LocationSignature").asString("").toUpperCase();
             if (sig.isBlank() || !index.containsKey(sig)) continue;
-            String tid = parseTid(a.path("AdvertisedTimeAtLocation").asText("")) == null ? ""
-                    : a.path("AdvertisedTimeAtLocation").asText("").substring(11, 16);
+            String tid = parseTid(a.path("AdvertisedTimeAtLocation").asString("")) == null ? ""
+                    : a.path("AdvertisedTimeAtLocation").asString("").substring(11, 16);
             String[] t = perPlats.computeIfAbsent(sig, k -> new String[]{"", ""});
-            if ("Ankomst".equalsIgnoreCase(a.path("ActivityType").asText())) t[0] = tid; else t[1] = tid;
+            if ("Ankomst".equalsIgnoreCase(a.path("ActivityType").asString())) t[0] = tid; else t[1] = tid;
         }
         List<Stopp> ut = new ArrayList<>();
         perPlats.forEach((sig, t) -> {
@@ -1134,18 +1134,18 @@ public class TrafikverketService {
         java.util.Set<String> bolag = new java.util.HashSet<>();
         int kommande = 0, avgangna = 0, iTid = 0, installda = 0;
         for (JsonNode a : anns) {
-            ZonedDateTime plan = parseTid(a.path("AdvertisedTimeAtLocation").asText(""));
+            ZonedDateTime plan = parseTid(a.path("AdvertisedTimeAtLocation").asString(""));
             if (plan == null) continue;
             if (a.path("Canceled").asBoolean(false)) { installda++; continue; }
-            String id = a.path("AdvertisedTrainIdent").asText("");
-            String agare = a.path("TrainOwner").asText("");
+            String id = a.path("AdvertisedTrainIdent").asString("");
+            String agare = a.path("TrainOwner").asString("");
             // "I trafik" = har en avgång inom en halvtimme åt något håll från nu.
             if (!id.isBlank() && Math.abs(java.time.Duration.between(nu, plan).toMinutes()) <= 30) {
                 tag.add(id);
                 if (!agare.isBlank()) bolag.add(agare);
             }
             if (!plan.isBefore(nu)) kommande++;
-            ZonedDateTime faktisk = parseTid(a.path("TimeAtLocation").asText(""));
+            ZonedDateTime faktisk = parseTid(a.path("TimeAtLocation").asString(""));
             if (faktisk != null) {
                 avgangna++;
                 if (java.time.Duration.between(plan, faktisk).toSeconds() <= 5 * 60 + 59) iTid++;

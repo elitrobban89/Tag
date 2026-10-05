@@ -125,7 +125,7 @@ Krediten visas i appen: som hovertext på avgångskortets miniatyr och som rad u
 
 | Lager | Teknik |
 |---|---|
-| Backend | Java 27, Spring Boot 3.5.16, Thymeleaf |
+| Backend | Java 27, Spring Boot 4.1.1, Thymeleaf |
 | Avgångsdata | Trafikverket Open Data API — `TrainAnnouncement` i namespace `rail.trafficinfo`, schemaversion 2.0 |
 | AI-chatbot | Groq API (`openai/gpt-oss-120b`, `reasoning_effort: low`), avgångskontextuell, max 8 meddelanden historik |
 | AI-förslag | Groq API (`openai/gpt-oss-120b`, `reasoning_effort: low`), cache 2 h per (from+kategori) |

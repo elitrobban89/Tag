@@ -1,7 +1,7 @@
 package com.minipristaget;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -143,7 +143,7 @@ public class SuggestController {
             JsonNode json        = mapper.readTree(response.body());
             String   destination = json.path("choices").get(0)
                                        .path("message").path("content")
-                                       .asText().trim().replaceAll("[\".]", "");
+                                       .asString().trim().replaceAll("[\".]", "");
 
             suggestCache.put(suggestKey, new SuggestEntry(destination, System.currentTimeMillis()));
             return ResponseEntity.ok(Map.of("destination", destination));

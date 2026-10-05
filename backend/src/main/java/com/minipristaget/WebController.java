@@ -10,8 +10,8 @@ import org.springframework.web.bind.annotation.*;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 import java.io.BufferedReader;
 import java.io.InputStream;
@@ -315,7 +315,7 @@ public class WebController {
                     if ("[DONE]".equals(data)) break;
                     try {
                         JsonNode node = mapper.readTree(data);
-                        String token = node.at("/choices/0/delta/content").asText("");
+                        String token = node.at("/choices/0/delta/content").asString("");
                         if (!token.isEmpty()) {
                             outputStream.write(("data: " + mapper.writeValueAsString(token) + "\n\n")
                                     .getBytes(StandardCharsets.UTF_8));
