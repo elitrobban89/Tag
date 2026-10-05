@@ -57,6 +57,7 @@ public class WebController {
         // Till uppstartsskärmen: versionerna finns direkt i sidan, så de raderna behöver
         // inte vänta på /api/splash (som frågar Trafikverket och kan dröja).
         model.addAttribute("javaVersion", System.getProperty("java.version"));
+        model.addAttribute("javaVendor", System.getProperty("java.vendor"));
         model.addAttribute("springBoot", org.springframework.boot.SpringBootVersion.getVersion());
         model.addAttribute("groqModel", groqChatService.modelName());
         return "index";

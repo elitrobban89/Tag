@@ -24,6 +24,13 @@
   var ds = intro.dataset || {};
   var live = null; // svaret från /api/splash
 
+  // JDK-namnet ur den körande JVM:en, inte hårdkodat — Dockerbilden har bytts förut.
+  function jdkNamn(v) {
+    if (/adoptium|temurin/i.test(v || '')) return 'Eclipse Temurin';
+    if (/bellsoft|liberica/i.test(v || '')) return 'Liberica OpenJDK';
+    return v || 'OpenJDK';
+  }
+
   function fmt(n) { return Math.round(n).toLocaleString('sv-SE'); }
 
   // Varje rad: ikon, rubrik, pill, animation och en text-funktion. e (0–1) driver
@@ -61,7 +68,7 @@
         return '<b>' + fmt(live.vagnsskisser * e) + '</b> vagnsskisser \xb7 v\xe4lj din plats';
       } },
     { ic: '🐳', t: 'Drift', an: 'val', tx: function () {
-        return 'Docker \xb7 Liberica OpenJDK' + (ds.java ? ' ' + ds.java.split('.')[0] : '') + ' \xb7 Render';
+        return 'Docker \xb7 ' + jdkNamn(ds.vendor) +(ds.java ? ' ' + ds.java.split('.')[0] : '') + ' \xb7 Render';
       } }
   ];
   var LIVE_ROWS = [2, 3, 4, 5, 6];
