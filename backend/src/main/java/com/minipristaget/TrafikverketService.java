@@ -71,9 +71,9 @@ public class TrafikverketService {
         List<TrainStation> list = new ArrayList<>();
         if (stations.isArray()) {
             for (JsonNode s : stations) {
-                String sig  = s.path("LocationSignature").asString();
-                String name = s.path("AdvertisedLocationName").asString();
-                String wgs  = s.path("Geometry").path("WGS84").asString();
+                String sig  = s.path("LocationSignature").asString("");
+                String name = s.path("AdvertisedLocationName").asString("");
+                String wgs  = s.path("Geometry").path("WGS84").asString("");
                 Matcher m   = WGS84_PATTERN.matcher(wgs);
                 if (m.find()) {
                     double lon = Double.parseDouble(m.group(1));
@@ -256,8 +256,8 @@ public class TrafikverketService {
                 if (!harMal) { departures.add(parseAnnouncement(ann)); continue; }
                 if (!ankomster.isEmpty()) {
                     // Ankomsten är känd: tåget ska stanna vid målet EFTER avgången här.
-                    String depIso = ann.path("AdvertisedTimeAtLocation").asString();
-                    Ankomst a = firstArrivalAfter(depIso, ankomster.get(ann.path("AdvertisedTrainIdent").asString()));
+                    String depIso = ann.path("AdvertisedTimeAtLocation").asString("");
+                    Ankomst a = firstArrivalAfter(depIso, ankomster.get(ann.path("AdvertisedTrainIdent").asString("")));
                     if (a == null) {
                         // Slutstation utan ankomstpost: stationer utanför det svenska nätet
                         // (Oslo) annonseras som mål men aldrig med en ankomst. Vy:s direkttåg
@@ -841,7 +841,7 @@ public class TrafikverketService {
         String lower = toName.toLowerCase();
 
         for (JsonNode loc : locs) {
-            String sig = loc.path("LocationName").asString();
+            String sig = loc.path("LocationName").asString("");
 
             if (sig.toLowerCase().startsWith(lower.substring(0, Math.min(3, lower.length())))) return true;
 
@@ -855,21 +855,21 @@ public class TrafikverketService {
 
     private TrainDeparture parseAnnouncement(JsonNode ann) {
         TrainDeparture dep = new TrainDeparture();
-        dep.setTrainId(ann.path("AdvertisedTrainIdent").asString());
+        dep.setTrainId(ann.path("AdvertisedTrainIdent").asString(""));
 
-        String adv = ann.path("AdvertisedTimeAtLocation").asString();
-        String est = ann.path("EstimatedTimeAtLocation").asString();
+        String adv = ann.path("AdvertisedTimeAtLocation").asString("");
+        String est = ann.path("EstimatedTimeAtLocation").asString("");
         dep.setDepartureTime(formatTime(adv));
         if (!est.isBlank() && !est.equals(adv)) dep.setEstimatedTime(formatTime(est));
 
-        dep.setOperator(ann.path("TrainOwner").asString());
+        dep.setOperator(ann.path("TrainOwner").asString(""));
         dep.setCanceled(ann.path("Canceled").asBoolean(false));
         dep.setProductInformation(readProductInformation(ann));
         dep.setTypeOfTraffic(readTypeOfTraffic(ann));
 
         JsonNode locs = ann.path("ToLocation");
         if (locs.isArray() && locs.size() > 0) {
-            String lastSig = locs.get(locs.size() - 1).path("LocationName").asString();
+            String lastSig = locs.get(locs.size() - 1).path("LocationName").asString("");
             dep.setDestinationSignature(lastSig);
             String friendlyName = lastSig;
             if (stationIndex != null) {
@@ -885,10 +885,10 @@ public class TrafikverketService {
     /** "Tåg", "Pendeltåg" eller "Buss" — samma form som ProductInformation. */
     private String readTypeOfTraffic(JsonNode ann) {
         JsonNode t = ann.path("TypeOfTraffic");
-        if (t.isString()) return t.asString();
+        if (t.isString()) return t.asString("");
         if (t.isArray() && t.size() > 0) {
             JsonNode f = t.get(0);
-            return f.isString() ? f.asString() : f.path("Description").asString("");
+            return f.isString() ? f.asString("") : f.path("Description").asString("");
         }
         return "";
     }
@@ -896,10 +896,10 @@ public class TrafikverketService {
     private String readProductInformation(JsonNode ann) {
         JsonNode pi = ann.path("ProductInformation");
         if (pi.isMissingNode() || pi.isNull()) return "";
-        if (pi.isString()) return pi.asString();
+        if (pi.isString()) return pi.asString("");
         if (pi.isArray() && pi.size() > 0) {
             JsonNode first = pi.get(0);
-            if (first.isString()) return first.asString();
+            if (first.isString()) return first.asString("");
             String desc = first.path("Description").asString("");
             return desc.isBlank() ? first.path("Code").asString("") : desc;
         }
@@ -1042,7 +1042,7 @@ public class TrafikverketService {
             String tid = parseTid(a.path("AdvertisedTimeAtLocation").asString("")) == null ? ""
                     : a.path("AdvertisedTimeAtLocation").asString("").substring(11, 16);
             String[] t = perPlats.computeIfAbsent(sig, k -> new String[]{"", ""});
-            if ("Ankomst".equalsIgnoreCase(a.path("ActivityType").asString())) t[0] = tid; else t[1] = tid;
+            if ("Ankomst".equalsIgnoreCase(a.path("ActivityType").asString(""))) t[0] = tid; else t[1] = tid;
         }
         List<Stopp> ut = new ArrayList<>();
         perPlats.forEach((sig, t) -> {

@@ -143,7 +143,7 @@ public class SuggestController {
             JsonNode json        = mapper.readTree(response.body());
             String   destination = json.path("choices").get(0)
                                        .path("message").path("content")
-                                       .asString().trim().replaceAll("[\".]", "");
+                                       .asString("").trim().replaceAll("[\".]", "");
 
             suggestCache.put(suggestKey, new SuggestEntry(destination, System.currentTimeMillis()));
             return ResponseEntity.ok(Map.of("destination", destination));
