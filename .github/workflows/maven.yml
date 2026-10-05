@@ -19,7 +19,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           java-version: '27'
-          distribution: 'liberica'
+          distribution: 'temurin'
           cache: maven
 
       - name: Build and run tests

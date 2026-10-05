@@ -134,7 +134,7 @@ Krediten visas i appen: som hovertext på avgångskortets miniatyr och som rad u
 
 > **Java 27 sedan 2026-09-22** (GA 15 september). Provat på riktigt innan det byttes: ren ombyggnad på JDK 27+35, klassfilsversion **71** och gröna tester — varken Mockito eller Byte Buddy behövde röras.
 >
-> Bygget kör på **BellSoft Liberica 27**, inte Temurin. Liberica är samma OpenJDK 27, byggd av en annan leverantör; skälet till bytet är att Temurin ännu inte publicerat en enda 27-avbildning (`eclipse-temurin:27-jdk`, `:27-jre` och `maven:3.9-eclipse-temurin-27` svarar alla 404 på Docker Hub, och Adoptium listar `jdk-27+35` utan binärer). Att stanna på Temurin hade alltså betytt att stanna på Java 25. Byggsteget är `liberica-openjdk-debian:27` med **Maven-wrappern i repot** (3.9.16) — det finns ingen `maven`-avbildning med JDK 27 än, och wrappern hämtar Maven själv med wget, curl **eller bara java**, så den ställer inga krav på basavbildningen. Byt tillbaka till Temurin när deras 27 dyker upp: det är ett namnbyte på två rader.
+> Bygget kör på **Eclipse Temurin 27**: `eclipse-temurin:27-jdk` bygger, `eclipse-temurin:27-jre` kör och CI använder `distribution: 'temurin'`. Mellan 2026-09-22 och 2026-10-05 gick bygget på BellSoft Liberica, eftersom Temurin ännu inte hade publicerat några 27-avbildningar. Maven kommer fortfarande från **Maven-wrappern i repot** (3.9.16): `maven:3.9-eclipse-temurin-27` finns inte än, och wrappern hämtar Maven själv med wget, curl **eller bara java**.
 ## Tester & CI
 
 55 tester i tre lager — ren logik, HTTP-felvägar och controller-lagret (MockMvc, tjänsterna mockas):
