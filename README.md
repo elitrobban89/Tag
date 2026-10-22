@@ -137,15 +137,16 @@ Krediten visas i appen: som hovertext på avgångskortets miniatyr och som rad u
 > Bygget kör på **Eclipse Temurin 27**: `eclipse-temurin:27-jdk` bygger, `eclipse-temurin:27-jre` kör och CI använder `distribution: 'temurin'`. Mellan 2026-09-22 och 2026-10-05 gick bygget på BellSoft Liberica, eftersom Temurin ännu inte hade publicerat några 27-avbildningar. Maven kommer fortfarande från **Maven-wrappern i repot** (3.9.16): `maven:3.9-eclipse-temurin-27` finns inte än, och wrappern hämtar Maven själv med wget, curl **eller bara java**.
 ## Tester & CI
 
-55 tester i tre lager — ren logik, HTTP-felvägar och controller-lagret (MockMvc, tjänsterna mockas):
+106 tester i tre lager — ren logik, HTTP-felvägar och controller-lagret (MockMvc, tjänsterna mockas):
 
 | Testklass | Täcker |
 |-----------|--------|
-| `TrainModelServiceTest` (18) | Prislogiken (MiniPris slutar på 9, klassordning, determinism), operatörsmappning, SJ 3000-valet på tågnummer, bekräftad avgång, produktnamn och destination, tågnummerserier när operatör saknas, platser kvar, restid |
+| `TrainModelServiceTest` (43) | Prislogiken (MiniPris slutar på 9, klassordning, determinism), operatörsmappning, SJ 3000-valet på tågnummer, bekräftad avgång, produktnamn och destination, tågnummerserier när operatör saknas, platser kvar, restid |
 | `TrainLayoutServiceTest` (11) | Vagnsskisserna: alla layouter har vagnar/toalett/bistro, SJ 3000:s fyra vagnar, avstånd till bistro och närmaste toalett över vagnsgräns, platsfakta och promptbeskrivningen, fönster-/gångplatser och bordsgrupper |
+| `TrafikverketServiceTest` (24) | Avgångarnas restid och byten (2026-09-27): restiden räknas ur tågets **riktiga ankomst** vid målet, inte ur en snabbtågsgissning — ankomst efter midnatt ger rätt restid, ankomst FÖRE avgången (samma tågnummer åt fel håll, eller gårdagens tur) räknas inte, och saknad ankomst betyder att tåget inte stannar där. Byten: tåget som är framme först väljs, direkttåg och samma tågnummer blir inget byte, resor som slås av en senare avgång med samma ankomst sorteras bort, och bytesstationen måste ligga på vägen. Stationsuppslaget: stadsnamn ger centralstationen, alias (Kastrup/København), "Trollhättan C" provas utan suffix. Chattens resekarta klipper ut resenärens delsträcka |
 | `GroqChatServiceTest` (5) | Meddelandelistan: systemprompt, avgångskontext, historiktrimning till 8, konfigurationskoll |
 | `GroqChatServiceHttpTest` (5) | HTTP-felvägar mot lokal stubbserver: 429/401/5xx ger begripliga fel, svar utan content ger standardtext |
-| `WebControllerTest` (12) | Autocomplete-sortering (prefix först), valideringsfel 400, auto-imorgon-logiken, chattens rate limit → 429, `/api/train-layout` (JSON + 404) och att skiss + platsfakta hamnar i chattkontexten |
+| `WebControllerTest` (14) | Autocomplete-sortering (prefix först), valideringsfel 400, auto-imorgon-logiken, chattens rate limit → 429, `/api/train-layout` (JSON + 404) och att skiss + platsfakta hamnar i chattkontexten |
 | `SuggestControllerTest` (4) | Kategorivalidering 400, health, rate limit → 429 |
 
 ```bash
