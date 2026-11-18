@@ -258,9 +258,7 @@ public class WebController {
     @PostMapping("/api/chat")
     @ResponseBody
     public ResponseEntity<?> chat(@RequestBody Map<String, Object> req, HttpServletRequest httpReq) {
-        String ip = Optional.ofNullable(httpReq.getHeader("X-Forwarded-For"))
-                .filter(h -> !h.isBlank()).map(h -> h.split(",")[0].trim())
-                .orElse(httpReq.getRemoteAddr());
+        String ip = ClientIp.of(httpReq);
 
         long now = System.currentTimeMillis();
         Deque<Long> times = chatTimestamps.computeIfAbsent(ip, k -> new ArrayDeque<>());
@@ -276,10 +274,9 @@ public class WebController {
             return ResponseEntity.ok(Map.of("reply", "AI-assistenten är inte konfigurerad ännu."));
 
         try {
-            @SuppressWarnings("unchecked")
-            List<Map<String, String>> messages = (List<Map<String, String>>) req.get("messages");
+            List<Map<String, String>> messages = cleanMessages(req.get("messages"));
             String context = withLayoutContext(req);
-            if (messages == null || messages.isEmpty())
+            if (messages.isEmpty())
                 return ResponseEntity.ok(Map.of("reply", "Inga meddelanden."));
             return ResponseEntity.ok(Map.of("reply", groqChatService.chat(messages, context)));
         } catch (Exception e) {
@@ -291,9 +288,7 @@ public class WebController {
     @PostMapping(value = "/api/chat/stream", produces = "text/event-stream")
     @ResponseBody
     public ResponseEntity<StreamingResponseBody> chatStream(@RequestBody Map<String, Object> req, HttpServletRequest httpReq) {
-        String ip = Optional.ofNullable(httpReq.getHeader("X-Forwarded-For"))
-                .filter(h -> !h.isBlank()).map(h -> h.split(",")[0].trim())
-                .orElse(httpReq.getRemoteAddr());
+        String ip = ClientIp.of(httpReq);
         long now = System.currentTimeMillis();
         Deque<Long> times = chatTimestamps.computeIfAbsent(ip, k -> new ArrayDeque<>());
         synchronized (times) {
@@ -302,11 +297,16 @@ public class WebController {
                 return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).build();
             times.addLast(now);
         }
-        @SuppressWarnings("unchecked")
-        List<Map<String, String>> messages = (List<Map<String, String>>) req.get("messages");
+        List<Map<String, String>> messages = cleanMessages(req.get("messages"));
         String context = withLayoutContext(req);
 
         StreamingResponseBody body = outputStream -> {
+            if (messages.isEmpty()) {
+                outputStream.write(("data: " + mapper.writeValueAsString("Inga meddelanden.") + "\n\n"
+                        + "data: [DONE]\n\n").getBytes(StandardCharsets.UTF_8));
+                outputStream.flush();
+                return;
+            }
             try (InputStream is = groqChatService.chatStream(messages, context);
                  BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
                 String line;
@@ -366,8 +366,35 @@ public class WebController {
      * "var finns toaletten?" och "ligger min plats nära bistron?" med räknade siffror ur
      * skissen i stället för allmänt tal om att det finns toaletter ombord.
      */
+    // Taken för det klienten skickar till AI:n. Utan dem kunde ett skript skicka megabyte per
+    // anrop, och tio anrop i minuten räckte då för att tömma Groq-kvoten för alla besökare.
+    // Ett heldygns sökresultat är ~80 tecken per avgång, så 20 000 rymmer ~250 avgångar.
+    static final int MAX_MESSAGE_CHARS = 4_000;
+    static final int MAX_CONTEXT_CHARS = 20_000;
+
+    /**
+     * Bara {@code user}- och {@code assistant}-meddelanden med text släpps igenom. Roller
+     * tas inte från klienten: ett eget {@code system}-meddelande hade annars kunnat skriva
+     * över systemprompten och göra tågassistenten till en gratis allmän chattbot.
+     */
+    static List<Map<String, String>> cleanMessages(Object raw) {
+        if (!(raw instanceof List<?> list)) return List.of();
+        List<Map<String, String>> out = new java.util.ArrayList<>();
+        for (Object o : list) {
+            if (!(o instanceof Map<?, ?> m)) continue;
+            Object role = m.get("role");
+            Object content = m.get("content");
+            if (!("user".equals(role) || "assistant".equals(role))) continue;
+            if (!(content instanceof String text) || text.isBlank()) continue;
+            if (text.length() > MAX_MESSAGE_CHARS) text = text.substring(0, MAX_MESSAGE_CHARS);
+            out.add(Map.of("role", (String) role, "content", text));
+        }
+        return out;
+    }
+
     private String withLayoutContext(Map<String, Object> req) {
         String context = req.get("context") instanceof String s ? s : "";
+        if (context.length() > MAX_CONTEXT_CHARS) context = context.substring(0, MAX_CONTEXT_CHARS);
         String layoutId = req.get("layout") instanceof String s ? s : null;
         String seat = req.get("seat") instanceof String s ? s : null;
         if (layoutId == null || !trainLayoutService.hasLayout(layoutId)) return context;

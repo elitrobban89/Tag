@@ -89,6 +89,8 @@ public class SuggestController {
         }
 
         String from = (req.getFrom() != null && !req.getFrom().isBlank()) ? req.getFrom().trim() : null;
+        // Ett stationsnamn; längre text är inget namn utan ett försök att styra prompten
+        if (from != null && from.length() > 60) from = from.substring(0, 60);
 
         // Suggest cache
         String suggestKey = (from != null ? from.toLowerCase() : "") + "|" + category;
@@ -182,9 +184,6 @@ public class SuggestController {
     }
 
     private String getClientIp(HttpServletRequest req) {
-        String forwarded = req.getHeader("X-Forwarded-For");
-        if (forwarded != null && !forwarded.isBlank())
-            return forwarded.split(",")[0].trim();
-        return req.getRemoteAddr();
+        return ClientIp.of(req);
     }
 }

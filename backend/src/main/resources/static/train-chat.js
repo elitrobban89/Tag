@@ -26,7 +26,7 @@
     var chip = document.createElement('div');
     chip.id = 'tc-search-chip';
     chip.className = 'tc-search-chip';
-    chip.innerHTML = '<span class="tc-search-chip-icon">🚂</span><span>' + data.fromName + ' → ' + data.toName + '<br><span class="tc-search-chip-sub">' + data.departures.length + ' avgångar — fråga AI</span></span>';
+    chip.innerHTML = '<span class="tc-search-chip-icon">🚂</span><span>' + tcEsc(data.fromName) + ' → ' + tcEsc(data.toName) + '<br><span class="tc-search-chip-sub">' + data.departures.length + ' avgångar — fråga AI</span></span>';
     chip.addEventListener('click', function() { chip.remove(); if (!tcIsOpen()) tcSetOpen(true); });
     setTimeout(function() { if (chip.parentNode) chip.remove(); }, 8000);
     document.body.appendChild(chip);

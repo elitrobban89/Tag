@@ -56,13 +56,13 @@ class SuggestControllerTest {
         String body = "{\"category\":\"Fjäll\"}"; // ogiltig kategori räcker — spärren ligger först
         for (int i = 0; i < 10; i++) {
             mvc.perform(post("/suggest")
-                    .header("X-Forwarded-For", "10.3.3.3")
+                    .header("CF-Connecting-IP", "10.3.3.3")
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(body))
                .andExpect(status().isBadRequest());
         }
         mvc.perform(post("/suggest")
-                .header("X-Forwarded-For", "10.3.3.3")
+                .header("CF-Connecting-IP", "10.3.3.3")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(body))
            .andExpect(status().isTooManyRequests())
