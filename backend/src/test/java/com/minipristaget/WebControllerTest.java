@@ -302,4 +302,25 @@ class WebControllerTest {
                 .contains("Vald plats: vagn 3, rad 2C")
                 .contains("Närmaste toalett");
     }
+
+    @Test
+    void chattenAnropasBaraFranEgnaSidor() throws Exception {
+        // En främmande sajt får inte bygga in chatten och låta sina besökare tömma Groq-kvoten
+        mvc.perform(post("/api/chat")
+                .header("Origin", "https://evil.example")
+                .header("CF-Connecting-IP", "10.4.4.20")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"messages\":[]}"))
+           .andExpect(status().isForbidden());
+
+        // Appens egen adress: Render avslutar TLS, så även egna anrop ser ut som cross-origin
+        when(groqChatService.isConfigured()).thenReturn(true);
+        mvc.perform(post("/api/chat/stream")
+                .header("Origin", "https://tag-k5we.onrender.com")
+                .header("CF-Connecting-IP", "10.4.4.21")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"messages\":[]}"))
+           .andExpect(status().isOk())
+           .andExpect(header().string("Access-Control-Allow-Origin", "https://tag-k5we.onrender.com"));
+    }
 }

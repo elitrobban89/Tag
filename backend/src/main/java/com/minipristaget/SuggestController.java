@@ -23,7 +23,6 @@ import java.util.stream.Collectors;
 
 /** @author Robert Andersson Kopler */
 @RestController
-@CrossOrigin
 public class SuggestController {
 
     private static final String GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
@@ -62,6 +61,7 @@ public class SuggestController {
     private final HttpClient httpClient = HttpClient.newHttpClient();
     private final ObjectMapper mapper   = new ObjectMapper();
 
+    @CrossOrigin
     @GetMapping("/health")
     public Map<String, Boolean> health() {
         return Map.of("ok", true);

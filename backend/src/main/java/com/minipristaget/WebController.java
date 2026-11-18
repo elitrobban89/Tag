@@ -254,7 +254,6 @@ public class WebController {
         }
     }
 
-    @CrossOrigin
     @PostMapping("/api/chat")
     @ResponseBody
     public ResponseEntity<?> chat(@RequestBody Map<String, Object> req, HttpServletRequest httpReq) {
@@ -284,7 +283,6 @@ public class WebController {
         }
     }
 
-    @CrossOrigin
     @PostMapping(value = "/api/chat/stream", produces = "text/event-stream")
     @ResponseBody
     public ResponseEntity<StreamingResponseBody> chatStream(@RequestBody Map<String, Object> req, HttpServletRequest httpReq) {
